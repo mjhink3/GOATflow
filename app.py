@@ -5,6 +5,8 @@ import html
 import base64
 import math
 import random
+import hashlib
+import secrets
 import urllib.parse
 import psycopg2
 import psycopg2.extras
@@ -123,16 +125,25 @@ def get_celeb_b64(name: str):
     return load_image_b64(f"celeb_{name}.png", f"celeb_{name}_b64")
 
 
-def get_replit_user():
-    try:
-        headers = st.context.headers
-        user_id = headers.get("X-Replit-User-Id", "")
-        user_name = headers.get("X-Replit-User-Name", "")
-        profile_image = headers.get("X-Replit-User-Profile-Image", "")
-        if user_id and user_name:
-            return {"id": user_id, "name": user_name, "profile_image": profile_image}
-    except Exception:
-        pass
+def hash_password(password: str, salt: str = None) -> tuple[str, str]:
+    if salt is None:
+        salt = secrets.token_hex(16)
+    pw_hash = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt.encode("utf-8"), 100000).hex()
+    return pw_hash, salt
+
+
+def verify_password(password: str, pw_hash: str, salt: str) -> bool:
+    check_hash, _ = hash_password(password, salt)
+    return check_hash == pw_hash
+
+
+def get_current_user():
+    if "auth_user_id" in st.session_state and "auth_user_name" in st.session_state:
+        return {
+            "id": str(st.session_state["auth_user_id"]),
+            "name": st.session_state["auth_user_name"],
+            "display_name": st.session_state.get("auth_display_name", st.session_state["auth_user_name"]),
+        }
     return None
 
 
@@ -884,6 +895,17 @@ def ensure_schema():
             if cur.fetchone():
                 cur.execute("ALTER TABLE directives DROP CONSTRAINT single_directives")
 
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id SERIAL PRIMARY KEY,
+                    username TEXT NOT NULL UNIQUE,
+                    password_hash TEXT NOT NULL,
+                    password_salt TEXT NOT NULL,
+                    display_name TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
+
             conn.commit()
     finally:
         conn.close()
@@ -893,6 +915,45 @@ try:
     ensure_schema()
 except Exception:
     pass
+
+
+def create_user(username: str, password: str, display_name: str):
+    conn = get_db()
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT id FROM users WHERE username = %s", (username.lower(),))
+            if cur.fetchone():
+                return None, "Username already taken."
+            pw_hash, salt = hash_password(password)
+            cur.execute(
+                "INSERT INTO users (username, password_hash, password_salt, display_name) VALUES (%s, %s, %s, %s) RETURNING id, username, display_name",
+                (username.lower(), pw_hash, salt, display_name)
+            )
+            user = dict(cur.fetchone())
+            conn.commit()
+            return user, None
+    except Exception as e:
+        conn.rollback()
+        return None, str(e)
+    finally:
+        conn.close()
+
+
+def authenticate_user(username: str, password: str):
+    conn = get_db()
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT id, username, display_name, password_hash, password_salt FROM users WHERE username = %s", (username.lower(),))
+            user = cur.fetchone()
+            if not user:
+                return None, "Invalid username or password."
+            if not verify_password(password, user["password_hash"], user["password_salt"]):
+                return None, "Invalid username or password."
+            return {"id": user["id"], "username": user["username"], "display_name": user["display_name"]}, None
+    except Exception as e:
+        return None, str(e)
+    finally:
+        conn.close()
 
 
 def get_player(user_id: str):
@@ -1242,7 +1303,7 @@ def get_tier_celeb_b64(tier: str) -> str:
     return get_celeb_b64(celeb_name)
 
 
-user_info = get_replit_user()
+user_info = get_current_user()
 
 if not user_info:
     st.markdown(f'''
@@ -1275,30 +1336,51 @@ if not user_info:
     </div>
     ''', unsafe_allow_html=True)
 
-    st.markdown(f"""
-    <div style="text-align:center;margin-top:2rem;">
-        <a href="https://replit.com/login" target="_blank" rel="noopener noreferrer" style="
-            display:inline-block;
-            background:linear-gradient(135deg, {PURPLE}, #4A00CC);
-            color:#FFFFFF;
-            border:none;
-            border-radius:10px;
-            padding:0.8rem 2.5rem;
-            font-weight:700;
-            font-family:'Inter',sans-serif;
-            font-size:1rem;
-            letter-spacing:0.02em;
-            text-decoration:none;
-            cursor:pointer;
-            box-shadow:0 4px 20px rgba(97,0,255,0.35);
-            transition:background 0.2s;
-        ">🔐 Login to GOATflow</a>
-        <div style="font-size:0.75rem;color:{SILVER};margin-top:0.8rem;line-height:1.5;">
-            Sign in once with a free Replit account to enter the pasture.<br>
-            After signing in, return to this page to access your dashboard.
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    login_tab, signup_tab = st.tabs(["Login", "Create Account"])
+
+    with login_tab:
+        with st.form("login_form"):
+            login_username = st.text_input("Username", key="login_username", placeholder="Enter your username")
+            login_password = st.text_input("Password", type="password", key="login_password", placeholder="Enter your password")
+            login_submitted = st.form_submit_button("🔐 Login to GOATflow", use_container_width=True)
+            if login_submitted:
+                if not login_username or not login_password:
+                    st.error("Please enter both username and password.")
+                else:
+                    user, err = authenticate_user(login_username, login_password)
+                    if err:
+                        st.error(err)
+                    else:
+                        st.session_state["auth_user_id"] = user["id"]
+                        st.session_state["auth_user_name"] = user["username"]
+                        st.session_state["auth_display_name"] = user["display_name"]
+                        st.rerun()
+
+    with signup_tab:
+        with st.form("signup_form"):
+            signup_display = st.text_input("Display Name", key="signup_display", placeholder="How should we call you?")
+            signup_username = st.text_input("Username", key="signup_username", placeholder="Choose a unique username")
+            signup_password = st.text_input("Password", type="password", key="signup_password", placeholder="Choose a password (min 6 characters)")
+            signup_confirm = st.text_input("Confirm Password", type="password", key="signup_confirm", placeholder="Re-enter your password")
+            signup_submitted = st.form_submit_button("🐐 Create Account", use_container_width=True)
+            if signup_submitted:
+                if not signup_display or not signup_username or not signup_password:
+                    st.error("All fields are required.")
+                elif len(signup_password) < 6:
+                    st.error("Password must be at least 6 characters.")
+                elif signup_password != signup_confirm:
+                    st.error("Passwords do not match.")
+                elif len(signup_username) < 3:
+                    st.error("Username must be at least 3 characters.")
+                else:
+                    user, err = create_user(signup_username, signup_password, signup_display)
+                    if err:
+                        st.error(err)
+                    else:
+                        st.session_state["auth_user_id"] = user["id"]
+                        st.session_state["auth_user_name"] = user["username"]
+                        st.session_state["auth_display_name"] = user["display_name"]
+                        st.rerun()
 
     st.markdown(f'''
     <div class="global-footer">
@@ -1308,8 +1390,7 @@ if not user_info:
     st.stop()
 
 current_user_id = user_info["id"]
-current_user_name = user_info["name"]
-current_user_image = user_info.get("profile_image", "")
+current_user_name = user_info["display_name"]
 
 QUICK_SCRIPTS = [
     {"label": "Staffing Crunch", "text": "IF staffing < 85% THEN set all Logistics tasks to Priority 1."},
@@ -1337,8 +1418,6 @@ with st.sidebar:
     if use_crown and celeb_power_hour_b64:
         crown_src = f"data:image/png;base64,{celeb_power_hour_b64}"
         avatar_html = f'<img src="{crown_src}" style="height:60px;border-radius:50%;border:2px solid {NEON_VIOLET};">'
-    elif current_user_image:
-        avatar_html = f'<img src="{safe(current_user_image)}" style="height:60px;border-radius:50%;border:2px solid {BORDER};">'
     else:
         avatar_html = f'<div style="height:60px;width:60px;border-radius:50%;background:{CARD_BG};border:2px solid {BORDER};display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin:0 auto;">🐐</div>'
 
@@ -1422,6 +1501,14 @@ with st.sidebar:
         </div>
     </div>
     ''', unsafe_allow_html=True)
+
+    st.markdown("---")
+    if st.button("🚪 Logout", use_container_width=True, key="logout_btn"):
+        for key in ["auth_user_id", "auth_user_name", "auth_display_name",
+                     "incognito_signals", "incognito_mode", "just_completed_task",
+                     "just_dropped", "just_purged", "just_metabolized", "daily_shot"]:
+            st.session_state.pop(key, None)
+        st.rerun()
 
 st.markdown(f'''
 <div class="goat-header">

@@ -14,13 +14,18 @@ Users sign in via Replit Auth to access their private dashboard. Each user has i
 - **Assets**: Celebration artwork images + main logo
 
 ## Authentication & Multi-User
-- Replit Auth checks `X-Replit-User-Id` and `X-Replit-User-Name` from `st.context.headers`
-- Non-logged-in users see the "Welcome to the Pasture" landing page with login button
-- Each user gets their own player record, signals, and directives (keyed by `user_id`)
+- Self-contained username/password auth using PostgreSQL `users` table
+- Passwords hashed with PBKDF2-HMAC-SHA256 + random salt (hashlib stdlib)
+- Session stored in `st.session_state` keys: `auth_user_id`, `auth_user_name`, `auth_display_name`
+- `get_current_user()` returns `{"id", "name", "display_name"}` from session state or `None`
+- Landing page has Login / Create Account tabs with `st.form` inside each
+- Signup validates: all fields required, username >= 3 chars, password >= 6 chars, passwords match, username unique
+- Logout button in sidebar clears session keys and reruns
+- Each user gets their own player record, signals, and directives (keyed by `user_id` = str(users.id))
 - New users see a fresh empty Pen (auto-created player record)
-- `get_replit_user()` returns `{"id", "name", "profile_image"}` or `None`
 
 ## Database Schema
+- **users**: id (SERIAL PK), username (TEXT UNIQUE), password_hash (TEXT), password_salt (TEXT), display_name (TEXT), created_at (TIMESTAMP)
 - **signals**: id (SERIAL PK), task_name, why, xp_reward, operational_weight, completed, directive_applied, bleat_type, created_at, completed_at, **user_id** (TEXT, NOT NULL)
 - **player**: id (SERIAL PK), **user_id** (TEXT, UNIQUE), total_xp, level, tasks_completed
 - **directives**: id (SERIAL PK), **user_id** (TEXT, UNIQUE), rules_text
@@ -39,10 +44,10 @@ Users sign in via Replit Auth to access their private dashboard. Each user has i
 - `.streamlit/config.toml` — Streamlit server config (port 5000, showErrorDetails enabled)
 
 ## Landing Page ("Welcome to the Pasture")
-- Shown to non-logged-in users (no Replit Auth headers)
-- Features: GOATflow logo, tagline "Metabolize your to-do list.", subtitle "The Ozempic for your workload."
+- Shown to non-logged-in users (no session state auth)
+- Features: GOATflow logo, tagline "Metabolize your to-do list.", subtitle "The Operational Metabolizer."
 - Feature cards: Churn Engine, Cheese Churn Rate, Stateless Privacy, WorkGOAT Ecosystem
-- "Login with Replit" button
+- Login / Create Account tabs with forms
 - Footer: "GOATflow is a subsidiary of the WorkGOAT Ecosystem"
 - Calls `st.stop()` after rendering — no dashboard content below
 
