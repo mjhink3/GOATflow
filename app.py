@@ -1190,14 +1190,6 @@ if st.session_state.get("just_metabolized"):
     ''', unsafe_allow_html=True)
     st.session_state["just_metabolized"] = None
 
-if st.session_state.get("just_synced_herd"):
-    task_name = st.session_state["just_synced_herd"]
-    st.markdown(f'''
-    <div class="herd-toast">
-        <div class="herd-toast-text">🐐 Task verified. Grit points pushed to The Summit.</div>
-    </div>
-    ''', unsafe_allow_html=True)
-    st.session_state["just_synced_herd"] = None
 
 if st.session_state.get("just_completed_task"):
     task_name, xp_gained, leveled_up = st.session_state["just_completed_task"]
@@ -1206,9 +1198,6 @@ if st.session_state.get("just_completed_task"):
 
     goat_pun = random.choice(GOAT_PUNS)
     player_snap = get_player()
-    cur_pasture = pasture_name(player_snap["level"])
-    linkedin_text = f"Just earned {xp_gained:,} Cheese Churn Points on GOATflow! {cur_pasture} (Level {player_snap['level']}) | {player_snap['total_xp']:,} Total CCR | Part of the WorkGOAT Ecosystem."
-    linkedin_url = "https://www.linkedin.com/sharing/share-offsite/?" + urllib.parse.urlencode({"url": "https://workgoat.vip", "title": linkedin_text, "summary": linkedin_text})
 
     celeb_task_src = f"data:image/png;base64,{celeb_task_b64}" if celeb_task_b64 else ""
     popup_img = f'<img src="{celeb_task_src}" alt="Task Completed">' if celeb_task_src else ''
@@ -1218,7 +1207,6 @@ if st.session_state.get("just_completed_task"):
         <div class="xp-popup-text">+{xp_gained:,} Cheese Churn Points!</div>
         <div class="xp-popup-sub">{safe(task_name)}</div>
         <div class="xp-popup-pun">{safe(goat_pun)}</div>
-        <a class="linkedin-share-btn" href="{linkedin_url}" target="_blank" rel="noopener noreferrer">Share on LinkedIn</a>
     </div>
     ''', unsafe_allow_html=True)
     st.markdown(XP_POPUP_DISMISS_JS, unsafe_allow_html=True)
@@ -1248,6 +1236,9 @@ summit_count = sum(1 for s in signals if s.get("bleat_type") == "Summit-Level Bl
 level, xp_into, xp_needed = compute_level(player["total_xp"])
 cur_pasture = pasture_name(level)
 
+linkedin_total_text = f"I'm at {cur_pasture} (Level {level}) with {player['total_xp']:,} Cheese Churn Points on GOATflow! {player['tasks_completed']} Bleats completed. Part of the WorkGOAT Ecosystem."
+linkedin_total_url = "https://www.linkedin.com/sharing/share-offsite/?" + urllib.parse.urlencode({"url": "https://workgoat.vip", "title": linkedin_total_text, "summary": linkedin_total_text})
+
 st.markdown(f'''
 <div class="stats-row">
     <div class="stat-box">
@@ -1265,7 +1256,26 @@ st.markdown(f'''
     <div class="stat-box">
         <div class="stat-value" style="color:{NEON_GREEN};">{player["total_xp"]:,}</div>
         <div class="stat-label">Cheese Churn</div>
+        <a class="linkedin-share-btn" href="{linkedin_total_url}" target="_blank" rel="noopener noreferrer" style="margin-top:0.5rem;font-size:0.65rem;padding:0.25rem 0.8rem;">Share Score on LinkedIn</a>
     </div>
+</div>
+''', unsafe_allow_html=True)
+
+st.markdown(f'''
+<div style="text-align:center;margin-bottom:1rem;">
+    <button disabled style="
+        background: linear-gradient(135deg, #444, #333);
+        color: #777;
+        border: 1px solid #555;
+        border-radius: 10px;
+        padding: 0.5rem 1.5rem;
+        font-weight: 700;
+        font-family: 'Inter', sans-serif;
+        font-size: 0.8rem;
+        letter-spacing: 0.02em;
+        cursor: not-allowed;
+        opacity: 0.6;
+    ">🐐 Sync to Herd — Coming Soon</button>
 </div>
 ''', unsafe_allow_html=True)
 
@@ -1337,16 +1347,10 @@ else:
         </div>
         ''', unsafe_allow_html=True)
 
-        btn_cols = st.columns([1, 1])
-        with btn_cols[0]:
-            if st.button(f"✅ Complete", key=f"complete_{sig['id']}", use_container_width=True):
-                reward, xp, leveled_up = complete_signal(sig['id'])
-                if reward:
-                    st.session_state["just_completed_task"] = (sig['task_name'], xp, leveled_up)
-                    st.rerun()
-        with btn_cols[1]:
-            if st.button(f"🐐 Sync to Herd", key=f"herd_{sig['id']}", use_container_width=True):
-                st.session_state["just_synced_herd"] = sig['task_name']
+        if st.button(f"✅ Complete", key=f"complete_{sig['id']}", use_container_width=True):
+            reward, xp, leveled_up = complete_signal(sig['id'])
+            if reward:
+                st.session_state["just_completed_task"] = (sig['task_name'], xp, leveled_up)
                 st.rerun()
 
 st.markdown('<div class="spacer-bottom"></div>', unsafe_allow_html=True)
