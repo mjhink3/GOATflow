@@ -1257,6 +1257,7 @@ with col_text:
         height=130,
         placeholder="Paste emails, post-it notes, memos, quick tasks...",
         label_visibility="collapsed",
+        key="bleat_text_input",
     )
 
 drop_btn = st.button("⚡ Drop Into Churn Engine", use_container_width=True, key="drop_btn")
@@ -1311,6 +1312,7 @@ if drop_btn:
                     save_signals([s.model_dump() for s in result.signals])
                 st.session_state["just_dropped"] = True
                 st.session_state["just_purged"] = True
+                st.session_state["bleat_text_input"] = ""
                 st.rerun()
             except Exception:
                 st.error("The Churn Engine hit a snag. Please try again.")
