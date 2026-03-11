@@ -1058,12 +1058,15 @@ celeb_priority_achieved_b64 = get_celeb_b64("priority_achieved")
 celeb_power_hour_b64 = get_celeb_b64("power_hour")
 celeb_daily_flow_b64 = get_celeb_b64("daily_flow")
 
-TIER_CELEB_MAP = {
-    "Micro": ("celeb_daily_flow", celeb_daily_flow_b64),
-    "Standard": ("celeb_focus_streak", celeb_focus_streak_b64),
-    "High-Leverage": ("celeb_priority_achieved", celeb_priority_achieved_b64),
-    "GOAT": ("celeb_power_hour", celeb_power_hour_b64),
-}
+def get_tier_celeb_b64(tier: str) -> str:
+    tier_map = {
+        "Micro": "daily_flow",
+        "Standard": "focus_streak",
+        "High-Leverage": "priority_achieved",
+        "GOAT": "power_hour",
+    }
+    celeb_name = tier_map.get(tier, "focus_streak")
+    return get_celeb_b64(celeb_name)
 
 QUICK_SCRIPTS = [
     {"label": "Staffing Crunch", "text": "IF staffing < 85% THEN set all Logistics tasks to Priority 1."},
@@ -1206,7 +1209,7 @@ if st.session_state.get("just_completed_task"):
     goat_pun = random.choice(GOAT_PUNS)
     player_snap = get_player()
 
-    _, tier_b64 = TIER_CELEB_MAP.get(xp_tier, ("celeb_focus_streak", celeb_focus_streak_b64))
+    tier_b64 = get_tier_celeb_b64(xp_tier)
     celeb_src = f"data:image/png;base64,{tier_b64}" if tier_b64 else ""
     popup_img = f'<img src="{celeb_src}" alt="Task Completed">' if celeb_src else ''
     st.markdown(f'''
