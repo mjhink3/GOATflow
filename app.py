@@ -1272,7 +1272,8 @@ st.markdown(f'''
 
 st.markdown(f'''
 <div style="text-align:center;margin-bottom:1rem;">
-    <button disabled style="
+    <div style="
+        display: inline-block;
         background: linear-gradient(135deg, #444, #333);
         color: #777;
         border: 1px solid #555;
@@ -1284,7 +1285,8 @@ st.markdown(f'''
         letter-spacing: 0.02em;
         cursor: not-allowed;
         opacity: 0.6;
-    ">🐐 Sync to Herd — Coming Soon</button>
+        user-select: none;
+    ">🐐 Sync to Herd — Coming Soon</div>
 </div>
 ''', unsafe_allow_html=True)
 
