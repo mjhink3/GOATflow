@@ -896,6 +896,26 @@ def ensure_schema():
                 cur.execute("ALTER TABLE directives DROP CONSTRAINT single_directives")
 
             cur.execute("""
+                SELECT column_default FROM information_schema.columns
+                WHERE table_name = 'directives' AND column_name = 'id'
+            """)
+            directives_id_col = cur.fetchone()
+            if directives_id_col and directives_id_col[0] and '1' in str(directives_id_col[0]) and 'nextval' not in str(directives_id_col[0]):
+                cur.execute("CREATE SEQUENCE IF NOT EXISTS directives_id_seq")
+                cur.execute("SELECT setval('directives_id_seq', GREATEST((SELECT MAX(id) FROM directives), 1))")
+                cur.execute("ALTER TABLE directives ALTER COLUMN id SET DEFAULT nextval('directives_id_seq')")
+
+            cur.execute("""
+                SELECT column_default FROM information_schema.columns
+                WHERE table_name = 'player' AND column_name = 'id'
+            """)
+            player_id_col = cur.fetchone()
+            if player_id_col and player_id_col[0] and '1' in str(player_id_col[0]) and 'nextval' not in str(player_id_col[0]):
+                cur.execute("CREATE SEQUENCE IF NOT EXISTS player_id_seq")
+                cur.execute("SELECT setval('player_id_seq', GREATEST((SELECT MAX(id) FROM player), 1))")
+                cur.execute("ALTER TABLE player ALTER COLUMN id SET DEFAULT nextval('player_id_seq')")
+
+            cur.execute("""
                 CREATE TABLE IF NOT EXISTS users (
                     id SERIAL PRIMARY KEY,
                     username TEXT NOT NULL UNIQUE,
