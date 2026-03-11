@@ -544,91 +544,6 @@ CUSTOM_CSS = f"""
         z-index: 99998;
     }}
 
-    .xp-popup-wrapper {{
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background: rgba(0, 0, 0, 0.75);
-        z-index: 99998;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        pointer-events: none;
-    }}
-
-    .xp-popup {{
-        background: {CARD_BG};
-        border: 2px solid {NEON_GREEN};
-        border-radius: 16px;
-        padding: 2rem 2.5rem 1.5rem 2.5rem;
-        text-align: center;
-        z-index: 99999;
-        box-shadow: 0 0 40px rgba(83, 198, 96, 0.3);
-        animation: popup-in 0.4s ease-out;
-        pointer-events: none;
-        max-width: 420px;
-        width: 90%;
-    }}
-
-    .xp-popup img {{
-        height: 160px;
-        margin-bottom: 0.5rem;
-        border-radius: 12px;
-    }}
-
-    div[data-testid="stVerticalBlock"]:has(.cheese-confirm-anchor) {{
-        position: fixed;
-        z-index: 100001;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, 130px);
-        pointer-events: auto;
-        width: 260px;
-    }}
-
-    div[data-testid="stVerticalBlock"]:has(.cheese-confirm-anchor) .stButton > button {{
-        background: linear-gradient(135deg, {NEON_GREEN}, #3fa84a) !important;
-        color: #000 !important;
-        font-weight: 800 !important;
-        font-size: 0.9rem !important;
-        border: none !important;
-        border-radius: 10px !important;
-        padding: 0.6rem 1.5rem !important;
-        box-shadow: 0 0 20px rgba(83, 198, 96, 0.4);
-    }}
-
-    div[data-testid="stVerticalBlock"]:has(.cheese-confirm-anchor) .stButton > button:hover {{
-        background: linear-gradient(135deg, #3fa84a, {NEON_GREEN}) !important;
-    }}
-
-    .cheese-confirm-anchor {{
-        display: none;
-    }}
-
-    .xp-popup-text {{
-        color: {NEON_GREEN};
-        font-size: 1.6rem;
-        font-weight: 900;
-        letter-spacing: -0.01em;
-    }}
-
-    .xp-popup-sub {{
-        color: {SILVER};
-        font-size: 0.85rem;
-        font-weight: 500;
-        margin-top: 0.3rem;
-    }}
-
-    .xp-popup-pun {{
-        color: {NEON_VIOLET};
-        font-size: 0.95rem;
-        font-weight: 700;
-        font-style: italic;
-        margin-top: 0.6rem;
-    }}
-
     .linkedin-share-btn {{
         display: inline-block;
         margin-top: 0.8rem;
@@ -647,11 +562,6 @@ CUSTOM_CSS = f"""
     .linkedin-share-btn:hover {{
         background: #004182;
         color: #FFFFFF;
-    }}
-
-    @keyframes popup-in {{
-        0% {{ opacity: 0; transform: translate(-50%, -50%) scale(0.7); }}
-        100% {{ opacity: 1; transform: translate(-50%, -50%) scale(1); }}
     }}
 
     .fence-overlay {{
@@ -1251,6 +1161,10 @@ with col_files:
         label_visibility="collapsed",
     )
 
+if st.session_state.get("_clear_bleat_text"):
+    st.session_state["bleat_text_input"] = ""
+    st.session_state["_clear_bleat_text"] = False
+
 with col_text:
     extra_text = st.text_area(
         "Paste text",
@@ -1312,10 +1226,12 @@ if drop_btn:
                     save_signals([s.model_dump() for s in result.signals])
                 st.session_state["just_dropped"] = True
                 st.session_state["just_purged"] = True
-                st.session_state["bleat_text_input"] = ""
+                st.session_state["_clear_bleat_text"] = True
                 st.rerun()
-            except Exception:
-                st.error("The Churn Engine hit a snag. Please try again.")
+            except Exception as e:
+                import traceback
+                traceback.print_exc()
+                st.error(f"The Churn Engine hit a snag: {e}")
 
 if st.session_state.get("just_dropped"):
     incognito_active = st.session_state.get("incognito_mode", False)
@@ -1346,14 +1262,8 @@ if st.session_state.get("just_metabolized"):
     st.session_state["just_metabolized"] = None
 
 
-if st.session_state.get("just_completed_task"):
-    task_data = st.session_state["just_completed_task"]
-    if len(task_data) == 4:
-        task_name, xp_gained, leveled_up, xp_tier = task_data
-    else:
-        task_name, xp_gained, leveled_up = task_data
-        xp_tier = "Standard"
-
+@st.dialog("🧀 Cheese Churn Points Earned!")
+def show_cheese_popup(task_name, xp_gained, leveled_up, xp_tier):
     st.markdown(CONFETTI_JS, unsafe_allow_html=True)
 
     goat_pun = random.choice(GOAT_PUNS)
@@ -1361,39 +1271,43 @@ if st.session_state.get("just_completed_task"):
 
     tier_b64 = get_tier_celeb_b64(xp_tier)
     celeb_src = f"data:image/png;base64,{tier_b64}" if tier_b64 else ""
-    popup_img = f'<img src="{celeb_src}" alt="Task Completed">' if celeb_src else ''
+    popup_img = f'<img src="{celeb_src}" alt="Task Completed" style="height:160px;border-radius:12px;display:block;margin:0 auto 0.5rem auto;">' if celeb_src else ''
 
     st.markdown(f'''
-    <div class="xp-popup-wrapper">
-        <div class="xp-popup" id="xp-popup">
-            {popup_img}
-            <div class="xp-popup-text">+{xp_gained:,} Cheese Churn Points!</div>
-            <div class="xp-popup-sub">{safe(task_name)}</div>
-            <div class="xp-popup-pun">{safe(goat_pun)}</div>
-        </div>
+    <div style="text-align:center;">
+        {popup_img}
+        <div style="color:{NEON_GREEN};font-size:1.6rem;font-weight:900;margin-bottom:0.3rem;">+{xp_gained:,} Cheese Churn Points!</div>
+        <div style="color:{SILVER};font-size:0.85rem;font-weight:500;margin-bottom:0.3rem;">{safe(task_name)}</div>
+        <div style="color:{NEON_VIOLET};font-size:0.95rem;font-weight:700;font-style:italic;margin-bottom:0.5rem;">{safe(goat_pun)}</div>
     </div>
     ''', unsafe_allow_html=True)
-    confirm_slot = st.empty()
-    with confirm_slot.container():
-        st.markdown('<div class="cheese-confirm-anchor"></div>', unsafe_allow_html=True)
-        if st.button("🧀 Confirm Cheese Points", key="confirm_cheese_btn", use_container_width=True):
-            st.session_state["just_completed_task"] = None
-            st.rerun()
 
     if leveled_up:
         new_pasture = pasture_name(player_snap["level"])
         old_pasture = pasture_name(player_snap["level"] - 1)
         celeb_levelup_src = f"data:image/png;base64,{celeb_levelup_b64}" if celeb_levelup_b64 else ""
-        fence_img = f'<img src="{celeb_levelup_src}" alt="Fence Broken!">' if celeb_levelup_src else ''
+        fence_img = f'<img src="{celeb_levelup_src}" style="height:100px;border-radius:12px;display:block;margin:0 auto 0.5rem auto;">' if celeb_levelup_src else ''
         st.markdown(f'''
-        <div class="fence-overlay" id="fence-overlay">
+        <div style="text-align:center;margin-top:0.5rem;padding:0.8rem;background:rgba(139,92,246,0.15);border:1px solid {NEON_VIOLET};border-radius:10px;">
             {fence_img}
-            <div class="fence-text">🚧 FENCE BROKEN! 🚧</div>
-            <div class="fence-subtitle">You escaped {safe(old_pasture)}!</div>
-            <div class="fence-pasture">Welcome to {safe(new_pasture)} (Level {player_snap["level"]})</div>
+            <div style="font-size:1.2rem;font-weight:900;color:{NEON_VIOLET};">🚧 FENCE BROKEN! 🚧</div>
+            <div style="color:{SILVER};font-size:0.8rem;margin-top:0.2rem;">You escaped {safe(old_pasture)}!</div>
+            <div style="color:{NEON_GREEN};font-size:0.9rem;font-weight:700;margin-top:0.2rem;">Welcome to {safe(new_pasture)} (Level {player_snap["level"]})</div>
         </div>
         ''', unsafe_allow_html=True)
-        st.markdown(FENCE_DISMISS_JS, unsafe_allow_html=True)
+
+    if st.button("🧀 Confirm Cheese Points", key="confirm_cheese_btn", use_container_width=True):
+        st.session_state["just_completed_task"] = None
+        st.rerun()
+
+if st.session_state.get("just_completed_task"):
+    task_data = st.session_state["just_completed_task"]
+    if len(task_data) == 4:
+        task_name, xp_gained, leveled_up, xp_tier = task_data
+    else:
+        task_name, xp_gained, leveled_up = task_data
+        xp_tier = "Standard"
+    show_cheese_popup(task_name, xp_gained, leveled_up, xp_tier)
 
 signals = get_active_signals()
 if st.session_state.get("incognito_mode", False):
