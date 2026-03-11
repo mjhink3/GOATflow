@@ -128,12 +128,71 @@ CUSTOM_CSS = f"""
         text-align: center;
         padding: 0.5rem 0 0.6rem 0;
         margin-bottom: 0.8rem;
+        position: relative;
     }}
 
     .goat-header img {{
         height: 320px;
         margin-bottom: 0;
         cursor: pointer;
+    }}
+
+    .trust-badge {{
+        display: inline-block;
+        position: relative;
+        cursor: help;
+        font-size: 1.2rem;
+        margin-left: 0.5rem;
+        vertical-align: middle;
+    }}
+
+    .trust-badge .trust-tooltip {{
+        visibility: hidden;
+        opacity: 0;
+        position: absolute;
+        bottom: 130%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: {CARD_BG};
+        color: {SILVER};
+        border: 1px solid {NEON_GREEN};
+        border-radius: 8px;
+        padding: 0.6rem 1rem;
+        font-size: 0.65rem;
+        font-weight: 500;
+        width: 240px;
+        text-align: center;
+        z-index: 100000;
+        transition: opacity 0.2s;
+        box-shadow: 0 0 12px rgba(83, 198, 96, 0.2);
+        line-height: 1.4;
+    }}
+
+    .trust-badge:hover .trust-tooltip {{
+        visibility: visible;
+        opacity: 1;
+    }}
+
+    .opsec-status {{
+        text-align: center;
+        font-size: 0.7rem;
+        color: {NEON_GREEN};
+        font-weight: 600;
+        margin-top: 0.4rem;
+        letter-spacing: 0.01em;
+    }}
+
+    .incognito-badge {{
+        display: inline-block;
+        background: linear-gradient(135deg, #1a1a2e, #2a2a4a);
+        color: {NEON_VIOLET};
+        border: 1px solid {NEON_VIOLET};
+        border-radius: 6px;
+        padding: 0.2rem 0.6rem;
+        font-size: 0.65rem;
+        font-weight: 700;
+        margin-top: 0.3rem;
+        letter-spacing: 0.03em;
     }}
 
     .goat-tagline {{
@@ -1106,9 +1165,35 @@ with st.sidebar:
     for qs in QUICK_SCRIPTS:
         st.code(qs["text"], language=None)
 
+    st.markdown("---")
+    st.markdown(f'<div style="text-align:center;font-size:1.1rem;font-weight:800;color:{WHITE};margin-bottom:0.2rem;">🛡️ OpSec Layer</div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="text-align:center;font-size:0.7rem;color:{SILVER};margin-bottom:0.6rem;">Operations Security Controls</div>', unsafe_allow_html=True)
+
+    incognito_mode = st.toggle("🕶️ Incognito Mode", key="incognito_mode", help="When ON, Bleats are session-only and will NOT be saved to the database.")
+    if incognito_mode:
+        st.markdown('<div style="text-align:center;"><span class="incognito-badge">🕶️ INCOGNITO ACTIVE</span></div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="font-size:0.65rem;color:{NEON_VIOLET};text-align:center;margin-top:0.3rem;">Bleats exist only in this session. Nothing is persisted.</div>', unsafe_allow_html=True)
+
+    st.markdown(f'''
+    <div style="margin-top:0.8rem;padding:0.6rem;background:{CARD_BG};border-radius:8px;border:1px solid {BORDER};">
+        <div style="font-size:0.7rem;font-weight:700;color:{NEON_GREEN};margin-bottom:0.3rem;">✅ Security Status</div>
+        <div style="font-size:0.6rem;color:{SILVER};line-height:1.5;">
+            • API keys loaded from environment<br>
+            • No raw uploads stored in DB<br>
+            • Files processed in-memory only<br>
+            • Only task signals are persisted
+        </div>
+    </div>
+    ''', unsafe_allow_html=True)
+
 st.markdown(f'''
 <div class="goat-header">
     {logo_img}
+    <div style="margin-top:0.2rem;">
+        <span class="trust-badge">🛡️
+            <span class="trust-tooltip">GOATflow uses Stateless Processing. Your sensitive documents are analyzed and then immediately destroyed.</span>
+        </span>
+    </div>
 </div>
 ''', unsafe_allow_html=True)
 
@@ -1165,23 +1250,45 @@ if drop_btn:
                             except Exception:
                                 files_data.append({"type": "text", "name": fname, "content": "[unreadable]"})
 
+                is_incognito = st.session_state.get("incognito_mode", False)
                 existing = get_active_signals()
+                if is_incognito:
+                    existing = existing + st.session_state.get("incognito_signals", [])
                 current_directives = get_directives()
                 result = run_churn_engine(existing, files_data, extra_text or "", current_directives)
 
-                save_signals([s.model_dump() for s in result.signals])
+                files_data.clear()
+
+                if is_incognito:
+                    new_incog = []
+                    for s in result.signals:
+                        sig_dict = s.model_dump()
+                        sig_dict["id"] = f"incog_{random.randint(100000, 999999)}"
+                        new_incog.append(sig_dict)
+                    st.session_state["incognito_signals"] = new_incog
+                else:
+                    save_signals([s.model_dump() for s in result.signals])
                 st.session_state["just_dropped"] = True
+                st.session_state["just_purged"] = True
                 st.rerun()
             except Exception:
                 st.error("The Churn Engine hit a snag. Please try again.")
 
 if st.session_state.get("just_dropped"):
-    st.markdown('''
+    incognito_active = st.session_state.get("incognito_mode", False)
+    incog_label = ' <span class="incognito-badge">🕶️ INCOGNITO</span>' if incognito_active else ''
+    st.markdown(f'''
     <div class="completed-toast">
-        <div class="completed-toast-text">⚡ Cheese Churn complete — Bleats re-prioritized</div>
+        <div class="completed-toast-text">⚡ Cheese Churn complete — Bleats re-prioritized{incog_label}</div>
     </div>
     ''', unsafe_allow_html=True)
     st.session_state["just_dropped"] = False
+
+if st.session_state.get("just_purged"):
+    st.markdown('''
+    <div class="opsec-status">🛡️ Analysis complete. Source file purged for security.</div>
+    ''', unsafe_allow_html=True)
+    st.session_state["just_purged"] = False
 
 if st.session_state.get("just_metabolized"):
     count = st.session_state["just_metabolized"]
@@ -1241,6 +1348,9 @@ if st.session_state.get("just_completed_task"):
         st.markdown(FENCE_DISMISS_JS, unsafe_allow_html=True)
 
 signals = get_active_signals()
+if st.session_state.get("incognito_mode", False):
+    incog_sigs = st.session_state.get("incognito_signals", [])
+    signals = signals + incog_sigs
 player = get_player()
 
 active_count = len(signals)
@@ -1361,11 +1471,20 @@ else:
         </div>
         ''', unsafe_allow_html=True)
 
+        is_incognito_sig = isinstance(sig.get('id'), str) and str(sig['id']).startswith("incog_")
         if st.button(f"✅ Complete", key=f"complete_{sig['id']}", use_container_width=True):
-            reward, xp, leveled_up = complete_signal(sig['id'])
-            if reward:
-                st.session_state["just_completed_task"] = (sig['task_name'], xp, leveled_up, reward)
+            if is_incognito_sig:
+                xp_tier = sig.get("xp_reward", "Standard")
+                xp = XP_TIERS.get(xp_tier, 500)
+                incog_sigs = st.session_state.get("incognito_signals", [])
+                st.session_state["incognito_signals"] = [s for s in incog_sigs if s.get("id") != sig["id"]]
+                st.session_state["just_completed_task"] = (sig['task_name'], xp, False, xp_tier)
                 st.rerun()
+            else:
+                reward, xp, leveled_up = complete_signal(sig['id'])
+                if reward:
+                    st.session_state["just_completed_task"] = (sig['task_name'], xp, leveled_up, reward)
+                    st.rerun()
 
 st.markdown('<div class="spacer-bottom"></div>', unsafe_allow_html=True)
 

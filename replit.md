@@ -10,7 +10,7 @@ Users drop files (PDFs, images, text) into the Bleat Sieve. GPT-4o-mini classifi
 - **AI**: OpenAI GPT-4o-mini via Replit AI Integrations (structured output with Pydantic)
 - **Database**: PostgreSQL (Replit built-in) for persistent signals, XP, and directives
 - **PDF Parsing**: PyPDF2
-- **Assets**: 6 cropped celebration sprites from sheet + main logo
+- **Assets**: Celebration artwork images + main logo
 
 ## Database Schema
 - **signals**: id, task_name, why, xp_reward (Micro/Standard/High-Leverage/GOAT), operational_weight, completed, directive_applied, bleat_type (Routine Grazing / Summit-Level Bleat), created_at, completed_at
@@ -20,17 +20,21 @@ Users drop files (PDFs, images, text) into the Bleat Sieve. GPT-4o-mini classifi
 ## Key Files
 - `app.py` — Full application
 - `goatflow_logo.png` — Main WorkGOAT logo (320px header, home button)
-- `celeb_levelup.png` — Level Up / Fence Broken celebration sprite
-- `celeb_task_completed.png` — Task completion popup sprite
+- `celeb_levelup.png` — Level Up / Fence Broken celebration (trophy goat)
 - `celeb_inbox_cleared.png` — Metabolize/inbox cleared sprite
-- `celeb_focus_streak.png`, `celeb_priority_achieved.png`, `celeb_daily_flow.png` — Additional celebration sprites
-- `.streamlit/config.toml` — Streamlit server config (port 5000)
+- `celeb_focus_streak.png` — Standard tier completion (meditating goat)
+- `celeb_priority_achieved.png` — High-Leverage tier completion (clipboard goat)
+- `celeb_power_hour.png` — GOAT tier completion (flexing goat)
+- `celeb_daily_flow.png` — Micro tier completion (daily flow goat)
+- `.streamlit/config.toml` — Streamlit server config (port 5000, showErrorDetails enabled)
 
 ## Cheese Churn Rate (CCR) System
 - Micro: 100 CCR, Standard: 500 CCR, High-Leverage: 1500 CCR, GOAT: 5000 CCR
 - Level thresholds: Level 1 = 5000 CCR, each subsequent = +20% more
-- Confetti + Task Completed popup with goat pun + LinkedIn share on completion
-- "Fence Broken" animation with Level Up sprite on pasture advancement
+- Confetti + Task Completed popup with tier-specific celebration artwork + goat pun
+- "Confirm Cheese Points" button dismisses popup (native Streamlit button)
+- "Fence Broken" animation with Level Up artwork on pasture advancement
+- LinkedIn share button on dashboard under Cheese Churn stat (shares total score)
 
 ## Pasture Progression
 1. The Pen (Level 1)
@@ -45,19 +49,26 @@ Users drop files (PDFs, images, text) into the Bleat Sieve. GPT-4o-mini classifi
 - **Routine Grazing** (green tag) — low impact, daily maintenance
 - **Summit-Level Bleat** (red tag) — high impact, crisis, urgent
 
+## Operations Security (OpSec) Layer
+- **Ephemeral Processing**: Files processed in-memory only; `files_data` cleared after AI analysis; purge status message shown
+- **Environment Security**: OpenAI API key from Replit env vars (AI_INTEGRATIONS_*), never hardcoded
+- **Data Minimization**: DB stores only task signals (task_name, why, xp_reward, weight, type); no raw uploads or document content persisted
+- **Incognito Mode**: Sidebar toggle; when ON, signals stored in session state only, not written to DB; removed on session end
+- **Trust Badge**: Shield icon near logo with hover tooltip explaining stateless processing
+
 ## Features
 - Bleat Sieve: multi-file drop zone + text paste
 - Churn Engine: AI classifies, merges, re-sorts Bleats
 - Bleat cards with task name, bleat type, CCR tier, operational weight
-- Sync to Herd button: "Task verified. Grit points pushed to The Summit."
+- Sync to Herd: grayed-out "Coming Soon" dashboard button (WorkGOAT integration placeholder)
 - Metabolize button: dissolves completed Bleats with Inbox Cleared sprite
 - Daily Shot: focused view showing top 3 Bleats only
 - GOAT Directives sidebar with persistent rules + Quick Scripts
+- OpSec Layer sidebar with Incognito Mode + Security Status card
 - Directive Applied badge (amber ⚡) on directive-influenced cards
 - GOAT badge (purple 🐐) on weight >= 8 signals
 - Pasture Gauge with neon violet pulse at bottom
 - Global footer: "GOATflow is a subsidiary of the WorkGOAT Ecosystem"
-- LinkedIn share on completion popup
 
 ## Dependencies
 - streamlit, openai, PyPDF2, fpdf2, psycopg2-binary, Pillow
