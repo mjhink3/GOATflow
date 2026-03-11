@@ -502,9 +502,9 @@ CUSTOM_CSS = f"""
     }}
 
     .xp-popup img {{
-        height: 80px;
+        height: 160px;
         margin-bottom: 0.5rem;
-        border-radius: 50%;
+        border-radius: 12px;
     }}
 
     .xp-popup-text {{
@@ -1046,22 +1046,24 @@ setTimeout(function() {
 </script>
 """
 
-XP_POPUP_DISMISS_JS = """
-<script>
-setTimeout(function() {
-    const popup = document.getElementById('xp-popup');
-    if (popup) popup.style.display = 'none';
-}, 6000);
-</script>
-"""
 
 logo_b64 = get_logo_b64()
 logo_src = f"data:image/png;base64,{logo_b64}" if logo_b64 else ""
 logo_img = f'<img src="{logo_src}" alt="GOATflow">' if logo_src else '<div style="font-size:2rem;font-weight:900;color:#6100ff;">GOATflow</div>'
 
 celeb_levelup_b64 = get_celeb_b64("levelup")
-celeb_task_b64 = get_celeb_b64("task_completed")
 celeb_inbox_b64 = get_celeb_b64("inbox_cleared")
+celeb_focus_streak_b64 = get_celeb_b64("focus_streak")
+celeb_priority_achieved_b64 = get_celeb_b64("priority_achieved")
+celeb_power_hour_b64 = get_celeb_b64("power_hour")
+celeb_daily_flow_b64 = get_celeb_b64("daily_flow")
+
+TIER_CELEB_MAP = {
+    "Micro": ("celeb_daily_flow", celeb_daily_flow_b64),
+    "Standard": ("celeb_focus_streak", celeb_focus_streak_b64),
+    "High-Leverage": ("celeb_priority_achieved", celeb_priority_achieved_b64),
+    "GOAT": ("celeb_power_hour", celeb_power_hour_b64),
+}
 
 QUICK_SCRIPTS = [
     {"label": "Staffing Crunch", "text": "IF staffing < 85% THEN set all Logistics tasks to Priority 1."},
@@ -1192,15 +1194,21 @@ if st.session_state.get("just_metabolized"):
 
 
 if st.session_state.get("just_completed_task"):
-    task_name, xp_gained, leveled_up = st.session_state["just_completed_task"]
+    task_data = st.session_state["just_completed_task"]
+    if len(task_data) == 4:
+        task_name, xp_gained, leveled_up, xp_tier = task_data
+    else:
+        task_name, xp_gained, leveled_up = task_data
+        xp_tier = "Standard"
 
     st.markdown(CONFETTI_JS, unsafe_allow_html=True)
 
     goat_pun = random.choice(GOAT_PUNS)
     player_snap = get_player()
 
-    celeb_task_src = f"data:image/png;base64,{celeb_task_b64}" if celeb_task_b64 else ""
-    popup_img = f'<img src="{celeb_task_src}" alt="Task Completed">' if celeb_task_src else ''
+    _, tier_b64 = TIER_CELEB_MAP.get(xp_tier, ("celeb_focus_streak", celeb_focus_streak_b64))
+    celeb_src = f"data:image/png;base64,{tier_b64}" if tier_b64 else ""
+    popup_img = f'<img src="{celeb_src}" alt="Task Completed">' if celeb_src else ''
     st.markdown(f'''
     <div class="xp-popup" id="xp-popup">
         {popup_img}
@@ -1209,7 +1217,10 @@ if st.session_state.get("just_completed_task"):
         <div class="xp-popup-pun">{safe(goat_pun)}</div>
     </div>
     ''', unsafe_allow_html=True)
-    st.markdown(XP_POPUP_DISMISS_JS, unsafe_allow_html=True)
+
+    if st.button("🧀 Confirm Cheese Points", key="confirm_cheese_btn", use_container_width=True):
+        st.session_state["just_completed_task"] = None
+        st.rerun()
 
     if leveled_up:
         new_pasture = pasture_name(player_snap["level"])
@@ -1225,8 +1236,6 @@ if st.session_state.get("just_completed_task"):
         </div>
         ''', unsafe_allow_html=True)
         st.markdown(FENCE_DISMISS_JS, unsafe_allow_html=True)
-
-    st.session_state["just_completed_task"] = None
 
 signals = get_active_signals()
 player = get_player()
@@ -1350,7 +1359,7 @@ else:
         if st.button(f"✅ Complete", key=f"complete_{sig['id']}", use_container_width=True):
             reward, xp, leveled_up = complete_signal(sig['id'])
             if reward:
-                st.session_state["just_completed_task"] = (sig['task_name'], xp, leveled_up)
+                st.session_state["just_completed_task"] = (sig['task_name'], xp, leveled_up, reward)
                 st.rerun()
 
 st.markdown('<div class="spacer-bottom"></div>', unsafe_allow_html=True)
