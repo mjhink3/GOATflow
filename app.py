@@ -1,275 +1,296 @@
 import streamlit as st
 import os
-import csv
 import io
-import html
 import json
+import html
 import base64
-import datetime
+import time
+import psycopg2
+import psycopg2.extras
 from openai import OpenAI
 from pydantic import BaseModel, Field
 from PyPDF2 import PdfReader
-from fpdf import FPDF
 
 st.set_page_config(
-    page_title="GOATflow | Operations Signal",
+    page_title="GOATflow | Dynamic Priority Engine",
     page_icon="🐐",
-    layout="wide",
-    initial_sidebar_state="expanded",
+    layout="centered",
+    initial_sidebar_state="collapsed",
 )
 
-NAVY = "#002147"
+PURPLE = "#6100ff"
+CHARCOAL = "#121212"
 SILVER = "#C0C0C0"
-SLATE_WHITE = "#F0F2F5"
-CARD_BG = "#001A3A"
-BORDER = "#003366"
-ACCENT_GOLD = "#D4A843"
-ACCENT_RED = "#E63946"
-ACCENT_GREEN = "#2EC4B6"
+NEON_GREEN = "#53c660"
+CARD_BG = "#1A1A2E"
+BORDER = "#2A2A4A"
+WHITE = "#F5F5F5"
+DARK_SURFACE = "#0D0D1A"
 
 CUSTOM_CSS = f"""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
 
     .stApp {{
-        background-color: {NAVY};
+        background-color: {CHARCOAL};
         font-family: 'Inter', sans-serif;
     }}
 
     header[data-testid="stHeader"] {{
-        background-color: {NAVY};
+        background-color: {CHARCOAL};
     }}
 
     section[data-testid="stSidebar"] {{
-        background-color: #001533;
-        border-right: 1px solid {BORDER};
-    }}
-
-    section[data-testid="stSidebar"] * {{
-        color: {SLATE_WHITE} !important;
+        background-color: {DARK_SURFACE};
     }}
 
     .goat-header {{
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0.8rem 0;
-        border-bottom: 2px solid {BORDER};
-        margin-bottom: 1.5rem;
+        text-align: center;
+        padding: 1.2rem 0 0.8rem 0;
+        margin-bottom: 1rem;
     }}
 
-    .goat-logo {{
-        display: flex;
+    .goat-brand {{
+        display: inline-flex;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
+        margin-bottom: 0.3rem;
     }}
 
-    .goat-logo-icon {{
-        width: 44px;
-        height: 44px;
-        background: linear-gradient(135deg, {ACCENT_GOLD}, #B8942E);
+    .goat-icon {{
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, {PURPLE}, #4A00CC);
         border-radius: 10px;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 1.5rem;
-        font-weight: 800;
-        color: {NAVY};
-        letter-spacing: -1px;
+        font-size: 1.4rem;
+        font-weight: 900;
+        color: #FFFFFF;
     }}
 
-    .goat-logo-text {{
-        font-size: 0.85rem;
-        font-weight: 600;
+    .goat-wordmark {{
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: {WHITE};
+        letter-spacing: -0.02em;
+    }}
+
+    .goat-wordmark span {{
+        color: {PURPLE};
+    }}
+
+    .goat-tagline {{
+        font-size: 0.75rem;
         color: {SILVER};
-        letter-spacing: 0.1em;
+        font-weight: 400;
+        letter-spacing: 0.15em;
         text-transform: uppercase;
     }}
 
-    .goat-title {{
-        font-size: 1.3rem;
-        font-weight: 700;
-        color: {SLATE_WHITE};
-        letter-spacing: 0.02em;
-    }}
-
-    .goat-title span {{
-        color: {ACCENT_GOLD};
-    }}
-
-    .goat-subtitle {{
-        font-size: 0.8rem;
+    .drop-zone-label {{
         color: {SILVER};
-        font-weight: 400;
-        margin-top: 2px;
+        font-size: 0.7rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        margin-bottom: 0.4rem;
     }}
 
-    .section-header {{
-        color: {SLATE_WHITE};
-        font-size: 1.1rem;
-        font-weight: 700;
-        letter-spacing: 0.02em;
-        margin-bottom: 0.5rem;
-        padding-bottom: 0.4rem;
-        border-bottom: 1px solid {BORDER};
+    div[data-testid="stFileUploader"] {{
+        background: linear-gradient(135deg, rgba(97,0,255,0.08), rgba(97,0,255,0.02));
+        border: 2px dashed {PURPLE};
+        border-radius: 14px;
+        padding: 1rem;
+    }}
+
+    [data-testid="stFileUploaderDropzone"] {{
+        background-color: transparent;
+    }}
+
+    .stTextArea textarea {{
+        background-color: {CARD_BG} !important;
+        border: 1px solid {BORDER} !important;
+        border-radius: 10px !important;
+        color: {WHITE} !important;
+        font-family: 'Inter', sans-serif !important;
+        font-size: 0.9rem !important;
+    }}
+
+    .stTextArea textarea:focus {{
+        border-color: {PURPLE} !important;
+        box-shadow: 0 0 0 1px {PURPLE} !important;
     }}
 
     .signal-card {{
-        background: linear-gradient(135deg, {CARD_BG} 0%, #001230 100%);
+        background: {CARD_BG};
         border: 1px solid {BORDER};
-        border-radius: 10px;
-        padding: 1.2rem;
-        margin-bottom: 0.8rem;
+        border-radius: 12px;
+        padding: 1.1rem 1.2rem;
+        margin-bottom: 0.7rem;
         position: relative;
+        transition: border-color 0.2s;
     }}
 
-    .signal-card.priority-high {{
-        border-left: 4px solid {ACCENT_RED};
+    .signal-card:hover {{
+        border-color: {PURPLE};
     }}
 
-    .signal-card.priority-med {{
-        border-left: 4px solid {ACCENT_GOLD};
+    .signal-weight {{
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        font-size: 1.6rem;
+        font-weight: 900;
+        color: {PURPLE};
+        opacity: 0.3;
+        line-height: 1;
     }}
 
-    .signal-card.priority-low {{
-        border-left: 4px solid {ACCENT_GREEN};
-    }}
-
-    .signal-silo {{
-        font-size: 0.65rem;
+    .signal-task {{
+        color: {WHITE};
+        font-size: 1rem;
         font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.1em;
-        padding: 0.2rem 0.6rem;
-        border-radius: 4px;
-        display: inline-block;
+        margin-bottom: 0.3rem;
+        padding-right: 2.5rem;
+    }}
+
+    .signal-why {{
+        color: {SILVER};
+        font-size: 0.85rem;
+        font-weight: 400;
+        line-height: 1.5;
         margin-bottom: 0.5rem;
     }}
 
-    .silo-labor {{
-        background-color: rgba(156, 39, 176, 0.2);
-        color: #CE93D8;
-        border: 1px solid rgba(156, 39, 176, 0.4);
-    }}
-
-    .silo-finance {{
-        background-color: rgba(212, 168, 67, 0.2);
-        color: {ACCENT_GOLD};
-        border: 1px solid rgba(212, 168, 67, 0.4);
-    }}
-
-    .silo-hr {{
-        background-color: rgba(46, 196, 182, 0.2);
-        color: {ACCENT_GREEN};
-        border: 1px solid rgba(46, 196, 182, 0.4);
-    }}
-
-    .silo-service {{
-        background-color: rgba(66, 133, 244, 0.2);
-        color: #64B5F6;
-        border: 1px solid rgba(66, 133, 244, 0.4);
-    }}
-
-    .silo-cross {{
-        background-color: rgba(230, 57, 70, 0.2);
-        color: {ACCENT_RED};
-        border: 1px solid rgba(230, 57, 70, 0.4);
-    }}
-
-    .signal-finding {{
-        color: {SLATE_WHITE};
-        font-size: 0.95rem;
-        font-weight: 400;
-        line-height: 1.6;
-        margin-bottom: 0.6rem;
-    }}
-
-    .priority-score {{
-        display: inline-flex;
-        align-items: center;
-        gap: 4px;
-        font-size: 0.75rem;
+    .xp-tag {{
+        display: inline-block;
+        font-size: 0.65rem;
         font-weight: 700;
-        padding: 0.15rem 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        padding: 0.15rem 0.55rem;
         border-radius: 4px;
-        margin-right: 0.5rem;
     }}
 
-    .priority-score-high {{
-        background-color: rgba(230, 57, 70, 0.2);
-        color: {ACCENT_RED};
+    .xp-small {{
+        background-color: rgba(83, 198, 96, 0.15);
+        color: {NEON_GREEN};
+        border: 1px solid rgba(83, 198, 96, 0.3);
     }}
 
-    .priority-score-med {{
-        background-color: rgba(212, 168, 67, 0.2);
-        color: {ACCENT_GOLD};
+    .xp-medium {{
+        background-color: rgba(97, 0, 255, 0.15);
+        color: #B388FF;
+        border: 1px solid rgba(97, 0, 255, 0.3);
     }}
 
-    .priority-score-low {{
-        background-color: rgba(46, 196, 182, 0.2);
-        color: {ACCENT_GREEN};
-    }}
-
-    .next-step {{
-        color: {SILVER};
-        font-size: 0.8rem;
-        font-weight: 500;
-        margin-top: 0.4rem;
-        padding: 0.4rem 0.6rem;
-        background-color: rgba(192, 192, 192, 0.08);
-        border-radius: 6px;
-        border-left: 3px solid {SILVER};
+    .xp-large {{
+        background-color: rgba(255, 171, 0, 0.15);
+        color: #FFD54F;
+        border: 1px solid rgba(255, 171, 0, 0.3);
     }}
 
     .goat-badge {{
         display: inline-flex;
         align-items: center;
-        gap: 4px;
-        font-size: 0.65rem;
-        font-weight: 700;
+        gap: 3px;
+        font-size: 0.6rem;
+        font-weight: 800;
         text-transform: uppercase;
-        letter-spacing: 0.08em;
-        padding: 0.15rem 0.5rem;
-        border-radius: 4px;
-        background: linear-gradient(135deg, {ACCENT_GOLD}, #B8942E);
-        color: {NAVY};
-        margin-left: 0.5rem;
+        letter-spacing: 0.06em;
+        padding: 0.1rem 0.45rem;
+        border-radius: 3px;
+        background: linear-gradient(135deg, {PURPLE}, #4A00CC);
+        color: #FFFFFF;
+        margin-left: 0.4rem;
     }}
 
-    .upload-zone {{
-        background-color: {CARD_BG};
-        border: 2px dashed {BORDER};
-        border-radius: 12px;
-        padding: 1rem;
+    .level-bar-container {{
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: {DARK_SURFACE};
+        border-top: 1px solid {BORDER};
+        padding: 0.6rem 1.5rem;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }}
+
+    .level-badge {{
+        background: linear-gradient(135deg, {PURPLE}, #4A00CC);
+        color: #FFFFFF;
+        font-weight: 800;
+        font-size: 0.85rem;
+        padding: 0.3rem 0.7rem;
+        border-radius: 8px;
+        min-width: 55px;
         text-align: center;
     }}
 
-    .sidebar-history-item {{
-        background-color: rgba(0, 51, 102, 0.5);
+    .xp-bar-outer {{
+        flex: 1;
+        height: 18px;
+        background: #1A1A2E;
+        border-radius: 9px;
+        overflow: hidden;
+        position: relative;
         border: 1px solid {BORDER};
-        border-radius: 8px;
-        padding: 0.6rem 0.8rem;
-        margin-bottom: 0.4rem;
-        cursor: pointer;
     }}
 
-    .sidebar-history-time {{
-        font-size: 0.65rem;
+    .xp-bar-inner {{
+        height: 100%;
+        background: linear-gradient(90deg, {NEON_GREEN}, #3DA64A);
+        border-radius: 9px;
+        transition: width 0.5s ease;
+    }}
+
+    .xp-text {{
         color: {SILVER};
-        opacity: 0.7;
+        font-size: 0.75rem;
+        font-weight: 600;
+        white-space: nowrap;
     }}
 
-    .sidebar-history-label {{
-        font-size: 0.8rem;
-        color: {SLATE_WHITE};
-        font-weight: 500;
+    .stats-row {{
+        display: flex;
+        gap: 0.8rem;
+        margin-bottom: 1rem;
+    }}
+
+    .stat-box {{
+        flex: 1;
+        background: {CARD_BG};
+        border: 1px solid {BORDER};
+        border-radius: 10px;
+        padding: 0.8rem;
+        text-align: center;
+    }}
+
+    .stat-value {{
+        font-size: 1.5rem;
+        font-weight: 800;
+        color: {WHITE};
+    }}
+
+    .stat-label {{
+        font-size: 0.6rem;
+        font-weight: 700;
+        color: {SILVER};
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        margin-top: 0.15rem;
     }}
 
     .stButton > button {{
-        background: linear-gradient(135deg, {ACCENT_GOLD}, #B8942E);
-        color: {NAVY};
+        background: linear-gradient(135deg, {PURPLE}, #4A00CC);
+        color: #FFFFFF;
         border: none;
-        border-radius: 8px;
+        border-radius: 10px;
         padding: 0.6rem 2rem;
         font-weight: 700;
         font-family: 'Inter', sans-serif;
@@ -277,101 +298,76 @@ CUSTOM_CSS = f"""
     }}
 
     .stButton > button:hover {{
-        background: linear-gradient(135deg, #E0B84E, #C8A23A);
-        box-shadow: 0 4px 16px rgba(212, 168, 67, 0.3);
-    }}
-
-    .stDownloadButton > button {{
-        background: transparent;
-        color: {ACCENT_GOLD};
-        border: 1px solid {ACCENT_GOLD};
-        border-radius: 8px;
-        padding: 0.5rem 1.5rem;
-        font-weight: 600;
-        font-family: 'Inter', sans-serif;
-    }}
-
-    .stDownloadButton > button:hover {{
-        background-color: rgba(212, 168, 67, 0.1);
-    }}
-
-    div[data-testid="stFileUploader"] {{
-        background-color: {CARD_BG};
-        border: 2px dashed {BORDER};
-        border-radius: 12px;
-        padding: 1rem;
-    }}
-
-    [data-testid="stFileUploaderDropzone"] {{
-        background-color: {CARD_BG};
-    }}
-
-    .stTextArea textarea {{
-        background-color: {CARD_BG} !important;
-        border: 1px solid {BORDER} !important;
-        border-radius: 10px !important;
-        color: {SLATE_WHITE} !important;
-        font-family: 'Inter', sans-serif !important;
-    }}
-
-    .stTextArea textarea:focus {{
-        border-color: {ACCENT_GOLD} !important;
-        box-shadow: 0 0 0 1px {ACCENT_GOLD} !important;
+        background: linear-gradient(135deg, #7722FF, #5500DD);
+        box-shadow: 0 4px 20px rgba(97, 0, 255, 0.35);
     }}
 
     div[data-testid="stAlert"] {{
         background-color: {CARD_BG};
         border: 1px solid {BORDER};
-        color: {SLATE_WHITE};
-        border-radius: 8px;
+        color: {WHITE};
+        border-radius: 10px;
     }}
 
     .stSpinner > div {{
-        border-top-color: {ACCENT_GOLD} !important;
+        border-top-color: {PURPLE} !important;
     }}
 
-    .metric-row {{
-        display: flex;
-        gap: 1rem;
-        margin-bottom: 1rem;
+    .complete-pulse {{
+        animation: pulse-green 0.6s ease-out;
     }}
 
-    .metric-box {{
-        flex: 1;
-        background: {CARD_BG};
-        border: 1px solid {BORDER};
+    @keyframes pulse-green {{
+        0% {{ box-shadow: 0 0 0 0 rgba(83, 198, 96, 0.6); }}
+        70% {{ box-shadow: 0 0 0 15px rgba(83, 198, 96, 0); }}
+        100% {{ box-shadow: 0 0 0 0 rgba(83, 198, 96, 0); }}
+    }}
+
+    .completed-toast {{
+        background: linear-gradient(135deg, rgba(83,198,96,0.15), rgba(83,198,96,0.05));
+        border: 1px solid rgba(83,198,96,0.3);
         border-radius: 10px;
-        padding: 1rem;
+        padding: 0.8rem 1rem;
+        margin-bottom: 0.8rem;
         text-align: center;
     }}
 
-    .metric-value {{
-        font-size: 1.8rem;
-        font-weight: 800;
-        color: {SLATE_WHITE};
+    .completed-toast-text {{
+        color: {NEON_GREEN};
+        font-size: 0.9rem;
+        font-weight: 700;
     }}
 
-    .metric-label {{
-        font-size: 0.7rem;
-        font-weight: 600;
+    .empty-state {{
+        text-align: center;
+        padding: 3rem 1rem;
         color: {SILVER};
+    }}
+
+    .empty-state-icon {{
+        font-size: 3rem;
+        margin-bottom: 0.5rem;
+        opacity: 0.3;
+    }}
+
+    .empty-state-text {{
+        font-size: 1rem;
+        font-weight: 500;
+        opacity: 0.5;
+    }}
+
+    .section-label {{
+        color: {SILVER};
+        font-size: 0.65rem;
+        font-weight: 700;
         text-transform: uppercase;
-        letter-spacing: 0.08em;
-        margin-top: 0.2rem;
+        letter-spacing: 0.12em;
+        margin-bottom: 0.5rem;
+        margin-top: 0.5rem;
     }}
 
-    .divider {{
-        border: none;
-        border-top: 1px solid {BORDER};
-        margin: 1.2rem 0;
-    }}
-
-    .stMultiSelect > div {{
-        background-color: {CARD_BG} !important;
-    }}
-
-    [data-testid="stCheckbox"] label span {{
-        color: {SLATE_WHITE} !important;
+    .spacer-bottom {{
+        height: 80px;
     }}
 </style>
 """
@@ -379,19 +375,135 @@ CUSTOM_CSS = f"""
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
 
-class SignalCard(BaseModel):
-    silo: str = Field(description="One of: Labor & Union, Finance & Audit, HR & Safety, Service & Logistics, Cross-Departmental")
-    finding: str = Field(description="The specific finding or issue identified")
-    priority_score: int = Field(ge=1, le=10, description="Priority score from 1 (low) to 10 (critical)")
-    suggested_next_step: str = Field(description="Concrete recommended action")
-    is_cross_departmental: bool = Field(default=False, description="True if this finding spans multiple departments")
-    friction_explanation: str = Field(default="", description="If cross-departmental, explain the friction between departments")
+def get_db():
+    return psycopg2.connect(os.environ["DATABASE_URL"])
 
 
-class TriageOutput(BaseModel):
-    signals: list[SignalCard] = Field(description="List of actionable signal cards")
-    executive_summary: str = Field(description="2-3 sentence executive overview of all findings")
-    overall_risk_level: str = Field(description="One of: Critical, High, Moderate, Low")
+def ensure_schema():
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS signals (
+                    id SERIAL PRIMARY KEY,
+                    task_name TEXT NOT NULL,
+                    why TEXT NOT NULL,
+                    xp_reward TEXT NOT NULL DEFAULT 'Medium',
+                    operational_weight REAL NOT NULL DEFAULT 5.0,
+                    completed BOOLEAN NOT NULL DEFAULT FALSE,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    completed_at TIMESTAMP
+                )
+            """)
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS player (
+                    id INTEGER PRIMARY KEY DEFAULT 1,
+                    total_xp INTEGER NOT NULL DEFAULT 0,
+                    level INTEGER NOT NULL DEFAULT 1,
+                    tasks_completed INTEGER NOT NULL DEFAULT 0,
+                    CONSTRAINT single_player CHECK (id = 1)
+                )
+            """)
+            cur.execute("INSERT INTO player (id, total_xp, level, tasks_completed) VALUES (1, 0, 1, 0) ON CONFLICT (id) DO NOTHING")
+            conn.commit()
+    finally:
+        conn.close()
+
+
+try:
+    ensure_schema()
+except Exception:
+    pass
+
+
+def get_player():
+    conn = get_db()
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT * FROM player WHERE id = 1")
+            row = cur.fetchone()
+            if not row:
+                return {"id": 1, "total_xp": 0, "level": 1, "tasks_completed": 0}
+            return dict(row)
+    except Exception:
+        return {"id": 1, "total_xp": 0, "level": 1, "tasks_completed": 0}
+    finally:
+        conn.close()
+
+
+def get_active_signals():
+    conn = get_db()
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT * FROM signals WHERE completed = FALSE ORDER BY operational_weight DESC, created_at ASC")
+            return [dict(r) for r in cur.fetchall()]
+    except Exception:
+        return []
+    finally:
+        conn.close()
+
+
+def complete_signal(signal_id: int):
+    xp_map = {"Small": 25, "Medium": 50, "Large": 100}
+    conn = get_db()
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("""
+                UPDATE signals SET completed = TRUE, completed_at = NOW()
+                WHERE id = %s AND completed = FALSE
+                RETURNING xp_reward
+            """, (signal_id,))
+            row = cur.fetchone()
+            if not row:
+                conn.rollback()
+                return None, 0
+            xp = xp_map.get(row["xp_reward"], 50)
+            cur.execute("""
+                UPDATE player
+                SET total_xp = total_xp + %s,
+                    tasks_completed = tasks_completed + 1,
+                    level = GREATEST(1, (total_xp + %s) / 100 + 1)
+                WHERE id = 1
+            """, (xp, xp))
+            conn.commit()
+            return row["xp_reward"], xp
+    except Exception:
+        conn.rollback()
+        return None, 0
+    finally:
+        conn.close()
+
+
+def save_signals(signals_data: list[dict]):
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            for s in signals_data:
+                cur.execute("SELECT id FROM signals WHERE task_name = %s AND completed = FALSE", (s["task_name"],))
+                existing = cur.fetchone()
+                if existing:
+                    cur.execute("""
+                        UPDATE signals SET why = %s, xp_reward = %s, operational_weight = %s WHERE id = %s
+                    """, (s["why"], s["xp_reward"], s["operational_weight"], existing[0]))
+                else:
+                    cur.execute("""
+                        INSERT INTO signals (task_name, why, xp_reward, operational_weight)
+                        VALUES (%s, %s, %s, %s)
+                    """, (s["task_name"], s["why"], s["xp_reward"], s["operational_weight"]))
+            conn.commit()
+    finally:
+        conn.close()
+
+
+class Signal(BaseModel):
+    task_name: str = Field(description="Clear, distilled task name")
+    why: str = Field(description="One sentence explaining why this matters")
+    xp_reward: str = Field(description="One of: Small, Medium, Large based on complexity")
+    operational_weight: float = Field(ge=0, le=10, description="Priority weight 0-10, higher = more urgent")
+
+
+class GravityOutput(BaseModel):
+    signals: list[Signal] = Field(description="Re-sorted list of all tasks by operational weight descending")
 
 
 def get_openai_client():
@@ -402,93 +514,76 @@ def get_openai_client():
     return OpenAI(api_key=api_key, base_url=base_url)
 
 
-SYSTEM_PROMPT = """You are GOATflow, an elite operational intelligence engine designed for Postmaster-General and Operations Lead level decision-making.
+SYSTEM_PROMPT = """You are the GOATflow Gravity Engine — a dynamic priority system for Postmaster-level operations.
 
-You receive inputs from multiple sources (documents, images, text) and must analyze them COLLECTIVELY to produce actionable operational signals.
+You receive two things:
+1. EXISTING TASKS: The current task list (may be empty).
+2. NEW INPUT: New information from the user (text, document content, or image descriptions).
 
-CATEGORIZE every finding into one of these silos:
-- Labor & Union: Grievance risks, contract deadlines, staffing disputes, union negotiations, overtime issues
-- Finance & Audit: Revenue gaps, 1412 discrepancies, budget impacts, audit findings, financial irregularities
-- HR & Safety: Hiring needs, accident reports, training compliance, OSHA issues, EEO matters
-- Service & Logistics: Mail volume anomalies, delivery SLA breaches, 'Red' unit alerts, vehicle/equipment issues, route optimization
+Your job:
+- Analyze the new input and extract actionable tasks.
+- MERGE any new tasks that overlap with existing ones (don't duplicate).
+- Re-sort the ENTIRE list by 'Operational Weight' (0-10 scale, 10 = most urgent).
+- Assign XP rewards: Small (quick/simple), Medium (moderate effort), Large (complex/high-impact).
 
-CRITICAL REQUIREMENT - Cross-Departmental Friction Detection:
-You MUST identify connections BETWEEN silos. Examples:
-- If HR shows a carrier is out AND logistics shows high volume = "Staffing-to-Volume Crisis"
-- If Finance shows budget cuts AND Labor shows overtime grievances = "Budget-Labor Tension"
-- If Safety shows accidents AND Service shows SLA misses = "Safety-Performance Conflict"
-
-Mark these as silo "Cross-Departmental" with is_cross_departmental=True and explain the friction.
-
-For each finding, assign:
-- priority_score: 1-10 (10 = immediate executive action needed)
-- suggested_next_step: A concrete action (e.g., "Authorize OT", "Escalate to District", "Issue Stand-Up Talk", "File PS Form 1769")
-
-Sort signals by priority_score descending (most urgent first).
-
-Be specific, data-driven, and actionable. This is for federal/corporate operations - maintain that standard."""
+Rules:
+- Task names should be clear, action-oriented, and distilled from noise.
+- The 'why' should be a single sentence of context.
+- Be specific and operational — this is for a Postmaster running a facility.
+- Return ALL tasks (existing + new, merged where appropriate).
+- Sort by operational_weight descending."""
 
 
 def extract_pdf_text(file_bytes: bytes) -> str:
     reader = PdfReader(io.BytesIO(file_bytes))
-    text_parts = []
+    parts = []
     for page in reader.pages:
-        page_text = page.extract_text()
-        if page_text:
-            text_parts.append(page_text)
-    return "\n".join(text_parts)
+        t = page.extract_text()
+        if t:
+            parts.append(t)
+    return "\n".join(parts)
 
 
-def build_messages(files_data: list[dict], extra_text: str) -> list[dict]:
-    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+def run_gravity_engine(existing_signals: list[dict], files_data: list[dict], extra_text: str) -> GravityOutput:
+    client = get_openai_client()
 
-    user_content = []
+    existing_desc = ""
+    if existing_signals:
+        lines = []
+        for s in existing_signals:
+            lines.append(f"- [{s['operational_weight']:.1f}] {s['task_name']}: {s['why']} (XP: {s['xp_reward']})")
+        existing_desc = "EXISTING TASKS:\n" + "\n".join(lines)
+    else:
+        existing_desc = "EXISTING TASKS: (none)"
 
+    new_input_parts = []
     if extra_text.strip():
-        user_content.append({
-            "type": "text",
-            "text": f"[DIRECT TEXT INPUT]\n{extra_text}"
-        })
-
+        new_input_parts.append(f"[TEXT INPUT]\n{extra_text}")
     for fd in files_data:
         if fd["type"] == "text":
-            user_content.append({
-                "type": "text",
-                "text": f"[FILE: {fd['name']}]\n{fd['content']}"
-            })
-        elif fd["type"] == "image":
-            user_content.append({
-                "type": "text",
-                "text": f"[IMAGE FILE: {fd['name']}] — Analyze this image for operational signals."
-            })
-            user_content.append({
-                "type": "image_url",
-                "image_url": {"url": f"data:{fd['mime']};base64,{fd['b64']}"}
-            })
+            new_input_parts.append(f"[FILE: {fd['name']}]\n{fd['content']}")
 
-    if not user_content:
-        user_content.append({"type": "text", "text": "No input provided."})
+    new_input = "\n\n".join(new_input_parts) if new_input_parts else "(no text input)"
 
-    user_content.append({
-        "type": "text",
-        "text": "Analyze ALL inputs collectively. Identify cross-departmental friction. Return structured actionable signals."
-    })
+    user_content = []
+    user_content.append({"type": "text", "text": f"{existing_desc}\n\nNEW INPUT:\n{new_input}\n\nMerge, re-prioritize, and return the full sorted task list."})
 
-    messages.append({"role": "user", "content": user_content})
-    return messages
+    for fd in files_data:
+        if fd["type"] == "image":
+            user_content.append({"type": "text", "text": f"[IMAGE: {fd['name']}] — Extract tasks from this image."})
+            user_content.append({"type": "image_url", "image_url": {"url": f"data:{fd['mime']};base64,{fd['b64']}"}})
 
-
-def run_analysis(files_data: list[dict], extra_text: str) -> TriageOutput:
-    client = get_openai_client()
-    messages = build_messages(files_data, extra_text)
     response = client.beta.chat.completions.parse(
         model="gpt-4o-mini",
-        messages=messages,
-        response_format=TriageOutput,
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": user_content},
+        ],
+        response_format=GravityOutput,
     )
     parsed = response.choices[0].message.parsed
     if parsed is None:
-        raise RuntimeError("Analysis could not be completed. Please try again.")
+        raise RuntimeError("Analysis could not be completed.")
     return parsed
 
 
@@ -496,370 +591,168 @@ def safe(text: str) -> str:
     return html.escape(text)
 
 
-def get_silo_class(silo: str) -> str:
-    s = silo.lower()
-    if "labor" in s or "union" in s:
-        return "silo-labor"
-    elif "finance" in s or "audit" in s:
-        return "silo-finance"
-    elif "hr" in s or "safety" in s:
-        return "silo-hr"
-    elif "service" in s or "logistics" in s:
-        return "silo-service"
-    elif "cross" in s:
-        return "silo-cross"
-    return "silo-service"
-
-
-def get_priority_class(score: int) -> tuple[str, str]:
-    if score >= 7:
-        return "priority-high", "priority-score-high"
-    elif score >= 4:
-        return "priority-med", "priority-score-med"
-    return "priority-low", "priority-score-low"
-
-
-def render_signal_card(signal: SignalCard):
-    card_class, score_class = get_priority_class(signal.priority_score)
-    silo_class = get_silo_class(signal.silo)
-
-    goat_badge = ""
-    if signal.priority_score >= 8:
-        goat_badge = '<span class="goat-badge">🐐 GOAT-Verified</span>'
-
-    friction_html = ""
-    if signal.is_cross_departmental and signal.friction_explanation:
-        friction_html = f'''<div style="margin-top:0.4rem;padding:0.3rem 0.6rem;background:rgba(230,57,70,0.08);border-radius:4px;font-size:0.8rem;color:#E63946;">
-            ⚡ <strong>Friction:</strong> {safe(signal.friction_explanation)}
-        </div>'''
-
-    st.markdown(f'''
-    <div class="signal-card {card_class}">
-        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.3rem;">
-            <div>
-                <span class="signal-silo {silo_class}">{safe(signal.silo)}</span>
-                {goat_badge}
-            </div>
-            <span class="priority-score {score_class}">■ PRIORITY {signal.priority_score}/10</span>
-        </div>
-        <div class="signal-finding">{safe(signal.finding)}</div>
-        {friction_html}
-        <div class="next-step">→ {safe(signal.suggested_next_step)}</div>
-    </div>
-    ''', unsafe_allow_html=True)
-
-
-def result_to_csv(output: TriageOutput) -> str:
-    buf = io.StringIO()
-    writer = csv.writer(buf)
-    writer.writerow(["Silo", "Finding", "Priority Score", "Suggested Next Step", "Cross-Departmental", "Friction"])
-    for s in output.signals:
-        writer.writerow([
-            s.silo, s.finding, s.priority_score,
-            s.suggested_next_step, s.is_cross_departmental,
-            s.friction_explanation
-        ])
-    writer.writerow([])
-    writer.writerow(["Executive Summary", output.executive_summary])
-    writer.writerow(["Overall Risk Level", output.overall_risk_level])
-    return buf.getvalue()
-
-
-def sanitize_for_pdf(text: str) -> str:
-    replacements = {
-        "\u2018": "'", "\u2019": "'", "\u201c": '"', "\u201d": '"',
-        "\u2013": "-", "\u2014": "--", "\u2026": "...", "\u2022": "-",
-        "\u00a0": " ", "\u200b": "",
-    }
-    for k, v in replacements.items():
-        text = text.replace(k, v)
-    return text.encode("latin-1", errors="replace").decode("latin-1")
-
-
-def result_to_pdf(output: TriageOutput) -> bytes:
-    pdf = FPDF()
-    pdf.set_auto_page_break(auto=True, margin=20)
-    pdf.set_left_margin(15)
-    pdf.set_right_margin(15)
-    pdf.add_page()
-
-    w = pdf.w - pdf.l_margin - pdf.r_margin
-
-    pdf.set_fill_color(0, 33, 71)
-    pdf.rect(0, 0, 210, 297, 'F')
-
-    pdf.set_font("Helvetica", "B", 18)
-    pdf.set_text_color(212, 168, 67)
-    pdf.cell(w, 12, "GOATflow | Operations Signal Report", ln=True)
-    pdf.set_font("Helvetica", "", 9)
-    pdf.set_text_color(192, 192, 192)
-    pdf.cell(w, 6, f"Generated: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')} | Classification: OPERATIONAL", ln=True)
-    pdf.ln(4)
-
-    pdf.set_draw_color(0, 51, 102)
-    pdf.line(15, pdf.get_y(), 195, pdf.get_y())
-    pdf.ln(4)
-
-    pdf.set_font("Helvetica", "B", 11)
-    pdf.set_text_color(240, 242, 245)
-    pdf.cell(w, 8, "EXECUTIVE SUMMARY", ln=True)
-    pdf.set_font("Helvetica", "", 9)
-    pdf.set_text_color(192, 192, 192)
-    pdf.multi_cell(w, 5, sanitize_for_pdf(output.executive_summary))
-    pdf.ln(2)
-    pdf.set_font("Helvetica", "B", 9)
-    pdf.set_text_color(212, 168, 67)
-    pdf.cell(w, 6, f"Overall Risk Level: {output.overall_risk_level}", ln=True)
-    pdf.ln(4)
-
-    pdf.set_draw_color(0, 51, 102)
-    pdf.line(15, pdf.get_y(), 195, pdf.get_y())
-    pdf.ln(4)
-
-    pdf.set_font("Helvetica", "B", 11)
-    pdf.set_text_color(240, 242, 245)
-    pdf.cell(w, 8, "ACTIONABLE SIGNALS", ln=True)
-    pdf.ln(2)
-
-    for i, s in enumerate(output.signals, 1):
-        if pdf.get_y() > 245:
-            pdf.add_page()
-            pdf.set_fill_color(0, 33, 71)
-            pdf.rect(0, 0, 210, 297, 'F')
-
-        badge = " [GOAT-VERIFIED]" if s.priority_score >= 8 else ""
-        pdf.set_font("Helvetica", "B", 9)
-        pdf.set_text_color(212, 168, 67)
-        pdf.cell(w, 6, sanitize_for_pdf(f"Signal #{i} | {s.silo} | Priority: {s.priority_score}/10{badge}"), ln=True)
-
-        pdf.set_font("Helvetica", "", 9)
-        pdf.set_text_color(240, 242, 245)
-        pdf.multi_cell(w, 5, sanitize_for_pdf(s.finding))
-
-        if s.is_cross_departmental and s.friction_explanation:
-            pdf.set_text_color(230, 57, 70)
-            pdf.set_font("Helvetica", "I", 8)
-            pdf.multi_cell(w, 5, sanitize_for_pdf(f"Cross-Dept Friction: {s.friction_explanation}"))
-
-        pdf.set_text_color(192, 192, 192)
-        pdf.set_font("Helvetica", "", 8)
-        pdf.multi_cell(w, 5, sanitize_for_pdf(f"Next Step: {s.suggested_next_step}"))
-        pdf.ln(3)
-
-    return bytes(pdf.output())
-
-
-if "triage_history" not in st.session_state:
-    st.session_state["triage_history"] = []
-if "active_result" not in st.session_state:
-    st.session_state["active_result"] = None
-if "active_filters" not in st.session_state:
-    st.session_state["active_filters"] = []
-
-with st.sidebar:
-    st.markdown(f'''
-    <div style="padding:0.5rem 0 1rem 0;">
-        <div style="display:flex;align-items:center;gap:10px;margin-bottom:0.8rem;">
-            <div style="width:36px;height:36px;background:linear-gradient(135deg,{ACCENT_GOLD},#B8942E);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;font-weight:800;color:{NAVY};">G</div>
-            <div>
-                <div style="font-size:0.75rem;font-weight:600;color:{SILVER};letter-spacing:0.1em;">WORKGOAT</div>
-            </div>
-        </div>
-    </div>
-    ''', unsafe_allow_html=True)
-
-    st.markdown(f'<div style="font-size:0.7rem;font-weight:700;color:{SILVER};text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.5rem;">Departmental Filter</div>', unsafe_allow_html=True)
-
-    all_silos = ["Labor & Union", "Finance & Audit", "HR & Safety", "Service & Logistics", "Cross-Departmental"]
-    active_filters = []
-    for silo in all_silos:
-        if st.checkbox(silo, value=True, key=f"filter_{silo}"):
-            active_filters.append(silo)
-    st.session_state["active_filters"] = active_filters
-
-    st.markdown('<hr style="border-color:#003366;margin:1rem 0;">', unsafe_allow_html=True)
-
-    st.markdown(f'<div style="font-size:0.7rem;font-weight:700;color:{SILVER};text-transform:uppercase;letter-spacing:0.1em;margin-bottom:0.5rem;">Recent Triages</div>', unsafe_allow_html=True)
-
-    if st.session_state["triage_history"]:
-        for idx, entry in enumerate(reversed(st.session_state["triage_history"][-10:])):
-            risk_color = ACCENT_RED if entry["risk"] == "Critical" else ACCENT_GOLD if entry["risk"] == "High" else ACCENT_GREEN
-            st.markdown(f'''
-            <div class="sidebar-history-item">
-                <div class="sidebar-history-time">{entry["time"]}</div>
-                <div class="sidebar-history-label">{safe(entry["label"])}</div>
-                <div style="font-size:0.65rem;color:{risk_color};font-weight:600;margin-top:2px;">{entry["risk"]} — {entry["count"]} signals</div>
-            </div>
-            ''', unsafe_allow_html=True)
-    else:
-        st.markdown(f'<div style="font-size:0.8rem;color:{SILVER};opacity:0.5;padding:0.5rem;">No triages yet</div>', unsafe_allow_html=True)
-
-
 st.markdown(f'''
 <div class="goat-header">
-    <div class="goat-logo">
-        <div class="goat-logo-icon">G</div>
-        <div>
-            <div class="goat-logo-text">WorkGOAT</div>
-        </div>
+    <div class="goat-brand">
+        <div class="goat-icon">G</div>
+        <div class="goat-wordmark">Work<span>GOAT</span></div>
     </div>
-    <div style="text-align:right;">
-        <div class="goat-title"><span>GOATflow</span> | Operations Signal</div>
-        <div class="goat-subtitle">Operational Intelligence Dashboard</div>
-    </div>
+    <div class="goat-tagline">Dynamic Priority Engine</div>
 </div>
 ''', unsafe_allow_html=True)
 
-st.markdown('<div class="section-header">📥 Intelligence Intake</div>', unsafe_allow_html=True)
+st.markdown('<div class="drop-zone-label">🎯 Gravity Drop Zone — Add Intel</div>', unsafe_allow_html=True)
 
-col_upload, col_text = st.columns([1, 1])
+col_files, col_text = st.columns([1, 1])
 
-with col_upload:
+with col_files:
     uploaded_files = st.file_uploader(
-        "Drop files here — PDFs, Images, or Text",
+        "Drop files here",
         type=["pdf", "png", "jpg", "jpeg", "webp", "gif", "txt", "csv"],
         accept_multiple_files=True,
-        help="Supports: PDF, PNG, JPG, WebP, GIF, TXT, CSV",
+        help="Photos, PDFs, screenshots, text files",
+        label_visibility="collapsed",
     )
 
 with col_text:
     extra_text = st.text_area(
-        "Or paste text directly",
-        height=170,
-        placeholder="Paste emails, memos, reports, grievance notes, audit findings...",
+        "Paste text",
+        height=130,
+        placeholder="Paste emails, post-it notes, memos, quick tasks...",
+        label_visibility="collapsed",
     )
 
-analyze_btn = st.button("🔍 Run Triage Analysis", use_container_width=True, key="run_triage")
+drop_btn = st.button("⚡ Drop Into Gravity Engine", use_container_width=True, key="drop_btn")
 
-if analyze_btn:
+if drop_btn:
     has_files = uploaded_files and len(uploaded_files) > 0
     has_text = extra_text and extra_text.strip()
 
     if not has_files and not has_text:
-        st.warning("Please upload files or paste text to analyze.")
+        st.warning("Drop some files or paste text to feed the engine.")
     else:
-        with st.spinner("GOATflow is analyzing your inputs..."):
+        with st.spinner("Gravity Engine processing..."):
             try:
                 files_data = []
                 if uploaded_files:
                     for f in uploaded_files:
                         file_bytes = f.getvalue()
-                        fname = f.name or "unknown"
+                        fname = f.name or "file"
                         ftype = f.type or ""
 
                         if fname.lower().endswith(".pdf") or "pdf" in ftype:
                             text_content = extract_pdf_text(file_bytes)
-                            if text_content.strip():
-                                files_data.append({"type": "text", "name": fname, "content": text_content})
-                            else:
-                                files_data.append({"type": "text", "name": fname, "content": "[PDF could not be read — may be scanned/image-based]"})
-
+                            files_data.append({"type": "text", "name": fname, "content": text_content if text_content.strip() else "[PDF unreadable]"})
                         elif any(fname.lower().endswith(ext) for ext in [".png", ".jpg", ".jpeg", ".webp", ".gif"]) or "image" in ftype:
                             b64 = base64.b64encode(file_bytes).decode("utf-8")
                             mime = ftype if ftype else "image/png"
                             files_data.append({"type": "image", "name": fname, "b64": b64, "mime": mime})
-
                         else:
                             try:
                                 text_content = file_bytes.decode("utf-8", errors="replace")
                                 files_data.append({"type": "text", "name": fname, "content": text_content})
                             except Exception:
-                                files_data.append({"type": "text", "name": fname, "content": "[File could not be read]"})
+                                files_data.append({"type": "text", "name": fname, "content": "[unreadable]"})
 
-                result = run_analysis(files_data, extra_text or "")
-                st.session_state["active_result"] = result
+                existing = get_active_signals()
+                result = run_gravity_engine(existing, files_data, extra_text or "")
 
-                file_label = ""
-                if has_files:
-                    names = [f.name for f in uploaded_files[:3]]
-                    file_label = ", ".join(names)
-                    if len(uploaded_files) > 3:
-                        file_label += f" +{len(uploaded_files) - 3} more"
-                elif has_text:
-                    file_label = extra_text[:50].strip() + "..."
+                save_signals([s.model_dump() for s in result.signals])
+                st.session_state["just_dropped"] = True
+                st.rerun()
+            except Exception:
+                st.error("The Gravity Engine hit a snag. Please try again.")
 
-                st.session_state["triage_history"].append({
-                    "time": datetime.datetime.now().strftime("%H:%M"),
-                    "label": file_label,
-                    "risk": result.overall_risk_level,
-                    "count": len(result.signals),
-                })
+if st.session_state.get("just_dropped"):
+    st.markdown('''
+    <div class="completed-toast">
+        <div class="completed-toast-text">⚡ Gravity Engine complete — tasks re-prioritized</div>
+    </div>
+    ''', unsafe_allow_html=True)
+    st.session_state["just_dropped"] = False
 
+if st.session_state.get("just_completed_task"):
+    task_name, xp_gained = st.session_state["just_completed_task"]
+    st.markdown(f'''
+    <div class="completed-toast complete-pulse">
+        <div class="completed-toast-text">✅ Task Complete! +{xp_gained} XP — {safe(task_name)}</div>
+    </div>
+    ''', unsafe_allow_html=True)
+    st.session_state["just_completed_task"] = None
+
+signals = get_active_signals()
+player = get_player()
+
+active_count = len(signals)
+top_weight = f"{signals[0]['operational_weight']:.1f}" if signals else "—"
+
+st.markdown(f'''
+<div class="stats-row">
+    <div class="stat-box">
+        <div class="stat-value">{active_count}</div>
+        <div class="stat-label">Active Signals</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-value">{top_weight}</div>
+        <div class="stat-label">Top Weight</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-value">{player["tasks_completed"]}</div>
+        <div class="stat-label">Completed</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-value" style="color:{NEON_GREEN};">{player["total_xp"]}</div>
+        <div class="stat-label">Total XP</div>
+    </div>
+</div>
+''', unsafe_allow_html=True)
+
+st.markdown('<div class="section-label">📡 Signal Queue</div>', unsafe_allow_html=True)
+
+if not signals:
+    st.markdown('''
+    <div class="empty-state">
+        <div class="empty-state-icon">🐐</div>
+        <div class="empty-state-text">No active signals. Drop intel into the Gravity Zone above.</div>
+    </div>
+    ''', unsafe_allow_html=True)
+else:
+    for sig in signals:
+        xp_class = f"xp-{sig['xp_reward'].lower()}" if sig['xp_reward'].lower() in ['small', 'medium', 'large'] else "xp-medium"
+        xp_map = {"Small": "+25 XP", "Medium": "+50 XP", "Large": "+100 XP"}
+        xp_label = xp_map.get(sig['xp_reward'], "+50 XP")
+        weight = sig['operational_weight']
+
+        goat_badge = ""
+        if weight >= 8.0:
+            goat_badge = '<span class="goat-badge">🐐 GOAT</span>'
+
+        st.markdown(f'''
+        <div class="signal-card">
+            <div class="signal-weight">{weight:.0f}</div>
+            <div class="signal-task">{safe(sig["task_name"])}{goat_badge}</div>
+            <div class="signal-why">{safe(sig["why"])}</div>
+            <span class="xp-tag {xp_class}">{xp_label} — {sig["xp_reward"]}</span>
+        </div>
+        ''', unsafe_allow_html=True)
+
+        if st.button(f"✅ Complete", key=f"complete_{sig['id']}", use_container_width=True):
+            reward, xp = complete_signal(sig['id'])
+            if reward:
+                st.session_state["just_completed_task"] = (sig['task_name'], xp)
                 st.rerun()
 
-            except Exception:
-                st.error("Analysis failed. Please check your inputs and try again.")
+st.markdown('<div class="spacer-bottom"></div>', unsafe_allow_html=True)
 
-if st.session_state["active_result"]:
-    result = st.session_state["active_result"]
+xp_in_level = player["total_xp"] % 100
+xp_pct = min(xp_in_level, 100)
 
-    st.markdown('<hr class="divider">', unsafe_allow_html=True)
-
-    risk_color = ACCENT_RED if result.overall_risk_level == "Critical" else ACCENT_GOLD if result.overall_risk_level == "High" else ACCENT_GREEN
-    total_signals = len(result.signals)
-    cross_dept = sum(1 for s in result.signals if s.is_cross_departmental)
-    max_priority = max((s.priority_score for s in result.signals), default=0)
-
-    st.markdown(f'''
-    <div class="metric-row">
-        <div class="metric-box">
-            <div class="metric-value" style="color:{risk_color};">{safe(result.overall_risk_level)}</div>
-            <div class="metric-label">Risk Level</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-value">{total_signals}</div>
-            <div class="metric-label">Signals Detected</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-value" style="color:{ACCENT_RED if cross_dept > 0 else ACCENT_GREEN};">{cross_dept}</div>
-            <div class="metric-label">Cross-Dept Frictions</div>
-        </div>
-        <div class="metric-box">
-            <div class="metric-value" style="color:{ACCENT_RED if max_priority >= 7 else ACCENT_GOLD};">{max_priority}/10</div>
-            <div class="metric-label">Peak Priority</div>
-        </div>
+st.markdown(f'''
+<div class="level-bar-container">
+    <div class="level-badge">LVL {player["level"]}</div>
+    <div class="xp-bar-outer">
+        <div class="xp-bar-inner" style="width:{xp_pct}%;"></div>
     </div>
-    ''', unsafe_allow_html=True)
-
-    st.markdown(f'''
-    <div class="signal-card" style="border-left:4px solid {ACCENT_GOLD};">
-        <div class="signal-silo silo-finance" style="margin-bottom:0.3rem;">Executive Summary</div>
-        <div class="signal-finding">{safe(result.executive_summary)}</div>
-    </div>
-    ''', unsafe_allow_html=True)
-
-    st.markdown('<div class="section-header">📡 Actionable Signals</div>', unsafe_allow_html=True)
-
-    active_filters = st.session_state.get("active_filters", all_silos)
-
-    filtered = [s for s in result.signals if any(af.lower() in s.silo.lower() for af in active_filters)]
-    filtered.sort(key=lambda x: x.priority_score, reverse=True)
-
-    if not filtered:
-        st.info("No signals match your current department filters.")
-    else:
-        for signal in filtered:
-            render_signal_card(signal)
-
-    st.markdown('<hr class="divider">', unsafe_allow_html=True)
-    st.markdown('<div class="section-header">📤 Export Triage</div>', unsafe_allow_html=True)
-
-    col_csv, col_pdf = st.columns(2)
-    with col_csv:
-        csv_data = result_to_csv(result)
-        st.download_button(
-            label="Export as CSV",
-            data=csv_data,
-            file_name=f"goatflow_triage_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.csv",
-            mime="text/csv",
-            use_container_width=True,
-        )
-    with col_pdf:
-        pdf_data = result_to_pdf(result)
-        st.download_button(
-            label="Export as PDF",
-            data=pdf_data,
-            file_name=f"goatflow_triage_{datetime.datetime.now().strftime('%Y%m%d_%H%M')}.pdf",
-            mime="application/pdf",
-            use_container_width=True,
-        )
+    <div class="xp-text">{xp_in_level}/100 XP</div>
+</div>
+''', unsafe_allow_html=True)

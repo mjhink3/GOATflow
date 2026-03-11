@@ -1,33 +1,38 @@
-# GOATflow — Operations Intelligence Dashboard
+# GOATflow — Dynamic Priority Engine
 
-AI-powered operational intelligence dashboard for Postmaster/Operations Lead level decision-making.
+AI-powered single-page priority dashboard for Postmaster-level operations with gamification.
 
 ## Overview
-Users upload multiple files (PDFs, images, text) or paste text. GPT-4o-mini analyzes all inputs collectively and categorizes findings into operational silos: Labor & Union, Finance & Audit, HR & Safety, Service & Logistics. The AI also detects cross-departmental friction between silos.
+Users drop files (PDFs, images, text) or paste text into the Gravity Zone. GPT-4o-mini analyzes all inputs alongside existing tasks, merges related items, and re-sorts by Operational Weight. Tasks persist in Postgres. Completing tasks earns XP toward a global level.
 
 ## Architecture
-- **Framework**: Streamlit (Python), wide layout
+- **Framework**: Streamlit (Python), centered layout, single-page
 - **AI**: OpenAI GPT-4o-mini via Replit AI Integrations (structured output with Pydantic)
-- **PDF Parsing**: PyPDF2 for text extraction from uploaded PDFs
-- **PDF Export**: fpdf2 for generating branded PDF reports
-- **Styling**: Custom CSS for Executive Dark Mode (Navy #002147, Silver #C0C0C0, Slate White)
+- **Database**: PostgreSQL (Replit built-in) for persistent signals and XP
+- **PDF Parsing**: PyPDF2
+
+## Database Schema
+- **signals**: id, task_name, why, xp_reward, operational_weight, completed, created_at, completed_at
+- **player**: id (always 1), total_xp, level, tasks_completed
 
 ## Key Files
-- `app.py` — Main application (UI, AI logic, PDF/CSV export)
+- `app.py` — Full application (UI, AI, DB logic)
 - `.streamlit/config.toml` — Streamlit server config (port 5000)
 
 ## Features
-- Multi-file upload (PDF, images, text files) with simultaneous analysis
-- Structured output: Signal cards with Priority Score (1-10), Suggested Next Steps
-- Cross-Departmental Friction detection
-- GOAT-Verified badge on priority >= 8 signals
-- Sidebar: Departmental filter toggles, Recent Triages history
-- Export: CSV and PDF with branded formatting
+- Multi-file drop zone (PDFs, images, text, screenshots)
+- Gravity Engine: merges and re-sorts tasks by operational weight
+- Signal cards with task name, why, XP reward, operational weight
+- Complete button with XP toast animation
+- Persistent global XP bar and level system (25/50/100 XP per task)
+- GOAT badge on weight >= 8 signals
+- Mobile-responsive layout
 
 ## Dependencies
-- streamlit, openai, PyPDF2, fpdf2
+- streamlit, openai, PyPDF2, fpdf2, psycopg2-binary
 
 ## Environment Variables
+- `DATABASE_URL` — PostgreSQL connection (set by Replit)
 - `AI_INTEGRATIONS_OPENAI_BASE_URL` — OpenAI base URL (set by Replit AI Integrations)
 - `AI_INTEGRATIONS_OPENAI_API_KEY` — OpenAI API key (set by Replit AI Integrations)
 
