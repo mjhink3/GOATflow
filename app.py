@@ -14,7 +14,7 @@ st.set_page_config(
     page_title="GOATflow | Prioritize. Optimize. Execute.",
     page_icon="🐐",
     layout="centered",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="expanded",
 )
 
 PURPLE = "#6100ff"
@@ -85,7 +85,7 @@ CUSTOM_CSS = f"""
     }}
 
     .goat-header img {{
-        height: 90px;
+        height: 160px;
         margin-bottom: 0;
     }}
 
@@ -474,6 +474,58 @@ CUSTOM_CSS = f"""
         0% {{ opacity: 0; }}
         100% {{ opacity: 1; }}
     }}
+
+    .directive-badge {{
+        display: inline-flex;
+        align-items: center;
+        gap: 3px;
+        font-size: 0.6rem;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        padding: 0.1rem 0.45rem;
+        border-radius: 3px;
+        background: linear-gradient(135deg, rgba(255, 171, 0, 0.2), rgba(255, 171, 0, 0.1));
+        color: #FFD54F;
+        border: 1px solid rgba(255, 171, 0, 0.3);
+        margin-left: 0.4rem;
+    }}
+
+    .quick-script {{
+        background: {CARD_BG};
+        border: 1px solid {BORDER};
+        border-radius: 8px;
+        padding: 0.6rem 0.8rem;
+        margin-bottom: 0.5rem;
+        font-size: 0.78rem;
+        color: {SILVER};
+        line-height: 1.45;
+        cursor: pointer;
+        transition: border-color 0.2s;
+    }}
+
+    .quick-script:hover {{
+        border-color: {PURPLE};
+    }}
+
+    .quick-script-label {{
+        font-size: 0.6rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: {NEON_VIOLET};
+        margin-bottom: 0.15rem;
+    }}
+
+    .sidebar-section-label {{
+        color: {SILVER};
+        font-size: 0.65rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+        margin-bottom: 0.5rem;
+        margin-top: 1rem;
+    }}
 </style>
 """
 
@@ -496,10 +548,17 @@ def ensure_schema():
                     xp_reward TEXT NOT NULL DEFAULT 'Standard',
                     operational_weight REAL NOT NULL DEFAULT 5.0,
                     completed BOOLEAN NOT NULL DEFAULT FALSE,
+                    directive_applied BOOLEAN NOT NULL DEFAULT FALSE,
                     created_at TIMESTAMP DEFAULT NOW(),
                     completed_at TIMESTAMP
                 )
             """)
+            cur.execute("""
+                SELECT column_name FROM information_schema.columns
+                WHERE table_name = 'signals' AND column_name = 'directive_applied'
+            """)
+            if not cur.fetchone():
+                cur.execute("ALTER TABLE signals ADD COLUMN directive_applied BOOLEAN NOT NULL DEFAULT FALSE")
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS player (
                     id INTEGER PRIMARY KEY DEFAULT 1,
@@ -510,6 +569,14 @@ def ensure_schema():
                 )
             """)
             cur.execute("INSERT INTO player (id, total_xp, level, tasks_completed) VALUES (1, 0, 1, 0) ON CONFLICT (id) DO NOTHING")
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS directives (
+                    id INTEGER PRIMARY KEY DEFAULT 1,
+                    rules_text TEXT NOT NULL DEFAULT '',
+                    CONSTRAINT single_directives CHECK (id = 1)
+                )
+            """)
+            cur.execute("INSERT INTO directives (id, rules_text) VALUES (1, '') ON CONFLICT (id) DO NOTHING")
             conn.commit()
     finally:
         conn.close()
@@ -585,22 +652,48 @@ def complete_signal(signal_id: int):
         conn.close()
 
 
+def get_directives():
+    conn = get_db()
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT rules_text FROM directives WHERE id = 1")
+            row = cur.fetchone()
+            return row["rules_text"] if row else ""
+    except Exception:
+        return ""
+    finally:
+        conn.close()
+
+
+def save_directives(rules_text: str):
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE directives SET rules_text = %s WHERE id = 1", (rules_text,))
+            if cur.rowcount == 0:
+                cur.execute("INSERT INTO directives (id, rules_text) VALUES (1, %s) ON CONFLICT (id) DO UPDATE SET rules_text = %s", (rules_text, rules_text))
+            conn.commit()
+    finally:
+        conn.close()
+
+
 def save_signals(signals_data: list[dict]):
     conn = get_db()
     try:
         with conn.cursor() as cur:
             for s in signals_data:
+                directive_applied = s.get("directive_applied", False)
                 cur.execute("SELECT id FROM signals WHERE task_name = %s AND completed = FALSE", (s["task_name"],))
                 existing = cur.fetchone()
                 if existing:
                     cur.execute("""
-                        UPDATE signals SET why = %s, xp_reward = %s, operational_weight = %s WHERE id = %s
-                    """, (s["why"], s["xp_reward"], s["operational_weight"], existing[0]))
+                        UPDATE signals SET why = %s, xp_reward = %s, operational_weight = %s, directive_applied = %s WHERE id = %s
+                    """, (s["why"], s["xp_reward"], s["operational_weight"], directive_applied, existing[0]))
                 else:
                     cur.execute("""
-                        INSERT INTO signals (task_name, why, xp_reward, operational_weight)
-                        VALUES (%s, %s, %s, %s)
-                    """, (s["task_name"], s["why"], s["xp_reward"], s["operational_weight"]))
+                        INSERT INTO signals (task_name, why, xp_reward, operational_weight, directive_applied)
+                        VALUES (%s, %s, %s, %s, %s)
+                    """, (s["task_name"], s["why"], s["xp_reward"], s["operational_weight"], directive_applied))
             conn.commit()
     finally:
         conn.close()
@@ -611,6 +704,7 @@ class Signal(BaseModel):
     why: str = Field(description="One sentence explaining why this matters")
     xp_reward: str = Field(description="One of: Micro, Standard, High-Leverage, GOAT — based on complexity and operational impact")
     operational_weight: float = Field(ge=0, le=10, description="Priority weight 0-10, higher = more urgent")
+    directive_applied: bool = Field(default=False, description="True if this task's priority was influenced by a user-defined GOAT Directive")
 
 
 class ChurnOutput(BaseModel):
@@ -625,7 +719,7 @@ def get_openai_client():
     return OpenAI(api_key=api_key, base_url=base_url)
 
 
-SYSTEM_PROMPT = """You are the GOATflow Churn Engine — a dynamic priority system for Postmaster-level operations.
+SYSTEM_PROMPT_BASE = """You are the GOATflow Churn Engine — a dynamic priority system for Postmaster-level operations.
 
 You receive two things:
 1. EXISTING TASKS: The current task list (may be empty).
@@ -647,7 +741,8 @@ Rules:
 - Be specific and operational — this is for a Postmaster running a facility.
 - Return ALL tasks (existing + new, merged where appropriate).
 - Sort by operational_weight descending.
-- xp_reward must be exactly one of: Micro, Standard, High-Leverage, GOAT"""
+- xp_reward must be exactly one of: Micro, Standard, High-Leverage, GOAT
+- For directive_applied: set to true ONLY if a GOAT Directive directly influenced this task's priority or ranking. If no directives exist, always set to false."""
 
 
 def extract_pdf_text(file_bytes: bytes) -> str:
@@ -660,7 +755,20 @@ def extract_pdf_text(file_bytes: bytes) -> str:
     return "\n".join(parts)
 
 
-def run_churn_engine(existing_signals: list[dict], files_data: list[dict], extra_text: str) -> ChurnOutput:
+def build_system_prompt(directives_text: str) -> str:
+    prompt = SYSTEM_PROMPT_BASE
+    if directives_text.strip():
+        prompt += f"""
+
+---
+GOAT DIRECTIVES (User-defined operational rules — you MUST strictly follow these):
+{directives_text.strip()}
+
+IMPORTANT: These directives override default ranking logic. If a directive says a category should be Priority 1, boost its operational_weight to 9-10. If a directive says to deprioritize something, lower its weight. Set directive_applied = true for any task whose ranking was changed by these directives."""
+    return prompt
+
+
+def run_churn_engine(existing_signals: list[dict], files_data: list[dict], extra_text: str, directives_text: str = "") -> ChurnOutput:
     client = get_openai_client()
 
     existing_desc = ""
@@ -689,10 +797,12 @@ def run_churn_engine(existing_signals: list[dict], files_data: list[dict], extra
             user_content.append({"type": "text", "text": f"[IMAGE: {fd['name']}] — Extract tasks from this image."})
             user_content.append({"type": "image_url", "image_url": {"url": f"data:{fd['mime']};base64,{fd['b64']}"}})
 
+    system_prompt = build_system_prompt(directives_text)
+
     response = client.beta.chat.completions.parse(
         model="gpt-4o-mini",
         messages=[
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_content},
         ],
         response_format=ChurnOutput,
@@ -779,6 +889,59 @@ logo_src = f"data:image/png;base64,{logo_b64}" if logo_b64 else ""
 
 logo_img = f'<img src="{logo_src}" alt="GOATflow">' if logo_src else '<div style="font-size:2rem;font-weight:900;color:#6100ff;">GOATflow</div>'
 
+QUICK_SCRIPTS = [
+    {
+        "label": "Staffing Crunch",
+        "text": "IF staffing < 85% THEN set all Logistics tasks to Priority 1."
+    },
+    {
+        "label": "Legal First",
+        "text": "ALWAYS prioritize tasks with legal deadlines over general admin."
+    },
+    {
+        "label": "Family Saturdays",
+        "text": "Saturdays are for family—move all work tasks to Medium Priority unless labeled EMERGENCY."
+    },
+    {
+        "label": "Family Events",
+        "text": "Family events are always Priority 1."
+    },
+    {
+        "label": "Tuesday Focus",
+        "text": "Focus on Labor Relations on Tuesdays."
+    },
+]
+
+with st.sidebar:
+    sidebar_logo = f'<img src="{logo_src}" alt="GOATflow" style="height:50px;">' if logo_src else '<div style="font-size:1.2rem;font-weight:900;color:#6100ff;">🐐 GOATflow</div>'
+    st.markdown(f'''
+    <div style="text-align:center;padding:0.5rem 0 0.2rem 0;">
+        {sidebar_logo}
+    </div>
+    ''', unsafe_allow_html=True)
+    st.markdown(f'<div style="text-align:center;font-size:1.1rem;font-weight:800;color:{WHITE};margin-bottom:0.2rem;">🐐 GOAT Directives</div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="text-align:center;font-size:0.7rem;color:{SILVER};margin-bottom:1rem;">Permanent operational rules that override default ranking</div>', unsafe_allow_html=True)
+
+    saved_directives = get_directives()
+    directives_input = st.text_area(
+        "Operational Rules",
+        value=saved_directives,
+        height=180,
+        placeholder="Type your permanent operational rules here...\n\nExample:\n• Family events are always Priority 1\n• Focus on Labor Relations on Tuesdays\n• Legal deadlines override general admin",
+        key="directives_text",
+        label_visibility="collapsed",
+    )
+
+    if st.button("💾 Save Directives", use_container_width=True, key="save_directives_btn"):
+        save_directives(directives_input)
+        st.success("Directives saved!")
+
+    st.markdown(f'<div class="sidebar-section-label">⚡ Quick Scripts</div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="font-size:0.7rem;color:{SILVER};margin-bottom:0.6rem;">Click to copy, then paste into Directives above</div>', unsafe_allow_html=True)
+
+    for qs in QUICK_SCRIPTS:
+        st.code(qs["text"], language=None)
+
 st.markdown(f'''
 <div class="goat-header">
     {logo_img}
@@ -839,7 +1002,8 @@ if drop_btn:
                                 files_data.append({"type": "text", "name": fname, "content": "[unreadable]"})
 
                 existing = get_active_signals()
-                result = run_churn_engine(existing, files_data, extra_text or "")
+                current_directives = get_directives()
+                result = run_churn_engine(existing, files_data, extra_text or "", current_directives)
 
                 save_signals([s.model_dump() for s in result.signals])
                 st.session_state["just_dropped"] = True
@@ -933,10 +1097,14 @@ else:
         if weight >= 8.0:
             goat_badge = '<span class="goat-badge">🐐 GOAT</span>'
 
+        directive_badge = ""
+        if sig.get('directive_applied', False):
+            directive_badge = '<span class="directive-badge">⚡ Directive Applied</span>'
+
         st.markdown(f'''
         <div class="signal-card">
             <div class="signal-weight">{weight:.0f}</div>
-            <div class="signal-task">{safe(sig["task_name"])}{goat_badge}</div>
+            <div class="signal-task">{safe(sig["task_name"])}{goat_badge}{directive_badge}</div>
             <div class="signal-why">{safe(sig["why"])}</div>
             <span class="xp-tag {xp_class}">+{xp_amount:,} XP — {safe(tier)}</span>
         </div>

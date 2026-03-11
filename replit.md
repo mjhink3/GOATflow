@@ -8,12 +8,13 @@ Users drop files (PDFs, images, text) or paste text into the Churn Index Field. 
 ## Architecture
 - **Framework**: Streamlit (Python), centered layout, single-page
 - **AI**: OpenAI GPT-4o-mini via Replit AI Integrations (structured output with Pydantic)
-- **Database**: PostgreSQL (Replit built-in) for persistent signals and XP
+- **Database**: PostgreSQL (Replit built-in) for persistent signals, XP, and directives
 - **PDF Parsing**: PyPDF2
 
 ## Database Schema
-- **signals**: id, task_name, why, xp_reward (Micro/Standard/High-Leverage/GOAT), operational_weight, completed, created_at, completed_at
+- **signals**: id, task_name, why, xp_reward (Micro/Standard/High-Leverage/GOAT), operational_weight, completed, directive_applied, created_at, completed_at
 - **player**: id (always 1), total_xp, level, tasks_completed
+- **directives**: id (always 1), rules_text (persistent operational rules)
 
 ## Key Files
 - `app.py` — Full application (UI, AI, DB logic, animations)
@@ -26,13 +27,21 @@ Users drop files (PDFs, images, text) or paste text into the Churn Index Field. 
 - Confetti animation + GOAT Points popup on task completion
 - Full-screen LEVEL UP overlay with neon violet branding on level-up
 
+## GOAT Directives
+- Sidebar panel with persistent text area for operational rules
+- Rules are injected into the AI system prompt as strict overrides
+- Quick Scripts: pre-built logic templates (staffing crunch, legal first, family saturdays, etc.)
+- When a directive influences a task's ranking, the card shows a "⚡ Directive Applied" badge
+- Directives persist in PostgreSQL across sessions
+
 ## Features
 - Multi-file drop zone (PDFs, images, text, screenshots)
 - Churn Engine: merges and re-sorts tasks by operational weight
 - Signal cards with task name, why, XP tier, operational weight
+- Directive Applied badge (amber ⚡) on directive-influenced cards
+- GOAT badge (purple 🐐) on weight >= 8 signals
 - Complete button with confetti + XP popup
 - Persistent XP bar with glowing animation at bottom
-- GOAT badge on weight >= 8 signals
 - Mobile-responsive layout
 
 ## Dependencies
