@@ -1275,15 +1275,30 @@ if not user_info:
     </div>
     ''', unsafe_allow_html=True)
 
-    st.markdown("""
-    <div style="text-align:center;margin-top:1rem;">
-        <div style="font-size:0.8rem;color:#C0C0C0;margin-bottom:0.5rem;">Sign in with your Replit account to enter the pasture.</div>
+    st.markdown(f"""
+    <div style="text-align:center;margin-top:2rem;">
+        <a href="https://replit.com/login" target="_blank" rel="noopener noreferrer" style="
+            display:inline-block;
+            background:linear-gradient(135deg, {PURPLE}, #4A00CC);
+            color:#FFFFFF;
+            border:none;
+            border-radius:10px;
+            padding:0.8rem 2.5rem;
+            font-weight:700;
+            font-family:'Inter',sans-serif;
+            font-size:1rem;
+            letter-spacing:0.02em;
+            text-decoration:none;
+            cursor:pointer;
+            box-shadow:0 4px 20px rgba(97,0,255,0.35);
+            transition:background 0.2s;
+        ">🔐 Login to GOATflow</a>
+        <div style="font-size:0.75rem;color:{SILVER};margin-top:0.8rem;line-height:1.5;">
+            Sign in once with a free Replit account to enter the pasture.<br>
+            After signing in, return to this page to access your dashboard.
+        </div>
     </div>
     """, unsafe_allow_html=True)
-
-    login_col1, login_col2, login_col3 = st.columns([1, 2, 1])
-    with login_col2:
-        st.link_button("🔐 Login with Replit", "https://replit.com/login", use_container_width=True)
 
     st.markdown(f'''
     <div class="global-footer">
