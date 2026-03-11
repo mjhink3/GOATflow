@@ -805,7 +805,15 @@ st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 
 
 def get_db():
-    return psycopg2.connect(os.environ["DATABASE_URL"])
+    import time
+    last_err = None
+    for attempt in range(5):
+        try:
+            return psycopg2.connect(os.environ["DATABASE_URL"])
+        except Exception as e:
+            last_err = e
+            time.sleep(0.5 * (attempt + 1))
+    raise last_err
 
 
 def ensure_schema():
