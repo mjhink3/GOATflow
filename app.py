@@ -544,26 +544,67 @@ CUSTOM_CSS = f"""
         z-index: 99998;
     }}
 
-    .xp-popup {{
+    .xp-popup-wrapper {{
         position: fixed;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.75);
+        z-index: 99998;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+    }}
+
+    .xp-popup {{
         background: {CARD_BG};
         border: 2px solid {NEON_GREEN};
         border-radius: 16px;
-        padding: 2rem 2.5rem;
+        padding: 2rem 2.5rem 1.5rem 2.5rem;
         text-align: center;
         z-index: 99999;
         box-shadow: 0 0 40px rgba(83, 198, 96, 0.3);
         animation: popup-in 0.4s ease-out;
-        pointer-events: auto;
+        pointer-events: none;
+        max-width: 420px;
+        width: 90%;
     }}
 
     .xp-popup img {{
         height: 160px;
         margin-bottom: 0.5rem;
         border-radius: 12px;
+    }}
+
+    div[data-testid="stVerticalBlock"]:has(.cheese-confirm-anchor) {{
+        position: fixed;
+        z-index: 100001;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, 130px);
+        pointer-events: auto;
+        width: 260px;
+    }}
+
+    div[data-testid="stVerticalBlock"]:has(.cheese-confirm-anchor) .stButton > button {{
+        background: linear-gradient(135deg, {NEON_GREEN}, #3fa84a) !important;
+        color: #000 !important;
+        font-weight: 800 !important;
+        font-size: 0.9rem !important;
+        border: none !important;
+        border-radius: 10px !important;
+        padding: 0.6rem 1.5rem !important;
+        box-shadow: 0 0 20px rgba(83, 198, 96, 0.4);
+    }}
+
+    div[data-testid="stVerticalBlock"]:has(.cheese-confirm-anchor) .stButton > button:hover {{
+        background: linear-gradient(135deg, #3fa84a, {NEON_GREEN}) !important;
+    }}
+
+    .cheese-confirm-anchor {{
+        display: none;
     }}
 
     .xp-popup-text {{
@@ -1319,18 +1360,23 @@ if st.session_state.get("just_completed_task"):
     tier_b64 = get_tier_celeb_b64(xp_tier)
     celeb_src = f"data:image/png;base64,{tier_b64}" if tier_b64 else ""
     popup_img = f'<img src="{celeb_src}" alt="Task Completed">' if celeb_src else ''
+
     st.markdown(f'''
-    <div class="xp-popup" id="xp-popup">
-        {popup_img}
-        <div class="xp-popup-text">+{xp_gained:,} Cheese Churn Points!</div>
-        <div class="xp-popup-sub">{safe(task_name)}</div>
-        <div class="xp-popup-pun">{safe(goat_pun)}</div>
+    <div class="xp-popup-wrapper">
+        <div class="xp-popup" id="xp-popup">
+            {popup_img}
+            <div class="xp-popup-text">+{xp_gained:,} Cheese Churn Points!</div>
+            <div class="xp-popup-sub">{safe(task_name)}</div>
+            <div class="xp-popup-pun">{safe(goat_pun)}</div>
+        </div>
     </div>
     ''', unsafe_allow_html=True)
-
-    if st.button("🧀 Confirm Cheese Points", key="confirm_cheese_btn", use_container_width=True):
-        st.session_state["just_completed_task"] = None
-        st.rerun()
+    confirm_slot = st.empty()
+    with confirm_slot.container():
+        st.markdown('<div class="cheese-confirm-anchor"></div>', unsafe_allow_html=True)
+        if st.button("🧀 Confirm Cheese Points", key="confirm_cheese_btn", use_container_width=True):
+            st.session_state["just_completed_task"] = None
+            st.rerun()
 
     if leveled_up:
         new_pasture = pasture_name(player_snap["level"])
