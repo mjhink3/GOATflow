@@ -4,6 +4,8 @@ import io
 import html
 import base64
 import math
+import random
+import urllib.parse
 import psycopg2
 import psycopg2.extras
 from openai import OpenAI
@@ -50,15 +52,35 @@ def compute_level(total_xp: int) -> tuple[int, int, int]:
         level += 1
 
 
+GOAT_PUNS = [
+    "Look at you, GOAT!",
+    "You really herd that task into submission!",
+    "No kidding — you crushed it!",
+    "That was baaaa-d to the bone!",
+    "You've goat this on lock!",
+    "Another one bites the dust — GOAT style!",
+    "Unstoppable. Unflappable. Un-GOAT-able.",
+    "Kids could never. You're the GOAT.",
+    "That task didn't stand a chance, kid.",
+    "Hoof-five! Task destroyed.",
+    "You've been promoted to Chief GOAT Officer.",
+    "The herd is watching. And they're impressed.",
+    "Peak performance. Peak GOAT energy.",
+    "You just cleared the mountain. GOAT move.",
+    "They said it couldn't be done. You said 'baaaa.'",
+]
+
+
 def get_logo_b64():
-    if "logo_b64" not in st.session_state:
-        logo_path = os.path.join(os.path.dirname(__file__), "goatflow_logo.png")
+    logo_path = os.path.join(os.path.dirname(__file__), "goatflow_logo.png")
+    cache_key = "logo_b64_v2"
+    if cache_key not in st.session_state:
         if os.path.exists(logo_path):
             with open(logo_path, "rb") as f:
-                st.session_state["logo_b64"] = base64.b64encode(f.read()).decode("utf-8")
+                st.session_state[cache_key] = base64.b64encode(f.read()).decode("utf-8")
         else:
-            st.session_state["logo_b64"] = ""
-    return st.session_state["logo_b64"]
+            st.session_state[cache_key] = ""
+    return st.session_state[cache_key]
 
 
 CUSTOM_CSS = f"""
@@ -85,7 +107,7 @@ CUSTOM_CSS = f"""
     }}
 
     .goat-header img {{
-        height: 160px;
+        height: 320px;
         margin-bottom: 0;
     }}
 
@@ -255,21 +277,30 @@ CUSTOM_CSS = f"""
         overflow: hidden;
         position: relative;
         border: 1px solid {BORDER};
-        box-shadow: 0 0 12px rgba(83, 198, 96, 0.15);
+        box-shadow: 0 0 12px rgba(139, 92, 246, 0.25);
     }}
 
     .xp-bar-inner {{
         height: 100%;
-        background: linear-gradient(90deg, {NEON_GREEN}, #3DA64A, {NEON_GREEN});
+        background: linear-gradient(90deg, {NEON_VIOLET}, {PURPLE}, {NEON_VIOLET});
         background-size: 200% 100%;
         border-radius: 10px;
         transition: width 0.6s ease;
-        animation: glow-pulse 2s ease-in-out infinite;
+        animation: metabolism-pulse 2s ease-in-out infinite;
     }}
 
-    @keyframes glow-pulse {{
-        0%, 100% {{ box-shadow: 0 0 8px rgba(83, 198, 96, 0.4); background-position: 0% 50%; }}
-        50% {{ box-shadow: 0 0 18px rgba(83, 198, 96, 0.7); background-position: 100% 50%; }}
+    @keyframes metabolism-pulse {{
+        0%, 100% {{ box-shadow: 0 0 8px rgba(139, 92, 246, 0.5); background-position: 0% 50%; }}
+        50% {{ box-shadow: 0 0 22px rgba(139, 92, 246, 0.9); background-position: 100% 50%; }}
+    }}
+
+    .metabolism-label {{
+        color: {NEON_VIOLET};
+        font-size: 0.6rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        white-space: nowrap;
     }}
 
     .xp-text {{
@@ -403,7 +434,7 @@ CUSTOM_CSS = f"""
         z-index: 99999;
         box-shadow: 0 0 40px rgba(83, 198, 96, 0.3);
         animation: popup-in 0.4s ease-out;
-        pointer-events: none;
+        pointer-events: auto;
     }}
 
     .xp-popup img {{
@@ -423,6 +454,34 @@ CUSTOM_CSS = f"""
         font-size: 0.85rem;
         font-weight: 500;
         margin-top: 0.3rem;
+    }}
+
+    .xp-popup-pun {{
+        color: {NEON_VIOLET};
+        font-size: 0.95rem;
+        font-weight: 700;
+        font-style: italic;
+        margin-top: 0.6rem;
+    }}
+
+    .linkedin-share-btn {{
+        display: inline-block;
+        margin-top: 0.8rem;
+        padding: 0.4rem 1.2rem;
+        background: #0A66C2;
+        color: #FFFFFF;
+        font-size: 0.75rem;
+        font-weight: 700;
+        border-radius: 6px;
+        text-decoration: none;
+        letter-spacing: 0.02em;
+        pointer-events: auto;
+        cursor: pointer;
+    }}
+
+    .linkedin-share-btn:hover {{
+        background: #004182;
+        color: #FFFFFF;
     }}
 
     @keyframes popup-in {{
@@ -880,7 +939,7 @@ XP_POPUP_DISMISS_JS = """
 setTimeout(function() {
     const popup = document.getElementById('xp-popup');
     if (popup) popup.style.display = 'none';
-}, 3000);
+}, 6000);
 </script>
 """
 
@@ -1024,23 +1083,29 @@ if st.session_state.get("just_completed_task"):
 
     st.markdown(CONFETTI_JS, unsafe_allow_html=True)
 
+    goat_pun = random.choice(GOAT_PUNS)
+    player_snap = get_player()
+    linkedin_text = f"Just earned {xp_gained:,} GOAT Points on GOATflow! Level {player_snap['level']} | {player_snap['total_xp']:,} Total XP | Metabolizing my to-do list like a GOAT."
+    linkedin_url = "https://www.linkedin.com/sharing/share-offsite/?" + urllib.parse.urlencode({"url": "https://goatflow.app", "title": linkedin_text, "summary": linkedin_text})
+
     popup_logo = f'<img src="{logo_src}" alt="GOATflow">' if logo_src else ''
     st.markdown(f'''
     <div class="xp-popup" id="xp-popup">
         {popup_logo}
         <div class="xp-popup-text">+{xp_gained:,} GOAT Points!</div>
         <div class="xp-popup-sub">{safe(task_name)}</div>
+        <div class="xp-popup-pun">{safe(goat_pun)}</div>
+        <a class="linkedin-share-btn" href="{linkedin_url}" target="_blank" rel="noopener noreferrer">Share on LinkedIn</a>
     </div>
     ''', unsafe_allow_html=True)
     st.markdown(XP_POPUP_DISMISS_JS, unsafe_allow_html=True)
 
     if leveled_up:
-        player_now = get_player()
         st.markdown(f'''
         <div class="levelup-overlay" id="levelup-overlay">
             {popup_logo}
             <div class="levelup-text">LEVEL UP</div>
-            <div class="levelup-level">Level {player_now["level"]} Reached</div>
+            <div class="levelup-level">Level {player_snap["level"]} Reached</div>
         </div>
         ''', unsafe_allow_html=True)
         st.markdown(LEVELUP_DISMISS_JS, unsafe_allow_html=True)
@@ -1075,9 +1140,27 @@ st.markdown(f'''
 </div>
 ''', unsafe_allow_html=True)
 
-st.markdown('<div class="section-label">📡 Signal Queue</div>', unsafe_allow_html=True)
+col_queue_label, col_daily_shot = st.columns([3, 1])
+with col_queue_label:
+    st.markdown('<div class="section-label">📡 Signal Queue</div>', unsafe_allow_html=True)
+with col_daily_shot:
+    daily_shot_active = st.session_state.get("daily_shot", False)
+    if len(signals) > 0:
+        shot_label = "📡 Full Queue" if daily_shot_active else "✨ Daily Shot"
+        if st.button(shot_label, key="daily_shot_btn", use_container_width=True):
+            st.session_state["daily_shot"] = not daily_shot_active
+            st.rerun()
 
-if not signals:
+display_signals = signals
+if st.session_state.get("daily_shot", False) and len(signals) > 3:
+    display_signals = signals[:3]
+    st.markdown(f'''
+    <div class="completed-toast">
+        <div class="completed-toast-text">✨ Daily Shot — Focused Metabolism: Top 3 Priorities Only</div>
+    </div>
+    ''', unsafe_allow_html=True)
+
+if not display_signals:
     st.markdown('''
     <div class="empty-state">
         <div class="empty-state-icon">🐐</div>
@@ -1085,7 +1168,7 @@ if not signals:
     </div>
     ''', unsafe_allow_html=True)
 else:
-    for sig in signals:
+    for sig in display_signals:
         tier = sig['xp_reward']
         tier_lower = tier.lower().replace("-", "-")
         xp_class_map = {"micro": "xp-micro", "standard": "xp-standard", "high-leverage": "xp-high-leverage", "goat": "xp-goat"}
@@ -1123,6 +1206,7 @@ xp_pct = min((xp_into / xp_needed) * 100, 100) if xp_needed > 0 else 0
 st.markdown(f'''
 <div class="level-bar-container">
     <div class="level-badge">LVL {level}</div>
+    <div class="metabolism-label">Operational Metabolism</div>
     <div class="xp-bar-outer">
         <div class="xp-bar-inner" style="width:{xp_pct:.1f}%;"></div>
     </div>
