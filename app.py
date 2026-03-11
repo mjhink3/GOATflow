@@ -1222,13 +1222,14 @@ logo_b64 = get_logo_b64()
 logo_src = f"data:image/png;base64,{logo_b64}" if logo_b64 else ""
 logo_img = f'<img src="{logo_src}" alt="GOATflow">' if logo_src else '<div style="font-size:2rem;font-weight:900;color:#6100ff;">GOATflow</div>'
 
-celeb_levelup_b64 = get_celeb_b64("levelup")
+celeb_levelup_b64 = load_image_b64("celeb_levelup_new.png", "celeb_levelup_new_b64")
 celeb_inbox_b64 = get_celeb_b64("inbox_cleared")
 celeb_focus_streak_b64 = get_celeb_b64("focus_streak")
 celeb_priority_achieved_b64 = get_celeb_b64("priority_achieved")
 celeb_power_hour_b64 = get_celeb_b64("power_hour")
 celeb_daily_flow_b64 = get_celeb_b64("daily_flow")
 celeb_task_completed_b64 = get_celeb_b64("task_completed")
+cheese_earned_b64 = load_image_b64("cheese_earned.png", "cheese_earned_b64")
 
 def get_tier_celeb_b64(tier: str) -> str:
     tier_map = {
@@ -1248,7 +1249,7 @@ if not user_info:
     <div class="landing-container">
         {f'<img src="{logo_src}" alt="GOATflow">' if logo_src else '<div style="font-size:3rem;font-weight:900;color:#6100ff;margin-bottom:1.5rem;">🐐 GOATflow</div>'}
         <div class="landing-tagline">Metabolize your to-do list.</div>
-        <div class="landing-sub">The Ozempic for your workload.</div>
+        <div class="landing-sub">The Operational Metabolizer.</div>
         <div class="landing-features">
             <div class="landing-feature">
                 <div class="landing-feature-icon">⚡</div>
@@ -1540,12 +1541,15 @@ def show_cheese_popup(task_name, xp_gained, leveled_up, xp_tier):
     goat_pun = random.choice(GOAT_PUNS)
     player_snap = get_player(current_user_id)
 
+    cheese_src = f"data:image/png;base64,{cheese_earned_b64}" if cheese_earned_b64 else ""
     gusto_b64 = celeb_task_completed_b64 if celeb_task_completed_b64 else get_tier_celeb_b64(xp_tier)
-    celeb_src = f"data:image/png;base64,{gusto_b64}" if gusto_b64 else ""
-    popup_img = f'<img src="{celeb_src}" alt="Task Completed" style="height:160px;border-radius:12px;display:block;margin:0 auto 0.5rem auto;">' if celeb_src else ''
+    gusto_src = f"data:image/png;base64,{gusto_b64}" if gusto_b64 else ""
+    cheese_img = f'<img src="{cheese_src}" alt="Cheese Earned" style="height:120px;border-radius:12px;display:block;margin:0 auto 0.3rem auto;">' if cheese_src else ''
+    popup_img = f'<img src="{gusto_src}" alt="Task Completed" style="height:120px;border-radius:12px;display:block;margin:0 auto 0.3rem auto;">' if gusto_src else ''
 
     st.markdown(f'''
     <div style="text-align:center;">
+        {cheese_img}
         {popup_img}
         <div style="color:{NEON_GREEN};font-size:1.6rem;font-weight:900;margin-bottom:0.3rem;">+{xp_gained:,} Cheese Churn Points!</div>
         <div style="color:{SILVER};font-size:0.85rem;font-weight:500;margin-bottom:0.3rem;">{safe(task_name)}</div>
