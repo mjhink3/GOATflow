@@ -44,6 +44,22 @@ PASTURE_NAMES = {
     7: "GOAT Mountain",
 }
 
+ASCENSION_RANKS = {
+    1: "The Kid",
+    2: "The Starter",
+    3: "The Starter",
+    4: "The Builder",
+    5: "The Builder",
+    6: "The Architect",
+    7: "The GOAT",
+}
+
+
+def ascension_rank(level: int) -> str:
+    if level >= 7:
+        return "The GOAT"
+    return ASCENSION_RANKS.get(level, "The Kid")
+
 
 def pasture_name(level: int) -> str:
     if level in PASTURE_NAMES:
@@ -105,6 +121,19 @@ def get_logo_b64():
 
 def get_celeb_b64(name: str):
     return load_image_b64(f"celeb_{name}.png", f"celeb_{name}_b64")
+
+
+def get_replit_user():
+    try:
+        headers = st.context.headers
+        user_id = headers.get("X-Replit-User-Id", "")
+        user_name = headers.get("X-Replit-User-Name", "")
+        profile_image = headers.get("X-Replit-User-Profile-Image", "")
+        if user_id and user_name:
+            return {"id": user_id, "name": user_name, "profile_image": profile_image}
+    except Exception:
+        pass
+    return None
 
 
 CUSTOM_CSS = f"""
@@ -679,6 +708,85 @@ CUSTOM_CSS = f"""
     .dissolving {{
         animation: dissolve-out 0.8s ease-out forwards;
     }}
+
+    .landing-container {{
+        text-align: center;
+        padding: 2rem 1rem 4rem 1rem;
+    }}
+
+    .landing-container img {{
+        height: 340px;
+        margin-bottom: 1.5rem;
+    }}
+
+    .landing-tagline {{
+        font-size: 1.4rem;
+        font-weight: 800;
+        color: {WHITE};
+        margin-bottom: 0.5rem;
+        line-height: 1.3;
+    }}
+
+    .landing-sub {{
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: {SILVER};
+        margin-bottom: 2rem;
+        font-style: italic;
+    }}
+
+    .landing-features {{
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        flex-wrap: wrap;
+        margin-bottom: 2.5rem;
+    }}
+
+    .landing-feature {{
+        background: {CARD_BG};
+        border: 1px solid {BORDER};
+        border-radius: 12px;
+        padding: 1.2rem 1rem;
+        width: 200px;
+        text-align: center;
+    }}
+
+    .landing-feature-icon {{
+        font-size: 2rem;
+        margin-bottom: 0.4rem;
+    }}
+
+    .landing-feature-title {{
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: {WHITE};
+        margin-bottom: 0.2rem;
+    }}
+
+    .landing-feature-desc {{
+        font-size: 0.65rem;
+        color: {SILVER};
+        line-height: 1.4;
+    }}
+
+    .high-leverage-glow {{
+        border-color: rgba(255, 171, 0, 0.5) !important;
+        box-shadow: 0 0 12px rgba(255, 171, 0, 0.15);
+    }}
+
+    .privacy-shield-inline {{
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        background: rgba(83, 198, 96, 0.1);
+        border: 1px solid rgba(83, 198, 96, 0.25);
+        border-radius: 6px;
+        padding: 0.15rem 0.5rem;
+        font-size: 0.6rem;
+        font-weight: 600;
+        color: {NEON_GREEN};
+    }}
 </style>
 """
 
@@ -704,12 +812,14 @@ def ensure_schema():
                     directive_applied BOOLEAN NOT NULL DEFAULT FALSE,
                     bleat_type TEXT NOT NULL DEFAULT 'Routine Grazing',
                     created_at TIMESTAMP DEFAULT NOW(),
-                    completed_at TIMESTAMP
+                    completed_at TIMESTAMP,
+                    user_id TEXT NOT NULL DEFAULT '__legacy__'
                 )
             """)
             for col, col_type, col_default in [
                 ("directive_applied", "BOOLEAN NOT NULL", "FALSE"),
                 ("bleat_type", "TEXT NOT NULL", "'Routine Grazing'"),
+                ("user_id", "TEXT NOT NULL", "'__legacy__'"),
             ]:
                 cur.execute(f"""
                     SELECT column_name FROM information_schema.columns
@@ -717,24 +827,63 @@ def ensure_schema():
                 """)
                 if not cur.fetchone():
                     cur.execute(f"ALTER TABLE signals ADD COLUMN {col} {col_type} DEFAULT {col_default}")
+
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS player (
-                    id INTEGER PRIMARY KEY DEFAULT 1,
+                    id SERIAL PRIMARY KEY,
+                    user_id TEXT NOT NULL UNIQUE,
                     total_xp INTEGER NOT NULL DEFAULT 0,
                     level INTEGER NOT NULL DEFAULT 1,
-                    tasks_completed INTEGER NOT NULL DEFAULT 0,
-                    CONSTRAINT single_player CHECK (id = 1)
+                    tasks_completed INTEGER NOT NULL DEFAULT 0
                 )
             """)
-            cur.execute("INSERT INTO player (id, total_xp, level, tasks_completed) VALUES (1, 0, 1, 0) ON CONFLICT (id) DO NOTHING")
+            cur.execute("""
+                SELECT column_name FROM information_schema.columns
+                WHERE table_name = 'player' AND column_name = 'user_id'
+            """)
+            if not cur.fetchone():
+                cur.execute("ALTER TABLE player ADD COLUMN user_id TEXT NOT NULL DEFAULT '__legacy__'")
+                cur.execute("""
+                    DO $$ BEGIN
+                        ALTER TABLE player ADD CONSTRAINT player_user_id_unique UNIQUE (user_id);
+                    EXCEPTION WHEN duplicate_table THEN NULL;
+                    END $$;
+                """)
+
+            cur.execute("""
+                SELECT constraint_name FROM information_schema.table_constraints
+                WHERE table_name = 'player' AND constraint_name = 'single_player'
+            """)
+            if cur.fetchone():
+                cur.execute("ALTER TABLE player DROP CONSTRAINT single_player")
+
             cur.execute("""
                 CREATE TABLE IF NOT EXISTS directives (
-                    id INTEGER PRIMARY KEY DEFAULT 1,
-                    rules_text TEXT NOT NULL DEFAULT '',
-                    CONSTRAINT single_directives CHECK (id = 1)
+                    id SERIAL PRIMARY KEY,
+                    user_id TEXT NOT NULL UNIQUE,
+                    rules_text TEXT NOT NULL DEFAULT ''
                 )
             """)
-            cur.execute("INSERT INTO directives (id, rules_text) VALUES (1, '') ON CONFLICT (id) DO NOTHING")
+            cur.execute("""
+                SELECT column_name FROM information_schema.columns
+                WHERE table_name = 'directives' AND column_name = 'user_id'
+            """)
+            if not cur.fetchone():
+                cur.execute("ALTER TABLE directives ADD COLUMN user_id TEXT NOT NULL DEFAULT '__legacy__'")
+                cur.execute("""
+                    DO $$ BEGIN
+                        ALTER TABLE directives ADD CONSTRAINT directives_user_id_unique UNIQUE (user_id);
+                    EXCEPTION WHEN duplicate_table THEN NULL;
+                    END $$;
+                """)
+
+            cur.execute("""
+                SELECT constraint_name FROM information_schema.table_constraints
+                WHERE table_name = 'directives' AND constraint_name = 'single_directives'
+            """)
+            if cur.fetchone():
+                cur.execute("ALTER TABLE directives DROP CONSTRAINT single_directives")
+
             conn.commit()
     finally:
         conn.close()
@@ -746,26 +895,34 @@ except Exception:
     pass
 
 
-def get_player():
+def get_player(user_id: str):
     conn = get_db()
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute("SELECT * FROM player WHERE id = 1")
+            cur.execute("SELECT * FROM player WHERE user_id = %s", (user_id,))
             row = cur.fetchone()
             if not row:
-                return {"id": 1, "total_xp": 0, "level": 1, "tasks_completed": 0}
+                cur.execute(
+                    "INSERT INTO player (user_id, total_xp, level, tasks_completed) VALUES (%s, 0, 1, 0) RETURNING *",
+                    (user_id,)
+                )
+                row = cur.fetchone()
+                conn.commit()
             return dict(row)
     except Exception:
-        return {"id": 1, "total_xp": 0, "level": 1, "tasks_completed": 0}
+        return {"user_id": user_id, "total_xp": 0, "level": 1, "tasks_completed": 0}
     finally:
         conn.close()
 
 
-def get_active_signals():
+def get_active_signals(user_id: str):
     conn = get_db()
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute("SELECT * FROM signals WHERE completed = FALSE ORDER BY operational_weight DESC, created_at ASC")
+            cur.execute(
+                "SELECT * FROM signals WHERE completed = FALSE AND user_id = %s ORDER BY operational_weight DESC, created_at ASC",
+                (user_id,)
+            )
             return [dict(r) for r in cur.fetchall()]
     except Exception:
         return []
@@ -773,21 +930,21 @@ def get_active_signals():
         conn.close()
 
 
-def complete_signal(signal_id: int):
+def complete_signal(signal_id: int, user_id: str):
     conn = get_db()
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute("""
                 UPDATE signals SET completed = TRUE, completed_at = NOW()
-                WHERE id = %s AND completed = FALSE
+                WHERE id = %s AND completed = FALSE AND user_id = %s
                 RETURNING xp_reward
-            """, (signal_id,))
+            """, (signal_id, user_id))
             row = cur.fetchone()
             if not row:
                 conn.rollback()
                 return None, 0, False
             xp = XP_TIERS.get(row["xp_reward"], 500)
-            cur.execute("SELECT total_xp FROM player WHERE id = 1")
+            cur.execute("SELECT total_xp FROM player WHERE user_id = %s", (user_id,))
             player_row = cur.fetchone()
             old_xp = player_row["total_xp"] if player_row else 0
             old_level, _, _ = compute_level(old_xp)
@@ -798,8 +955,8 @@ def complete_signal(signal_id: int):
                 SET total_xp = %s,
                     tasks_completed = tasks_completed + 1,
                     level = %s
-                WHERE id = 1
-            """, (new_xp, new_level))
+                WHERE user_id = %s
+            """, (new_xp, new_level, user_id))
             conn.commit()
             leveled_up = new_level > old_level
             return row["xp_reward"], xp, leveled_up
@@ -810,11 +967,11 @@ def complete_signal(signal_id: int):
         conn.close()
 
 
-def metabolize_completed():
+def metabolize_completed(user_id: str):
     conn = get_db()
     try:
         with conn.cursor() as cur:
-            cur.execute("DELETE FROM signals WHERE completed = TRUE")
+            cur.execute("DELETE FROM signals WHERE completed = TRUE AND user_id = %s", (user_id,))
             count = cur.rowcount
             conn.commit()
             return count
@@ -825,11 +982,11 @@ def metabolize_completed():
         conn.close()
 
 
-def get_directives():
+def get_directives(user_id: str):
     conn = get_db()
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute("SELECT rules_text FROM directives WHERE id = 1")
+            cur.execute("SELECT rules_text FROM directives WHERE user_id = %s", (user_id,))
             row = cur.fetchone()
             return row["rules_text"] if row else ""
     except Exception:
@@ -838,26 +995,30 @@ def get_directives():
         conn.close()
 
 
-def save_directives(rules_text: str):
+def save_directives(user_id: str, rules_text: str):
     conn = get_db()
     try:
         with conn.cursor() as cur:
-            cur.execute("UPDATE directives SET rules_text = %s WHERE id = 1", (rules_text,))
-            if cur.rowcount == 0:
-                cur.execute("INSERT INTO directives (id, rules_text) VALUES (1, %s) ON CONFLICT (id) DO UPDATE SET rules_text = %s", (rules_text, rules_text))
+            cur.execute(
+                "INSERT INTO directives (user_id, rules_text) VALUES (%s, %s) ON CONFLICT (user_id) DO UPDATE SET rules_text = %s",
+                (user_id, rules_text, rules_text)
+            )
             conn.commit()
     finally:
         conn.close()
 
 
-def save_signals(signals_data: list[dict]):
+def save_signals(user_id: str, signals_data: list[dict]):
     conn = get_db()
     try:
         with conn.cursor() as cur:
             for s in signals_data:
                 directive_applied = s.get("directive_applied", False)
                 bleat_type = s.get("bleat_type", "Routine Grazing")
-                cur.execute("SELECT id FROM signals WHERE task_name = %s AND completed = FALSE", (s["task_name"],))
+                cur.execute(
+                    "SELECT id FROM signals WHERE task_name = %s AND completed = FALSE AND user_id = %s",
+                    (s["task_name"], user_id)
+                )
                 existing = cur.fetchone()
                 if existing:
                     cur.execute("""
@@ -865,9 +1026,9 @@ def save_signals(signals_data: list[dict]):
                     """, (s["why"], s["xp_reward"], s["operational_weight"], directive_applied, bleat_type, existing[0]))
                 else:
                     cur.execute("""
-                        INSERT INTO signals (task_name, why, xp_reward, operational_weight, directive_applied, bleat_type)
-                        VALUES (%s, %s, %s, %s, %s, %s)
-                    """, (s["task_name"], s["why"], s["xp_reward"], s["operational_weight"], directive_applied, bleat_type))
+                        INSERT INTO signals (task_name, why, xp_reward, operational_weight, directive_applied, bleat_type, user_id)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    """, (s["task_name"], s["why"], s["xp_reward"], s["operational_weight"], directive_applied, bleat_type, user_id))
             conn.commit()
     finally:
         conn.close()
@@ -1067,6 +1228,7 @@ celeb_focus_streak_b64 = get_celeb_b64("focus_streak")
 celeb_priority_achieved_b64 = get_celeb_b64("priority_achieved")
 celeb_power_hour_b64 = get_celeb_b64("power_hour")
 celeb_daily_flow_b64 = get_celeb_b64("daily_flow")
+celeb_task_completed_b64 = get_celeb_b64("task_completed")
 
 def get_tier_celeb_b64(tier: str) -> str:
     tier_map = {
@@ -1078,6 +1240,61 @@ def get_tier_celeb_b64(tier: str) -> str:
     celeb_name = tier_map.get(tier, "focus_streak")
     return get_celeb_b64(celeb_name)
 
+
+user_info = get_replit_user()
+
+if not user_info:
+    st.markdown(f'''
+    <div class="landing-container">
+        {f'<img src="{logo_src}" alt="GOATflow">' if logo_src else '<div style="font-size:3rem;font-weight:900;color:#6100ff;margin-bottom:1.5rem;">🐐 GOATflow</div>'}
+        <div class="landing-tagline">Metabolize your to-do list.</div>
+        <div class="landing-sub">The Ozempic for your workload.</div>
+        <div class="landing-features">
+            <div class="landing-feature">
+                <div class="landing-feature-icon">⚡</div>
+                <div class="landing-feature-title">Churn Engine</div>
+                <div class="landing-feature-desc">AI-powered task classification and prioritization</div>
+            </div>
+            <div class="landing-feature">
+                <div class="landing-feature-icon">🧀</div>
+                <div class="landing-feature-title">Cheese Churn Rate</div>
+                <div class="landing-feature-desc">Gamified XP system with pasture progression</div>
+            </div>
+            <div class="landing-feature">
+                <div class="landing-feature-icon">🛡️</div>
+                <div class="landing-feature-title">Stateless Privacy</div>
+                <div class="landing-feature-desc">Source files purged after analysis</div>
+            </div>
+            <div class="landing-feature">
+                <div class="landing-feature-icon">🐐</div>
+                <div class="landing-feature-title">WorkGOAT Ecosystem</div>
+                <div class="landing-feature-desc">Part of the complete operational intelligence platform</div>
+            </div>
+        </div>
+    </div>
+    ''', unsafe_allow_html=True)
+
+    st.markdown("""
+    <div style="text-align:center;margin-top:1rem;">
+        <div style="font-size:0.8rem;color:#C0C0C0;margin-bottom:0.5rem;">Sign in with your Replit account to enter the pasture.</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+    login_col1, login_col2, login_col3 = st.columns([1, 2, 1])
+    with login_col2:
+        st.link_button("🔐 Login with Replit", "https://replit.com/login", use_container_width=True)
+
+    st.markdown(f'''
+    <div class="global-footer">
+        GOATflow is a subsidiary of the WorkGOAT Ecosystem. Build your legacy at <a href="https://workgoat.vip" target="_blank" rel="noopener noreferrer">workgoat.vip</a>
+    </div>
+    ''', unsafe_allow_html=True)
+    st.stop()
+
+current_user_id = user_info["id"]
+current_user_name = user_info["name"]
+current_user_image = user_info.get("profile_image", "")
+
 QUICK_SCRIPTS = [
     {"label": "Staffing Crunch", "text": "IF staffing < 85% THEN set all Logistics tasks to Priority 1."},
     {"label": "Legal First", "text": "ALWAYS prioritize tasks with legal deadlines over general admin."},
@@ -1086,6 +1303,11 @@ QUICK_SCRIPTS = [
     {"label": "Tuesday Focus", "text": "Focus on Labor Relations on Tuesdays."},
 ]
 
+player_data = get_player(current_user_id)
+user_level = player_data["level"]
+user_rank = ascension_rank(user_level)
+use_crown = user_level >= 5
+
 with st.sidebar:
     sidebar_logo = f'<img src="{logo_src}" alt="GOATflow" style="height:50px;">' if logo_src else '<div style="font-size:1.2rem;font-weight:900;color:#6100ff;">🐐 GOATflow</div>'
     st.markdown(f'''
@@ -1093,10 +1315,57 @@ with st.sidebar:
         {sidebar_logo}
     </div>
     ''', unsafe_allow_html=True)
+
+    st.markdown("---")
+
+    if use_crown and celeb_power_hour_b64:
+        crown_src = f"data:image/png;base64,{celeb_power_hour_b64}"
+        avatar_html = f'<img src="{crown_src}" style="height:60px;border-radius:50%;border:2px solid {NEON_VIOLET};">'
+    elif current_user_image:
+        avatar_html = f'<img src="{safe(current_user_image)}" style="height:60px;border-radius:50%;border:2px solid {BORDER};">'
+    else:
+        avatar_html = f'<div style="height:60px;width:60px;border-radius:50%;background:{CARD_BG};border:2px solid {BORDER};display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin:0 auto;">🐐</div>'
+
+    level_data = compute_level(player_data["total_xp"])
+    cur_level, cur_xp_into, cur_xp_needed = level_data
+    sidebar_pasture = pasture_name(cur_level)
+
+    st.markdown(f'''
+    <div style="text-align:center;padding:0.3rem 0;">
+        {avatar_html}
+        <div style="font-size:0.95rem;font-weight:800;color:{WHITE};margin-top:0.4rem;">{safe(current_user_name)}</div>
+        <div style="font-size:0.65rem;font-weight:700;color:{NEON_VIOLET};text-transform:uppercase;letter-spacing:0.1em;margin-top:0.1rem;">{safe(user_rank)}</div>
+        <div style="font-size:0.6rem;color:{SILVER};margin-top:0.2rem;">{safe(sidebar_pasture)} &bull; Level {cur_level}</div>
+    </div>
+    ''', unsafe_allow_html=True)
+
+    st.markdown(f'''
+    <div style="margin-top:0.5rem;padding:0.6rem;background:{CARD_BG};border-radius:8px;border:1px solid {BORDER};">
+        <div style="font-size:0.7rem;font-weight:700;color:{WHITE};margin-bottom:0.4rem;">📊 My Stats</div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:0.2rem;">
+            <span style="font-size:0.6rem;color:{SILVER};">Total Grit (XP)</span>
+            <span style="font-size:0.6rem;font-weight:700;color:{NEON_GREEN};">{player_data["total_xp"]:,}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:0.2rem;">
+            <span style="font-size:0.6rem;color:{SILVER};">Cheese Churn Rate</span>
+            <span style="font-size:0.6rem;font-weight:700;color:{NEON_VIOLET};">{player_data["tasks_completed"]} churned</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:0.2rem;">
+            <span style="font-size:0.6rem;color:{SILVER};">Ascension Rank</span>
+            <span style="font-size:0.6rem;font-weight:700;color:{WHITE};">{safe(user_rank)}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;">
+            <span style="font-size:0.6rem;color:{SILVER};">Next Fence</span>
+            <span style="font-size:0.6rem;font-weight:700;color:{SILVER};">{cur_xp_into:,}/{cur_xp_needed:,}</span>
+        </div>
+    </div>
+    ''', unsafe_allow_html=True)
+
+    st.markdown("---")
     st.markdown(f'<div style="text-align:center;font-size:1.1rem;font-weight:800;color:{WHITE};margin-bottom:0.2rem;">🐐 GOAT Directives</div>', unsafe_allow_html=True)
     st.markdown(f'<div style="text-align:center;font-size:0.7rem;color:{SILVER};margin-bottom:1rem;">Permanent operational rules that override default ranking</div>', unsafe_allow_html=True)
 
-    saved_directives = get_directives()
+    saved_directives = get_directives(current_user_id)
     directives_input = st.text_area(
         "Operational Rules",
         value=saved_directives,
@@ -1107,7 +1376,7 @@ with st.sidebar:
     )
 
     if st.button("💾 Save Directives", use_container_width=True, key="save_directives_btn"):
-        save_directives(directives_input)
+        save_directives(current_user_id, directives_input)
         st.success("Directives saved!")
 
     st.markdown(f'<div class="sidebar-section-label">⚡ Quick Scripts</div>', unsafe_allow_html=True)
@@ -1132,6 +1401,7 @@ with st.sidebar:
             • API keys loaded from environment<br>
             • No raw uploads stored in DB<br>
             • Files processed in-memory only<br>
+            • Source files purged after analysis<br>
             • Only task signals are persisted
         </div>
     </div>
@@ -1144,6 +1414,7 @@ st.markdown(f'''
         <span class="trust-badge">🛡️
             <span class="trust-tooltip">GOATflow uses Stateless Processing. Your sensitive documents are analyzed and then immediately destroyed.</span>
         </span>
+        <span class="privacy-shield-inline">🛡️ Stateless Processing Active: Source files purged after analysis</span>
     </div>
 </div>
 ''', unsafe_allow_html=True)
@@ -1207,10 +1478,10 @@ if drop_btn:
                                 files_data.append({"type": "text", "name": fname, "content": "[unreadable]"})
 
                 is_incognito = st.session_state.get("incognito_mode", False)
-                existing = get_active_signals()
+                existing = get_active_signals(current_user_id)
                 if is_incognito:
                     existing = existing + st.session_state.get("incognito_signals", [])
-                current_directives = get_directives()
+                current_directives = get_directives(current_user_id)
                 result = run_churn_engine(existing, files_data, extra_text or "", current_directives)
 
                 files_data.clear()
@@ -1223,7 +1494,7 @@ if drop_btn:
                         new_incog.append(sig_dict)
                     st.session_state["incognito_signals"] = new_incog
                 else:
-                    save_signals([s.model_dump() for s in result.signals])
+                    save_signals(current_user_id, [s.model_dump() for s in result.signals])
                 st.session_state["just_dropped"] = True
                 st.session_state["just_purged"] = True
                 st.session_state["_clear_bleat_text"] = True
@@ -1245,7 +1516,7 @@ if st.session_state.get("just_dropped"):
 
 if st.session_state.get("just_purged"):
     st.markdown('''
-    <div class="opsec-status">🛡️ Analysis complete. Source file purged for security.</div>
+    <div class="opsec-status">🛡️ Analysis complete. Source files permanently purged — Stateless Processing confirmed.</div>
     ''', unsafe_allow_html=True)
     st.session_state["just_purged"] = False
 
@@ -1267,10 +1538,10 @@ def show_cheese_popup(task_name, xp_gained, leveled_up, xp_tier):
     st.markdown(CONFETTI_JS, unsafe_allow_html=True)
 
     goat_pun = random.choice(GOAT_PUNS)
-    player_snap = get_player()
+    player_snap = get_player(current_user_id)
 
-    tier_b64 = get_tier_celeb_b64(xp_tier)
-    celeb_src = f"data:image/png;base64,{tier_b64}" if tier_b64 else ""
+    gusto_b64 = celeb_task_completed_b64 if celeb_task_completed_b64 else get_tier_celeb_b64(xp_tier)
+    celeb_src = f"data:image/png;base64,{gusto_b64}" if gusto_b64 else ""
     popup_img = f'<img src="{celeb_src}" alt="Task Completed" style="height:160px;border-radius:12px;display:block;margin:0 auto 0.5rem auto;">' if celeb_src else ''
 
     st.markdown(f'''
@@ -1309,11 +1580,11 @@ if st.session_state.get("just_completed_task"):
         xp_tier = "Standard"
     show_cheese_popup(task_name, xp_gained, leveled_up, xp_tier)
 
-signals = get_active_signals()
+signals = get_active_signals(current_user_id)
 if st.session_state.get("incognito_mode", False):
     incog_sigs = st.session_state.get("incognito_signals", [])
     signals = signals + incog_sigs
-player = get_player()
+player = get_player(current_user_id)
 
 active_count = len(signals)
 summit_count = sum(1 for s in signals if s.get("bleat_type") == "Summit-Level Bleat")
@@ -1377,7 +1648,7 @@ with col_daily_shot:
             st.rerun()
 with col_metabolize:
     if st.button("🧬 Metabolize", key="metabolize_btn", use_container_width=True):
-        count = metabolize_completed()
+        count = metabolize_completed(current_user_id)
         if count > 0:
             st.session_state["just_metabolized"] = count
         else:
@@ -1415,6 +1686,14 @@ else:
         bleat_class = "bleat-summit" if is_summit else "bleat-routine"
         bleat_label = "🔺 Summit-Level Bleat" if is_summit else "🌿 Routine Grazing"
 
+        is_high_leverage = tier == "High-Leverage"
+        card_extra_class = " high-leverage-glow" if is_high_leverage else ""
+
+        glow_eye_icon = ""
+        if is_high_leverage and celeb_priority_achieved_b64:
+            glow_src = f"data:image/png;base64,{celeb_priority_achieved_b64}"
+            glow_eye_icon = f'<img src="{glow_src}" style="height:24px;border-radius:4px;vertical-align:middle;margin-left:0.4rem;" title="High-Leverage Detected">'
+
         goat_badge = ""
         if weight >= 8.0:
             goat_badge = '<span class="goat-badge">🐐 GOAT</span>'
@@ -1424,9 +1703,9 @@ else:
             directive_badge = '<span class="directive-badge">⚡ Directive Applied</span>'
 
         st.markdown(f'''
-        <div class="signal-card">
+        <div class="signal-card{card_extra_class}">
             <div class="signal-weight">{weight:.0f}</div>
-            <div class="signal-task">{safe(sig["task_name"])}{goat_badge}{directive_badge}</div>
+            <div class="signal-task">{safe(sig["task_name"])}{glow_eye_icon}{goat_badge}{directive_badge}</div>
             <div class="signal-why">{safe(sig["why"])}</div>
             <span class="bleat-type-tag {bleat_class}">{bleat_label}</span>
             <span class="xp-tag {xp_class}">+{xp_amount:,} CCR — {safe(tier)}</span>
@@ -1443,7 +1722,7 @@ else:
                 st.session_state["just_completed_task"] = (sig['task_name'], xp, False, xp_tier)
                 st.rerun()
             else:
-                reward, xp, leveled_up = complete_signal(sig['id'])
+                reward, xp, leveled_up = complete_signal(sig['id'], current_user_id)
                 if reward:
                     st.session_state["just_completed_task"] = (sig['task_name'], xp, leveled_up, reward)
                     st.rerun()
