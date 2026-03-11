@@ -1,10 +1,9 @@
 import streamlit as st
 import os
 import io
-import json
 import html
 import base64
-import time
+import math
 import psycopg2
 import psycopg2.extras
 from openai import OpenAI
@@ -12,13 +11,14 @@ from pydantic import BaseModel, Field
 from PyPDF2 import PdfReader
 
 st.set_page_config(
-    page_title="GOATflow | Dynamic Priority Engine",
+    page_title="GOATflow | Prioritize. Optimize. Execute.",
     page_icon="🐐",
     layout="centered",
     initial_sidebar_state="collapsed",
 )
 
 PURPLE = "#6100ff"
+NEON_VIOLET = "#8B5CF6"
 CHARCOAL = "#121212"
 SILVER = "#C0C0C0"
 NEON_GREEN = "#53c660"
@@ -26,6 +26,40 @@ CARD_BG = "#1A1A2E"
 BORDER = "#2A2A4A"
 WHITE = "#F5F5F5"
 DARK_SURFACE = "#0D0D1A"
+
+XP_TIERS = {"Micro": 100, "Standard": 500, "High-Leverage": 1500, "GOAT": 5000}
+BASE_LEVEL_XP = 5000
+LEVEL_GROWTH = 0.20
+
+
+def xp_for_level(level: int) -> int:
+    if level <= 1:
+        return BASE_LEVEL_XP
+    return math.ceil(BASE_LEVEL_XP * ((1 + LEVEL_GROWTH) ** (level - 1)))
+
+
+def compute_level(total_xp: int) -> tuple[int, int, int]:
+    level = 1
+    xp_consumed = 0
+    while True:
+        needed = xp_for_level(level)
+        if xp_consumed + needed > total_xp:
+            xp_into = total_xp - xp_consumed
+            return level, xp_into, needed
+        xp_consumed += needed
+        level += 1
+
+
+def get_logo_b64():
+    if "logo_b64" not in st.session_state:
+        logo_path = os.path.join(os.path.dirname(__file__), "goatflow_logo.png")
+        if os.path.exists(logo_path):
+            with open(logo_path, "rb") as f:
+                st.session_state["logo_b64"] = base64.b64encode(f.read()).decode("utf-8")
+        else:
+            st.session_state["logo_b64"] = ""
+    return st.session_state["logo_b64"]
+
 
 CUSTOM_CSS = f"""
 <style>
@@ -46,50 +80,25 @@ CUSTOM_CSS = f"""
 
     .goat-header {{
         text-align: center;
-        padding: 1.2rem 0 0.8rem 0;
-        margin-bottom: 1rem;
+        padding: 0.5rem 0 0.6rem 0;
+        margin-bottom: 0.8rem;
     }}
 
-    .goat-brand {{
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
-        margin-bottom: 0.3rem;
-    }}
-
-    .goat-icon {{
-        width: 40px;
-        height: 40px;
-        background: linear-gradient(135deg, {PURPLE}, #4A00CC);
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.4rem;
-        font-weight: 900;
-        color: #FFFFFF;
-    }}
-
-    .goat-wordmark {{
-        font-size: 1.5rem;
-        font-weight: 800;
-        color: {WHITE};
-        letter-spacing: -0.02em;
-    }}
-
-    .goat-wordmark span {{
-        color: {PURPLE};
+    .goat-header img {{
+        height: 90px;
+        margin-bottom: 0;
     }}
 
     .goat-tagline {{
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         color: {SILVER};
-        font-weight: 400;
-        letter-spacing: 0.15em;
+        font-weight: 500;
+        letter-spacing: 0.18em;
         text-transform: uppercase;
+        margin-top: 0;
     }}
 
-    .drop-zone-label {{
+    .churn-label {{
         color: {SILVER};
         font-size: 0.7rem;
         font-weight: 700;
@@ -174,22 +183,28 @@ CUSTOM_CSS = f"""
         border-radius: 4px;
     }}
 
-    .xp-small {{
+    .xp-micro {{
         background-color: rgba(83, 198, 96, 0.15);
         color: {NEON_GREEN};
         border: 1px solid rgba(83, 198, 96, 0.3);
     }}
 
-    .xp-medium {{
+    .xp-standard {{
         background-color: rgba(97, 0, 255, 0.15);
         color: #B388FF;
         border: 1px solid rgba(97, 0, 255, 0.3);
     }}
 
-    .xp-large {{
+    .xp-high-leverage {{
         background-color: rgba(255, 171, 0, 0.15);
         color: #FFD54F;
         border: 1px solid rgba(255, 171, 0, 0.3);
+    }}
+
+    .xp-goat {{
+        background: linear-gradient(135deg, rgba(139,92,246,0.2), rgba(97,0,255,0.2));
+        color: #D4BFFF;
+        border: 1px solid rgba(139, 92, 246, 0.4);
     }}
 
     .goat-badge {{
@@ -234,19 +249,27 @@ CUSTOM_CSS = f"""
 
     .xp-bar-outer {{
         flex: 1;
-        height: 18px;
+        height: 20px;
         background: #1A1A2E;
-        border-radius: 9px;
+        border-radius: 10px;
         overflow: hidden;
         position: relative;
         border: 1px solid {BORDER};
+        box-shadow: 0 0 12px rgba(83, 198, 96, 0.15);
     }}
 
     .xp-bar-inner {{
         height: 100%;
-        background: linear-gradient(90deg, {NEON_GREEN}, #3DA64A);
-        border-radius: 9px;
-        transition: width 0.5s ease;
+        background: linear-gradient(90deg, {NEON_GREEN}, #3DA64A, {NEON_GREEN});
+        background-size: 200% 100%;
+        border-radius: 10px;
+        transition: width 0.6s ease;
+        animation: glow-pulse 2s ease-in-out infinite;
+    }}
+
+    @keyframes glow-pulse {{
+        0%, 100% {{ box-shadow: 0 0 8px rgba(83, 198, 96, 0.4); background-position: 0% 50%; }}
+        50% {{ box-shadow: 0 0 18px rgba(83, 198, 96, 0.7); background-position: 100% 50%; }}
     }}
 
     .xp-text {{
@@ -313,16 +336,6 @@ CUSTOM_CSS = f"""
         border-top-color: {PURPLE} !important;
     }}
 
-    .complete-pulse {{
-        animation: pulse-green 0.6s ease-out;
-    }}
-
-    @keyframes pulse-green {{
-        0% {{ box-shadow: 0 0 0 0 rgba(83, 198, 96, 0.6); }}
-        70% {{ box-shadow: 0 0 0 15px rgba(83, 198, 96, 0); }}
-        100% {{ box-shadow: 0 0 0 0 rgba(83, 198, 96, 0); }}
-    }}
-
     .completed-toast {{
         background: linear-gradient(135deg, rgba(83,198,96,0.15), rgba(83,198,96,0.05));
         border: 1px solid rgba(83,198,96,0.3);
@@ -369,6 +382,98 @@ CUSTOM_CSS = f"""
     .spacer-bottom {{
         height: 80px;
     }}
+
+    .confetti-overlay {{
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        pointer-events: none;
+        z-index: 99998;
+    }}
+
+    .xp-popup {{
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: {CARD_BG};
+        border: 2px solid {NEON_GREEN};
+        border-radius: 16px;
+        padding: 2rem 2.5rem;
+        text-align: center;
+        z-index: 99999;
+        box-shadow: 0 0 40px rgba(83, 198, 96, 0.3);
+        animation: popup-in 0.4s ease-out;
+        pointer-events: none;
+    }}
+
+    .xp-popup img {{
+        height: 80px;
+        margin-bottom: 0.5rem;
+    }}
+
+    .xp-popup-text {{
+        color: {NEON_GREEN};
+        font-size: 1.6rem;
+        font-weight: 900;
+        letter-spacing: -0.01em;
+    }}
+
+    .xp-popup-sub {{
+        color: {SILVER};
+        font-size: 0.85rem;
+        font-weight: 500;
+        margin-top: 0.3rem;
+    }}
+
+    @keyframes popup-in {{
+        0% {{ opacity: 0; transform: translate(-50%, -50%) scale(0.7); }}
+        100% {{ opacity: 1; transform: translate(-50%, -50%) scale(1); }}
+    }}
+
+    .levelup-overlay {{
+        position: fixed;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(97, 0, 255, 0.92);
+        z-index: 100000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        animation: levelup-fade 4s ease-in-out forwards;
+        pointer-events: none;
+    }}
+
+    @keyframes levelup-fade {{
+        0% {{ opacity: 0; }}
+        15% {{ opacity: 1; }}
+        75% {{ opacity: 1; }}
+        100% {{ opacity: 0; display: none; }}
+    }}
+
+    .levelup-overlay img {{
+        height: 120px;
+        margin-bottom: 1rem;
+    }}
+
+    .levelup-text {{
+        font-size: 3rem;
+        font-weight: 900;
+        color: #FFFFFF;
+        text-shadow: 0 0 30px rgba(255,255,255,0.5);
+        letter-spacing: 0.05em;
+    }}
+
+    .levelup-level {{
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: {NEON_GREEN};
+        margin-top: 0.5rem;
+    }}
+
+    @keyframes levelup-in {{
+        0% {{ opacity: 0; }}
+        100% {{ opacity: 1; }}
+    }}
 </style>
 """
 
@@ -388,7 +493,7 @@ def ensure_schema():
                     id SERIAL PRIMARY KEY,
                     task_name TEXT NOT NULL,
                     why TEXT NOT NULL,
-                    xp_reward TEXT NOT NULL DEFAULT 'Medium',
+                    xp_reward TEXT NOT NULL DEFAULT 'Standard',
                     operational_weight REAL NOT NULL DEFAULT 5.0,
                     completed BOOLEAN NOT NULL DEFAULT FALSE,
                     created_at TIMESTAMP DEFAULT NOW(),
@@ -444,7 +549,6 @@ def get_active_signals():
 
 
 def complete_signal(signal_id: int):
-    xp_map = {"Small": 25, "Medium": 50, "Large": 100}
     conn = get_db()
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
@@ -456,20 +560,27 @@ def complete_signal(signal_id: int):
             row = cur.fetchone()
             if not row:
                 conn.rollback()
-                return None, 0
-            xp = xp_map.get(row["xp_reward"], 50)
+                return None, 0, False
+            xp = XP_TIERS.get(row["xp_reward"], 500)
+            cur.execute("SELECT total_xp FROM player WHERE id = 1")
+            player_row = cur.fetchone()
+            old_xp = player_row["total_xp"] if player_row else 0
+            old_level, _, _ = compute_level(old_xp)
+            new_xp = old_xp + xp
+            new_level, _, _ = compute_level(new_xp)
             cur.execute("""
                 UPDATE player
-                SET total_xp = total_xp + %s,
+                SET total_xp = %s,
                     tasks_completed = tasks_completed + 1,
-                    level = GREATEST(1, (total_xp + %s) / 100 + 1)
+                    level = %s
                 WHERE id = 1
-            """, (xp, xp))
+            """, (new_xp, new_level))
             conn.commit()
-            return row["xp_reward"], xp
+            leveled_up = new_level > old_level
+            return row["xp_reward"], xp, leveled_up
     except Exception:
         conn.rollback()
-        return None, 0
+        return None, 0, False
     finally:
         conn.close()
 
@@ -498,11 +609,11 @@ def save_signals(signals_data: list[dict]):
 class Signal(BaseModel):
     task_name: str = Field(description="Clear, distilled task name")
     why: str = Field(description="One sentence explaining why this matters")
-    xp_reward: str = Field(description="One of: Small, Medium, Large based on complexity")
+    xp_reward: str = Field(description="One of: Micro, Standard, High-Leverage, GOAT — based on complexity and operational impact")
     operational_weight: float = Field(ge=0, le=10, description="Priority weight 0-10, higher = more urgent")
 
 
-class GravityOutput(BaseModel):
+class ChurnOutput(BaseModel):
     signals: list[Signal] = Field(description="Re-sorted list of all tasks by operational weight descending")
 
 
@@ -514,7 +625,7 @@ def get_openai_client():
     return OpenAI(api_key=api_key, base_url=base_url)
 
 
-SYSTEM_PROMPT = """You are the GOATflow Gravity Engine — a dynamic priority system for Postmaster-level operations.
+SYSTEM_PROMPT = """You are the GOATflow Churn Engine — a dynamic priority system for Postmaster-level operations.
 
 You receive two things:
 1. EXISTING TASKS: The current task list (may be empty).
@@ -524,14 +635,19 @@ Your job:
 - Analyze the new input and extract actionable tasks.
 - MERGE any new tasks that overlap with existing ones (don't duplicate).
 - Re-sort the ENTIRE list by 'Operational Weight' (0-10 scale, 10 = most urgent).
-- Assign XP rewards: Small (quick/simple), Medium (moderate effort), Large (complex/high-impact).
+- Assign an Operational Weight tier for XP:
+  * Micro (100 XP) — quick fixes, simple acknowledgments, routine checks
+  * Standard (500 XP) — moderate tasks requiring some effort or coordination
+  * High-Leverage (1500 XP) — complex tasks with significant operational impact
+  * GOAT (5000 XP) — critical, facility-level actions with major consequences
 
 Rules:
 - Task names should be clear, action-oriented, and distilled from noise.
 - The 'why' should be a single sentence of context.
 - Be specific and operational — this is for a Postmaster running a facility.
 - Return ALL tasks (existing + new, merged where appropriate).
-- Sort by operational_weight descending."""
+- Sort by operational_weight descending.
+- xp_reward must be exactly one of: Micro, Standard, High-Leverage, GOAT"""
 
 
 def extract_pdf_text(file_bytes: bytes) -> str:
@@ -544,14 +660,14 @@ def extract_pdf_text(file_bytes: bytes) -> str:
     return "\n".join(parts)
 
 
-def run_gravity_engine(existing_signals: list[dict], files_data: list[dict], extra_text: str) -> GravityOutput:
+def run_churn_engine(existing_signals: list[dict], files_data: list[dict], extra_text: str) -> ChurnOutput:
     client = get_openai_client()
 
     existing_desc = ""
     if existing_signals:
         lines = []
         for s in existing_signals:
-            lines.append(f"- [{s['operational_weight']:.1f}] {s['task_name']}: {s['why']} (XP: {s['xp_reward']})")
+            lines.append(f"- [{s['operational_weight']:.1f}] {s['task_name']}: {s['why']} (XP Tier: {s['xp_reward']})")
         existing_desc = "EXISTING TASKS:\n" + "\n".join(lines)
     else:
         existing_desc = "EXISTING TASKS: (none)"
@@ -579,7 +695,7 @@ def run_gravity_engine(existing_signals: list[dict], files_data: list[dict], ext
             {"role": "system", "content": SYSTEM_PROMPT},
             {"role": "user", "content": user_content},
         ],
-        response_format=GravityOutput,
+        response_format=ChurnOutput,
     )
     parsed = response.choices[0].message.parsed
     if parsed is None:
@@ -591,17 +707,85 @@ def safe(text: str) -> str:
     return html.escape(text)
 
 
+CONFETTI_JS = """
+<script>
+function launchConfetti() {
+    const canvas = document.createElement('canvas');
+    canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:99998;';
+    document.body.appendChild(canvas);
+    const ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    const particles = [];
+    const colors = ['#53c660','#6100ff','#8B5CF6','#FFD54F','#FF6B6B','#FFFFFF','#C0C0C0'];
+    for (let i = 0; i < 120; i++) {
+        particles.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height - canvas.height,
+            w: Math.random() * 8 + 4,
+            h: Math.random() * 4 + 2,
+            color: colors[Math.floor(Math.random() * colors.length)],
+            vx: (Math.random() - 0.5) * 4,
+            vy: Math.random() * 4 + 2,
+            rot: Math.random() * 360,
+            rv: (Math.random() - 0.5) * 10
+        });
+    }
+    let frame = 0;
+    function draw() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles.forEach(p => {
+            ctx.save();
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.rot * Math.PI / 180);
+            ctx.fillStyle = p.color;
+            ctx.fillRect(-p.w/2, -p.h/2, p.w, p.h);
+            ctx.restore();
+            p.x += p.vx;
+            p.y += p.vy;
+            p.rot += p.rv;
+            p.vy += 0.08;
+        });
+        frame++;
+        if (frame < 120) requestAnimationFrame(draw);
+        else canvas.remove();
+    }
+    draw();
+}
+launchConfetti();
+</script>
+"""
+
+LEVELUP_DISMISS_JS = """
+<script>
+setTimeout(function() {
+    const overlay = document.getElementById('levelup-overlay');
+    if (overlay) overlay.style.display = 'none';
+}, 4000);
+</script>
+"""
+
+XP_POPUP_DISMISS_JS = """
+<script>
+setTimeout(function() {
+    const popup = document.getElementById('xp-popup');
+    if (popup) popup.style.display = 'none';
+}, 3000);
+</script>
+"""
+
+logo_b64 = get_logo_b64()
+logo_src = f"data:image/png;base64,{logo_b64}" if logo_b64 else ""
+
+logo_img = f'<img src="{logo_src}" alt="GOATflow">' if logo_src else '<div style="font-size:2rem;font-weight:900;color:#6100ff;">GOATflow</div>'
+
 st.markdown(f'''
 <div class="goat-header">
-    <div class="goat-brand">
-        <div class="goat-icon">G</div>
-        <div class="goat-wordmark">Work<span>GOAT</span></div>
-    </div>
-    <div class="goat-tagline">Dynamic Priority Engine</div>
+    {logo_img}
 </div>
 ''', unsafe_allow_html=True)
 
-st.markdown('<div class="drop-zone-label">🎯 Gravity Drop Zone — Add Intel</div>', unsafe_allow_html=True)
+st.markdown('<div class="churn-label">📊 Churn Index Field — Add Intel</div>', unsafe_allow_html=True)
 
 col_files, col_text = st.columns([1, 1])
 
@@ -622,7 +806,7 @@ with col_text:
         label_visibility="collapsed",
     )
 
-drop_btn = st.button("⚡ Drop Into Gravity Engine", use_container_width=True, key="drop_btn")
+drop_btn = st.button("⚡ Drop Into Churn Engine", use_container_width=True, key="drop_btn")
 
 if drop_btn:
     has_files = uploaded_files and len(uploaded_files) > 0
@@ -631,7 +815,7 @@ if drop_btn:
     if not has_files and not has_text:
         st.warning("Drop some files or paste text to feed the engine.")
     else:
-        with st.spinner("Gravity Engine processing..."):
+        with st.spinner("Churn Engine processing..."):
             try:
                 files_data = []
                 if uploaded_files:
@@ -655,29 +839,48 @@ if drop_btn:
                                 files_data.append({"type": "text", "name": fname, "content": "[unreadable]"})
 
                 existing = get_active_signals()
-                result = run_gravity_engine(existing, files_data, extra_text or "")
+                result = run_churn_engine(existing, files_data, extra_text or "")
 
                 save_signals([s.model_dump() for s in result.signals])
                 st.session_state["just_dropped"] = True
                 st.rerun()
             except Exception:
-                st.error("The Gravity Engine hit a snag. Please try again.")
+                st.error("The Churn Engine hit a snag. Please try again.")
 
 if st.session_state.get("just_dropped"):
     st.markdown('''
     <div class="completed-toast">
-        <div class="completed-toast-text">⚡ Gravity Engine complete — tasks re-prioritized</div>
+        <div class="completed-toast-text">⚡ Churn Engine complete — tasks re-prioritized</div>
     </div>
     ''', unsafe_allow_html=True)
     st.session_state["just_dropped"] = False
 
 if st.session_state.get("just_completed_task"):
-    task_name, xp_gained = st.session_state["just_completed_task"]
+    task_name, xp_gained, leveled_up = st.session_state["just_completed_task"]
+
+    st.markdown(CONFETTI_JS, unsafe_allow_html=True)
+
+    popup_logo = f'<img src="{logo_src}" alt="GOATflow">' if logo_src else ''
     st.markdown(f'''
-    <div class="completed-toast complete-pulse">
-        <div class="completed-toast-text">✅ Task Complete! +{xp_gained} XP — {safe(task_name)}</div>
+    <div class="xp-popup" id="xp-popup">
+        {popup_logo}
+        <div class="xp-popup-text">+{xp_gained:,} GOAT Points!</div>
+        <div class="xp-popup-sub">{safe(task_name)}</div>
     </div>
     ''', unsafe_allow_html=True)
+    st.markdown(XP_POPUP_DISMISS_JS, unsafe_allow_html=True)
+
+    if leveled_up:
+        player_now = get_player()
+        st.markdown(f'''
+        <div class="levelup-overlay" id="levelup-overlay">
+            {popup_logo}
+            <div class="levelup-text">LEVEL UP</div>
+            <div class="levelup-level">Level {player_now["level"]} Reached</div>
+        </div>
+        ''', unsafe_allow_html=True)
+        st.markdown(LEVELUP_DISMISS_JS, unsafe_allow_html=True)
+
     st.session_state["just_completed_task"] = None
 
 signals = get_active_signals()
@@ -685,6 +888,7 @@ player = get_player()
 
 active_count = len(signals)
 top_weight = f"{signals[0]['operational_weight']:.1f}" if signals else "—"
+level, xp_into, xp_needed = compute_level(player["total_xp"])
 
 st.markdown(f'''
 <div class="stats-row">
@@ -701,7 +905,7 @@ st.markdown(f'''
         <div class="stat-label">Completed</div>
     </div>
     <div class="stat-box">
-        <div class="stat-value" style="color:{NEON_GREEN};">{player["total_xp"]}</div>
+        <div class="stat-value" style="color:{NEON_GREEN};">{player["total_xp"]:,}</div>
         <div class="stat-label">Total XP</div>
     </div>
 </div>
@@ -713,14 +917,16 @@ if not signals:
     st.markdown('''
     <div class="empty-state">
         <div class="empty-state-icon">🐐</div>
-        <div class="empty-state-text">No active signals. Drop intel into the Gravity Zone above.</div>
+        <div class="empty-state-text">No active signals. Drop intel into the Churn Index above.</div>
     </div>
     ''', unsafe_allow_html=True)
 else:
     for sig in signals:
-        xp_class = f"xp-{sig['xp_reward'].lower()}" if sig['xp_reward'].lower() in ['small', 'medium', 'large'] else "xp-medium"
-        xp_map = {"Small": "+25 XP", "Medium": "+50 XP", "Large": "+100 XP"}
-        xp_label = xp_map.get(sig['xp_reward'], "+50 XP")
+        tier = sig['xp_reward']
+        tier_lower = tier.lower().replace("-", "-")
+        xp_class_map = {"micro": "xp-micro", "standard": "xp-standard", "high-leverage": "xp-high-leverage", "goat": "xp-goat"}
+        xp_class = xp_class_map.get(tier_lower, "xp-standard")
+        xp_amount = XP_TIERS.get(tier, 500)
         weight = sig['operational_weight']
 
         goat_badge = ""
@@ -732,27 +938,26 @@ else:
             <div class="signal-weight">{weight:.0f}</div>
             <div class="signal-task">{safe(sig["task_name"])}{goat_badge}</div>
             <div class="signal-why">{safe(sig["why"])}</div>
-            <span class="xp-tag {xp_class}">{xp_label} — {sig["xp_reward"]}</span>
+            <span class="xp-tag {xp_class}">+{xp_amount:,} XP — {safe(tier)}</span>
         </div>
         ''', unsafe_allow_html=True)
 
         if st.button(f"✅ Complete", key=f"complete_{sig['id']}", use_container_width=True):
-            reward, xp = complete_signal(sig['id'])
+            reward, xp, leveled_up = complete_signal(sig['id'])
             if reward:
-                st.session_state["just_completed_task"] = (sig['task_name'], xp)
+                st.session_state["just_completed_task"] = (sig['task_name'], xp, leveled_up)
                 st.rerun()
 
 st.markdown('<div class="spacer-bottom"></div>', unsafe_allow_html=True)
 
-xp_in_level = player["total_xp"] % 100
-xp_pct = min(xp_in_level, 100)
+xp_pct = min((xp_into / xp_needed) * 100, 100) if xp_needed > 0 else 0
 
 st.markdown(f'''
 <div class="level-bar-container">
-    <div class="level-badge">LVL {player["level"]}</div>
+    <div class="level-badge">LVL {level}</div>
     <div class="xp-bar-outer">
-        <div class="xp-bar-inner" style="width:{xp_pct}%;"></div>
+        <div class="xp-bar-inner" style="width:{xp_pct:.1f}%;"></div>
     </div>
-    <div class="xp-text">{xp_in_level}/100 XP</div>
+    <div class="xp-text">{xp_into:,}/{xp_needed:,} XP</div>
 </div>
 ''', unsafe_allow_html=True)
