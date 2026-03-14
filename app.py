@@ -2453,10 +2453,10 @@ _slideshow_iife = r"""
     { key: 'horse',   caption: "Horses are making their own leaps" }
   ];
 
-  var T_FADEIN  = 500;
-  var T_X_DRAW  = 1000;
-  var T_CAPTION = 750;
-  var T_PAUSE   = 750;
+  var T_FADEIN  = 1500;
+  var T_X_DRAW  = 2000;
+  var T_CAPTION = 1750;
+  var T_PAUSE   = 1750;
   var T_BETWEEN = 300;
   var LINE_LEN  = 372; // sqrt(300^2 + 220^2) for 320x240 image with 10px inset
 
@@ -2580,7 +2580,8 @@ _slideshow_iife = r"""
         titleEl.style.opacity = '0.7';
       });
 
-      // Phase 2: draw X
+      // Phase 2: draw X (bull gets extra 1s to fully populate before X draws)
+      var xDelay = T_FADEIN + (idx === 0 ? 1000 : 0);
       slideTimer = setTimeout(function() {
         if (done) return;
         drawX();
@@ -2611,7 +2612,7 @@ _slideshow_iife = r"""
             }, T_BETWEEN);
           }, T_PAUSE);
         }, T_X_DRAW);
-      }, T_FADEIN);
+      }, xDelay);
     }
 
     // Preload image then animate
@@ -2687,6 +2688,8 @@ _slideshow_iife = r"""
   line1.setAttribute('stroke', '#ef4444');
   line1.setAttribute('stroke-width', '9');
   line1.setAttribute('stroke-linecap', 'round');
+  line1.setAttribute('stroke-dasharray', LINE_LEN);
+  line1.setAttribute('stroke-dashoffset', LINE_LEN);
 
   line2 = pd.createElementNS('http://www.w3.org/2000/svg', 'line');
   line2.setAttribute('x1', '310'); line2.setAttribute('y1', '10');
@@ -2694,6 +2697,8 @@ _slideshow_iife = r"""
   line2.setAttribute('stroke', '#ef4444');
   line2.setAttribute('stroke-width', '9');
   line2.setAttribute('stroke-linecap', 'round');
+  line2.setAttribute('stroke-dasharray', LINE_LEN);
+  line2.setAttribute('stroke-dashoffset', LINE_LEN);
 
   svgEl.appendChild(line1);
   svgEl.appendChild(line2);
