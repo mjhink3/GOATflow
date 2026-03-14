@@ -1148,9 +1148,6 @@ CUSTOM_CSS = f"""
     .landing-tagline {{
         animation: gfFadeSlideUp 500ms ease-out 400ms both;
     }}
-    .landing-sub {{
-        animation: gfFadeSlideUp 500ms ease-out 700ms both;
-    }}
     .global-footer {{
         animation: gfFadeIn 300ms ease-out 1100ms both;
     }}
@@ -1824,7 +1821,6 @@ if not user_info:
     <div class="landing-container">
         {f'<img src="{logo_src}" alt="GOATflow">' if logo_src else '<div style="font-size:3rem;font-weight:900;font-family:Syne,sans-serif;color:#fff;margin-bottom:2rem;">🐐 GOATflow</div>'}
         <div class="landing-tagline">Grab life by the horns.<br>Leave the bull behind.</div>
-        <div class="landing-sub">Metabolize your to-do list.</div>
     </div>
     ''', unsafe_allow_html=True)
 
