@@ -28,7 +28,7 @@ Users sign in via username/password to access their private dashboard. Each user
 ## Database Schema
 - **users**: id (SERIAL PK), username (TEXT UNIQUE), password_hash, password_salt, display_name, created_at
 - **signals**: id (SERIAL PK), task_name, why, xp_reward, operational_weight, completed, directive_applied, bleat_type, created_at, completed_at, **user_id** (TEXT NOT NULL), horn_applied_name
-- **player**: id (SERIAL PK), **user_id** (TEXT UNIQUE), total_xp, level, tasks_completed, **hay** (INTEGER DEFAULT 0), **fresh_cheese** (INTEGER DEFAULT 0)
+- **player**: id (SERIAL PK), **user_id** (TEXT UNIQUE), total_xp, level, tasks_completed, **hay** (INTEGER DEFAULT 0), **fresh_cheese** (INTEGER DEFAULT 0), **onboarding_done** (BOOLEAN DEFAULT FALSE)
 - **directives**: id (SERIAL PK), **user_id** (TEXT UNIQUE), rules_text (newline-separated Horns)
 - **operational_log**: id, user_id, task_name, task_why, resolution, horn_applied_name, priority_score, xp_tier, created_at
 - Migration: `ensure_schema()` adds all new columns via ALTER TABLE IF NOT EXISTS checks

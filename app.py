@@ -1288,7 +1288,7 @@ def ensure_schema():
                     EXCEPTION WHEN duplicate_table THEN NULL;
                     END $$;
                 """)
-            for pcol in [("hay", "INTEGER NOT NULL", "0"), ("fresh_cheese", "INTEGER NOT NULL", "0")]:
+            for pcol in [("hay", "INTEGER NOT NULL", "0"), ("fresh_cheese", "INTEGER NOT NULL", "0"), ("onboarding_done", "BOOLEAN NOT NULL", "FALSE")]:
                 cur.execute(f"SELECT column_name FROM information_schema.columns WHERE table_name = 'player' AND column_name = '{pcol[0]}'")
                 if not cur.fetchone():
                     cur.execute(f"ALTER TABLE player ADD COLUMN {pcol[0]} {pcol[1]} DEFAULT {pcol[2]}")
@@ -1444,7 +1444,19 @@ def get_player(user_id: str):
                 conn.commit()
             return dict(row)
     except Exception:
-        return {"user_id": user_id, "total_xp": 0, "level": 1, "tasks_completed": 0, "hay": 0, "fresh_cheese": 0}
+        return {"user_id": user_id, "total_xp": 0, "level": 1, "tasks_completed": 0, "hay": 0, "fresh_cheese": 0, "onboarding_done": False}
+    finally:
+        conn.close()
+
+
+def mark_onboarding_done(user_id: str):
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE player SET onboarding_done = TRUE WHERE user_id = %s", (user_id,))
+            conn.commit()
+    except Exception:
+        pass
     finally:
         conn.close()
 
@@ -1978,7 +1990,6 @@ if not user_info:
                         st.session_state["auth_user_id"] = user["id"]
                         st.session_state["auth_user_name"] = user["username"]
                         st.session_state["auth_display_name"] = user["display_name"]
-                        st.session_state["show_onboarding"] = True
                         st.rerun()
 
     st.markdown(f'''
@@ -2056,6 +2067,10 @@ QUICK_SCRIPTS = [
 ]
 
 player_data = get_player(current_user_id)
+if st.query_params.get("ob_done") == "1":
+    mark_onboarding_done(current_user_id)
+    st.query_params.clear()
+    st.rerun()
 user_level = player_data["level"]
 user_rank = ascension_rank(user_level)
 use_crown = user_level >= 5
@@ -2215,15 +2230,25 @@ with st.sidebar:
                      "just_dropped", "just_purged", "fresh_cheese_pending", "just_earned_fresh_cheese"]:
             st.session_state.pop(key, None)
         st.rerun()
+    st.markdown(
+        '<button onclick="if(window.gfObReshow){gfObReshow();}else{var o=document.getElementById(\'gf-onboarding\');if(o)o.style.display=\'block\';}" '
+        'style="width:100%;background:transparent;border:1px solid #374151;border-radius:8px;color:#6b7280;'
+        'font-family:\'DM Sans\',sans-serif;font-size:0.75rem;font-weight:500;padding:8px 0;cursor:pointer;'
+        'transition:all 0.2s;margin-top:0.5rem;" '
+        'onmouseover="this.style.borderColor=\'#7c3aed\';this.style.color=\'#a78bfa\';" '
+        'onmouseout="this.style.borderColor=\'#374151\';this.style.color=\'#6b7280\';">'
+        '❓ Replay Tutorial</button>',
+        unsafe_allow_html=True
+    )
 
 # ── Welcome overlay (first-login, no Horns set) ───────────────────────────────
 _has_horns_js = "true" if current_horns else "false"
 _logo_src_js  = logo_src.replace('"', '\\"') if logo_src else ""
 
-# ── First-login onboarding sequence (3 acts, localStorage gated) ───────────
+# ── First-login onboarding sequence (3 acts, DB + localStorage gated) ─────
 # NOTE: No blank lines within the HTML block — Streamlit's markdown parser
 # (CommonMark) terminates an HTML block at the first blank line inside a <div>.
-_force_onboarding = st.session_state.pop("show_onboarding", False)
+_force_onboarding = not player_data.get("onboarding_done", False)
 _ob_username_safe = ''.join(c for c in (current_user_name or 'user') if c.isalnum() or c == '_')
 import base64 as _b64
 _animal_names = [
@@ -2238,8 +2263,9 @@ def _load_animal_b64(name):
     except Exception:
         return ""
 _animal_data_urls = [_load_animal_b64(n) for n in _animal_names]
+_ob_display = 'block' if _force_onboarding else 'none'
 _ob_html = (
-    '<div id="gf-onboarding" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:100;background:#08080f;overflow:hidden;">'
+    f'<div id="gf-onboarding" style="display:{_ob_display};position:fixed;top:0;left:0;width:100%;height:100%;z-index:100;background:#08080f;overflow:hidden;">'
     '<div id="gf-ob-skip" onclick="gfObSkipToAct3()" style="position:absolute;bottom:24px;right:24px;font-family:\'DM Sans\',sans-serif;font-weight:400;font-size:12px;color:#4b5563;cursor:pointer;z-index:110;" onmouseover="this.style.color=\'#9ca3af\'" onmouseout="this.style.color=\'#4b5563\'">Skip intro \u2192</div>'
     '<div id="gf-act1" style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;">'
     '<div id="gf-ob-title-card" style="text-align:center;padding:0 32px;">'
@@ -2276,9 +2302,11 @@ _ob_html = (
 )
 _animal_imgs_json = '[' + ','.join('"' + u + '"' for u in _animal_data_urls) + ']'
 _ob_force_js = 'true' if _force_onboarding else 'false'
-_ob_html += ('<script>window.gfAnimalImgs=' + _animal_imgs_json
-             + ';window.gfObForce=' + _ob_force_js
-             + ';window.gfObLsKey="goatflow_ob_' + _ob_username_safe + '";</script>')
+_ob_html += ('<script>'
+             'window.gfAnimalImgs=' + _animal_imgs_json + ';'
+             'window.gfObForce=' + _ob_force_js + ';'
+             'window.gfObLsKey="goatflow_ob_' + _ob_username_safe + '";'
+             '</script>')
 st.markdown(_ob_html, unsafe_allow_html=True)
 st.markdown(r"""
 <style>
@@ -2291,13 +2319,8 @@ st.markdown(r"""
 <script>
 (function() {
   var _lsKey = window.gfObLsKey || 'goatflow_ob';
-  if (!window.gfObForce && localStorage.getItem(_lsKey) === 'true') return;
-  function gfObInit() {
-    var overlay = document.getElementById('gf-onboarding');
-    if (!overlay) { setTimeout(gfObInit, 120); return; }
-    overlay.style.display = 'block';
-  var gfObCard = 0, gfObTimer = null, gfObXTimer = null, gfObAborted = false;
-  var gfAnimals = [
+  var _card = 0, _tmr = null, _xtmr = null, _ab = false;
+  var _animals = [
     {c:'Bulls \u2014 Full of it.',                           d:1800},
     {c:'Rams \u2014 Too aggressive.',                        d:1800},
     {c:'Chickens \u2014 You already know.',                  d:1800},
@@ -2314,83 +2337,96 @@ st.markdown(r"""
     {c:"Eagles \u2014 Not always free.",                     d:1100},
     {c:"Horses \u2014 Making their own leaps.",              d:1100}
   ];
-  function gfObAnimal(i) {
-    if (gfObAborted) return;
-    if (i >= gfAnimals.length) { gfObFlash(); return; }
-    var a = gfAnimals[i];
-    var tc = document.getElementById('gf-ob-title-card');
-    var ac = document.getElementById('gf-ob-animal-card');
-    var im = document.getElementById('gf-ob-animal-img');
-    var cp = document.getElementById('gf-ob-caption');
-    var x  = document.getElementById('gf-ob-x');
-    if (tc) tc.style.display = 'none';
-    if (ac) ac.style.display = 'block';
-    if (im && window.gfAnimalImgs && window.gfAnimalImgs[i]) im.src = window.gfAnimalImgs[i];
-    if (cp) cp.textContent = a.c;
-    if (x)  x.style.opacity = '0';
-    gfObXTimer = setTimeout(function() { if (!gfObAborted && x) x.style.opacity = '1'; }, 900);
-    gfObTimer  = setTimeout(function() { gfObAnimal(i + 1); }, a.d);
+  function _parade(i) {
+    if (_ab) return;
+    if (i >= _animals.length) { _flash(); return; }
+    var a = _animals[i];
+    var tc=document.getElementById('gf-ob-title-card'), ac=document.getElementById('gf-ob-animal-card');
+    var im=document.getElementById('gf-ob-animal-img'), cp=document.getElementById('gf-ob-caption'), x=document.getElementById('gf-ob-x');
+    if (tc) tc.style.display='none';
+    if (ac) ac.style.display='block';
+    if (im && window.gfAnimalImgs && window.gfAnimalImgs[i]) im.src=window.gfAnimalImgs[i];
+    if (cp) cp.textContent=a.c;
+    if (x) x.style.opacity='0';
+    _xtmr=setTimeout(function(){if(!_ab&&x)x.style.opacity='1';},900);
+    _tmr=setTimeout(function(){_parade(i+1);},a.d);
   }
-  function gfObFlash() {
-    var fl = document.getElementById('gf-ob-flash');
-    if (fl) { fl.style.display = 'block'; setTimeout(function() { fl.style.display = 'none'; gfObShowAct2(); }, 150); }
-    else gfObShowAct2();
+  function _flash() {
+    var fl=document.getElementById('gf-ob-flash');
+    if(fl){fl.style.display='block';setTimeout(function(){fl.style.display='none';_act2();},150);}
+    else _act2();
   }
-  function gfObShowAct2() {
-    document.getElementById('gf-act1').style.display = 'none';
-    var a2 = document.getElementById('gf-act2');
-    a2.style.display = 'flex';
-    var lines = a2.querySelectorAll('.gf-bam-line'), delay = 0;
-    for (var i = 0; i < lines.length; i++) {
-      (function(el, d) { setTimeout(function() { el.style.opacity = '1'; }, d); })(lines[i], delay);
-      delay += 400;
-    }
-    setTimeout(function() { var btn = document.getElementById('gf-bam-btn'); if (btn) btn.style.display = 'inline-block'; }, delay + 2000);
+  function _act2() {
+    var a1=document.getElementById('gf-act1'); if(a1)a1.style.display='none';
+    var a2=document.getElementById('gf-act2'); if(!a2)return;
+    a2.style.display='flex';
+    var lines=a2.querySelectorAll('.gf-bam-line'),delay=0;
+    for(var i=0;i<lines.length;i++){(function(el,d){setTimeout(function(){el.style.opacity='1';},d);})(lines[i],delay);delay+=400;}
+    setTimeout(function(){var btn=document.getElementById('gf-bam-btn');if(btn)btn.style.display='inline-block';},delay+2000);
   }
-  window.gfObAct3 = function() {
-    var a2 = document.getElementById('gf-act2'); if (a2) a2.style.display = 'none';
-    var sk = document.getElementById('gf-ob-skip'); if (sk) sk.style.display = 'none';
-    var a3 = document.getElementById('gf-act3'); a3.style.display = 'flex';
-    gfObCard = 0; gfObUpdateDots();
-  };
-  window.gfObNextCard = function() {
-    if (gfObCard >= 4) { gfObComplete(); return; }
-    var cur = document.getElementById('gf-ob-card-' + gfObCard); if (cur) cur.style.display = 'none';
-    gfObCard++;
-    var nxt = document.getElementById('gf-ob-card-' + gfObCard); if (nxt) nxt.style.display = 'flex';
-    gfObUpdateDots();
-  };
-  function gfObUpdateDots() {
-    for (var i = 0; i <= 4; i++) {
-      var dot = document.getElementById('gf-dot-' + i);
-      if (dot) dot.style.background = (i === gfObCard) ? '#7c3aed' : '#374151';
-    }
+  function _dots() {
+    for(var i=0;i<=4;i++){var d=document.getElementById('gf-dot-'+i);if(d)d.style.background=(i===_card)?'#7c3aed':'#374151';}
   }
-  window.gfObComplete = function() {
-    localStorage.setItem(_lsKey, 'true');
-    localStorage.setItem('goatflow_welcomed', 'true');
-    overlay.style.display = 'none';
-    setTimeout(function() {
-      var t = document.querySelector('[data-testid="stSidebarNavToggleButton"] button, button[aria-label="open sidebar"], [data-testid="collapsedControl"] button, [data-testid="collapsedControl"]');
-      if (t) t.click();
-    }, 300);
+  window.gfObAct3=function(){
+    var a2=document.getElementById('gf-act2');if(a2)a2.style.display='none';
+    var sk=document.getElementById('gf-ob-skip');if(sk)sk.style.display='none';
+    var a3=document.getElementById('gf-act3');if(a3)a3.style.display='flex';
+    _card=0;_dots();
   };
-  window.gfObSkipToAct3 = function() {
-    gfObAborted = true;
-    if (gfObTimer)  clearTimeout(gfObTimer);
-    if (gfObXTimer) clearTimeout(gfObXTimer);
-    var a1 = document.getElementById('gf-act1'); if (a1) a1.style.display = 'none';
-    var a2 = document.getElementById('gf-act2'); if (a2) a2.style.display = 'none';
-    var fl = document.getElementById('gf-ob-flash'); if (fl) fl.style.display = 'none';
-    gfObAct3();
+  window.gfObNextCard=function(){
+    if(_card>=4){window.gfObComplete();return;}
+    var cur=document.getElementById('gf-ob-card-'+_card);if(cur)cur.style.display='none';
+    _card++;
+    var nxt=document.getElementById('gf-ob-card-'+_card);if(nxt)nxt.style.display='flex';
+    _dots();
   };
-  window.goatflow_resetOnboarding = function() {
-    localStorage.removeItem(_lsKey);
-    location.reload();
+  window.gfObComplete=function(){
+    var ov=document.getElementById('gf-onboarding');
+    if(ov)ov.style.display='none';
+    localStorage.setItem(_lsKey,'true');
+    localStorage.setItem('goatflow_welcomed','true');
+    try{history.replaceState(null,'',window.location.pathname+'?ob_done=1');}catch(e){}
+    setTimeout(function(){
+      var t=document.querySelector('[data-testid="stSidebarNavToggleButton"] button,[data-testid="collapsedControl"] button,[data-testid="collapsedControl"]');
+      if(t)t.click();
+    },300);
   };
-  gfObTimer = setTimeout(function() { gfObAnimal(0); }, 2000);
+  window.gfObSkipToAct3=function(){
+    _ab=true;if(_tmr)clearTimeout(_tmr);if(_xtmr)clearTimeout(_xtmr);
+    var a1=document.getElementById('gf-act1');if(a1)a1.style.display='none';
+    var a2=document.getElementById('gf-act2');if(a2)a2.style.display='none';
+    var fl=document.getElementById('gf-ob-flash');if(fl)fl.style.display='none';
+    window.gfObAct3();
+  };
+  window.gfObReshow=function(){
+    if(_tmr)clearTimeout(_tmr);if(_xtmr)clearTimeout(_xtmr);
+    _ab=false;_card=0;
+    var ov=document.getElementById('gf-onboarding');
+    if(!ov)return;
+    var a1=document.getElementById('gf-act1');if(a1)a1.style.display='flex';
+    var a2=document.getElementById('gf-act2');
+    if(a2){a2.style.display='none';var bl=a2.querySelectorAll('.gf-bam-line');for(var i=0;i<bl.length;i++)bl[i].style.opacity='0';}
+    var a3=document.getElementById('gf-act3');if(a3)a3.style.display='none';
+    var tc=document.getElementById('gf-ob-title-card');if(tc)tc.style.display='block';
+    var ac=document.getElementById('gf-ob-animal-card');if(ac)ac.style.display='none';
+    var x=document.getElementById('gf-ob-x');if(x)x.style.opacity='0';
+    var fl=document.getElementById('gf-ob-flash');if(fl)fl.style.display='none';
+    var sk=document.getElementById('gf-ob-skip');if(sk)sk.style.display='block';
+    var bm=document.getElementById('gf-bam-btn');if(bm)bm.style.display='none';
+    ov.style.display='block';
+    _tmr=setTimeout(function(){_parade(0);},2000);
+  };
+  window.goatflow_resetOnboarding=function(){localStorage.removeItem(_lsKey);location.reload();};
+  // If localStorage says tutorial is done, immediately hide the overlay
+  // (handles edge case where server rendered it as block on a repeated rerun)
+  if(localStorage.getItem(_lsKey)==='true'){
+    var _ovH=document.getElementById('gf-onboarding');
+    if(_ovH)_ovH.style.display='none';
+    return;
   }
-  gfObInit();
+  // New user: overlay is already display:block from server-side render.
+  // Just start the parade timer.
+  _tmr=setTimeout(function(){_parade(0);},2000);
 })();
 </script>
 """, unsafe_allow_html=True)
