@@ -1977,6 +1977,7 @@ if not user_info:
                         st.session_state["auth_user_id"] = user["id"]
                         st.session_state["auth_user_name"] = user["username"]
                         st.session_state["auth_display_name"] = user["display_name"]
+                        st.session_state["show_onboarding"] = True
                         st.rerun()
 
     st.markdown(f'''
@@ -2221,6 +2222,8 @@ _logo_src_js  = logo_src.replace('"', '\\"') if logo_src else ""
 # ── First-login onboarding sequence (3 acts, localStorage gated) ───────────
 # NOTE: No blank lines within the HTML block — Streamlit's markdown parser
 # (CommonMark) terminates an HTML block at the first blank line inside a <div>.
+_force_onboarding = st.session_state.pop("show_onboarding", False)
+_ob_username_safe = ''.join(c for c in (current_user_name or 'user') if c.isalnum() or c == '_')
 import base64 as _b64
 _animal_names = [
     "bull","ram","chicken","cow","dog","cat","donkey","lizard",
@@ -2271,7 +2274,10 @@ _ob_html = (
     '</div>'
 )
 _animal_imgs_json = '[' + ','.join('"' + u + '"' for u in _animal_data_urls) + ']'
-_ob_html += '<script>window.gfAnimalImgs=' + _animal_imgs_json + ';</script>'
+_ob_force_js = 'true' if _force_onboarding else 'false'
+_ob_html += ('<script>window.gfAnimalImgs=' + _animal_imgs_json
+             + ';window.gfObForce=' + _ob_force_js
+             + ';window.gfObLsKey="goatflow_ob_' + _ob_username_safe + '";</script>')
 st.markdown(_ob_html, unsafe_allow_html=True)
 st.markdown(r"""
 <style>
@@ -2283,7 +2289,8 @@ st.markdown(r"""
 </style>
 <script>
 (function() {
-  if (localStorage.getItem('goatflow_onboarding_complete') === 'true') return;
+  var _lsKey = window.gfObLsKey || 'goatflow_ob';
+  if (!window.gfObForce && localStorage.getItem(_lsKey) === 'true') return;
   function gfObInit() {
     var overlay = document.getElementById('gf-onboarding');
     if (!overlay) { setTimeout(gfObInit, 120); return; }
@@ -2359,7 +2366,7 @@ st.markdown(r"""
     }
   }
   window.gfObComplete = function() {
-    localStorage.setItem('goatflow_onboarding_complete', 'true');
+    localStorage.setItem(_lsKey, 'true');
     localStorage.setItem('goatflow_welcomed', 'true');
     overlay.style.display = 'none';
     setTimeout(function() {
@@ -2377,7 +2384,7 @@ st.markdown(r"""
     gfObAct3();
   };
   window.goatflow_resetOnboarding = function() {
-    localStorage.removeItem('goatflow_onboarding_complete');
+    localStorage.removeItem(_lsKey);
     location.reload();
   };
   gfObTimer = setTimeout(function() { gfObAnimal(0); }, 2000);
