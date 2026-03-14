@@ -2007,6 +2007,114 @@ with st.sidebar:
             st.session_state.pop(key, None)
         st.rerun()
 
+# ── Welcome overlay (first-login, no Horns set) ───────────────────────────────
+_has_horns_js = "true" if current_horns else "false"
+_logo_src_js  = logo_src.replace('"', '\\"') if logo_src else ""
+
+st.markdown(f"""
+<div id="gf-welcome-overlay" style="
+    display:none;
+    position:fixed;top:0;left:0;width:100%;height:100%;
+    z-index:50;
+    background:rgba(8,8,15,0.92);
+    backdrop-filter:blur(8px);
+    -webkit-backdrop-filter:blur(8px);
+    align-items:center;justify-content:center;
+    animation:gfOverlayIn 0.4s ease forwards;
+">
+  <div id="gf-welcome-box" style="
+      max-width:320px;width:90%;
+      text-align:center;
+      animation:gfBoxIn 0.4s ease forwards;
+  ">
+    <div style="margin-bottom:18px;">
+      <img src="{_logo_src_js}" alt="GOATflow" style="width:80px;animation:logo-float 3.5s ease-in-out infinite;">
+    </div>
+    <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:22px;color:#ffffff;line-height:1.2;">
+      Welcome to GOATflow.
+    </div>
+    <div style="font-family:'DM Sans',sans-serif;font-weight:400;font-size:15px;color:#9ca3af;margin-top:16px;line-height:1.6;">
+      Before the chaos hits — set your Horns.<br>
+      Your Horns tell GOATflow what never moves,<br>no matter what comes in.
+    </div>
+    <button onclick="gfSetHorns()" style="
+        display:block;width:100%;margin-top:32px;
+        padding:14px 0;
+        background:#7c3aed;border:none;border-radius:8px;
+        font-family:'Syne',sans-serif;font-weight:700;font-size:15px;color:#ffffff;
+        cursor:pointer;letter-spacing:0.02em;
+        transition:background 0.2s;
+    " onmouseover="this.style.background='#6d28d9'" onmouseout="this.style.background='#7c3aed'">
+      Set My Horns →
+    </button>
+    <div onclick="gfSkip()" style="
+        margin-top:18px;
+        font-family:'DM Sans',sans-serif;font-size:13px;color:#4b5563;
+        cursor:pointer;
+    ">Skip for now</div>
+  </div>
+</div>
+
+<style>
+@keyframes gfOverlayIn {{
+    from {{ opacity:0; }}
+    to   {{ opacity:1; }}
+}}
+@keyframes gfBoxIn {{
+    from {{ transform:scale(0.95); opacity:0; }}
+    to   {{ transform:scale(1);    opacity:1; }}
+}}
+</style>
+
+<script>
+(function() {{
+    var hasHorns = {_has_horns_js};
+    var welcomed = localStorage.getItem('goatflow_welcomed') === 'true';
+    if (!welcomed && !hasHorns) {{
+        var overlay = document.getElementById('gf-welcome-overlay');
+        if (overlay) {{
+            overlay.style.display = 'flex';
+        }}
+    }}
+}})();
+
+function gfDismiss() {{
+    localStorage.setItem('goatflow_welcomed', 'true');
+    var overlay = document.getElementById('gf-welcome-overlay');
+    if (overlay) {{
+        overlay.style.transition = 'opacity 0.25s';
+        overlay.style.opacity = '0';
+        setTimeout(function() {{ overlay.style.display = 'none'; }}, 260);
+    }}
+}}
+
+function gfSetHorns() {{
+    gfDismiss();
+    // Focus the Horn input in the sidebar
+    setTimeout(function() {{
+        var sidebar = document.querySelector('[data-testid="stSidebar"]');
+        if (!sidebar) return;
+        // On mobile, open the sidebar first
+        var toggle = document.querySelector('[data-testid="stSidebarNavToggleButton"] button, button[aria-label="open sidebar"], [data-testid="collapsedControl"] button');
+        if (toggle) toggle.click();
+        // Find and focus the Horn text input
+        setTimeout(function() {{
+            var inputs = sidebar.querySelectorAll('input[type="text"], textarea');
+            if (inputs.length > 0) {{
+                var hornInput = inputs[inputs.length - 1];
+                hornInput.scrollIntoView({{behavior:'smooth',block:'center'}});
+                hornInput.focus();
+            }}
+        }}, 300);
+    }}, 280);
+}}
+
+function gfSkip() {{
+    gfDismiss();
+}}
+</script>
+""", unsafe_allow_html=True)
+
 st.markdown(f'''
 <div class="goat-header">
     {logo_img}
