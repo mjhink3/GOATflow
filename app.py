@@ -2115,6 +2115,109 @@ function gfSkip() {{
 </script>
 """, unsafe_allow_html=True)
 
+# ── Horns callout indicator (shows after welcome overlay, before first sidebar open) ──
+st.markdown("""
+<div id="gf-horns-callout" style="
+    display:none;
+    position:fixed;
+    left:44px;
+    top:28px;
+    z-index:25;
+    pointer-events:none;
+    align-items:center;
+    opacity:0;
+    transition:opacity 0.3s ease;
+">
+  <span style="
+      font-size:20px;
+      color:#f59e0b;
+      line-height:1;
+      display:inline-block;
+      animation:pointLeft 1.2s ease-in-out infinite;
+  ">&#8592;</span>
+  <span style="
+      font-family:'DM Sans',sans-serif;
+      font-weight:500;
+      font-size:11px;
+      color:#f59e0b;
+      background:rgba(245,158,11,0.1);
+      border:1px solid rgba(245,158,11,0.3);
+      border-radius:20px;
+      padding:4px 10px;
+      margin-left:6px;
+      white-space:nowrap;
+  ">Your Horns &amp; Stats</span>
+</div>
+
+<style>
+@keyframes pointLeft {
+  0%   { transform: translateX(0px);  opacity: 1;   }
+  50%  { transform: translateX(-6px); opacity: 0.6; }
+  100% { transform: translateX(0px);  opacity: 1;   }
+}
+</style>
+
+<script>
+(function() {
+  var welcomed  = localStorage.getItem('goatflow_welcomed')    === 'true';
+  var panelOpen = localStorage.getItem('goatflow_panel_opened') === 'true';
+  if (!welcomed || panelOpen) return;
+
+  var callout = document.getElementById('gf-horns-callout');
+  if (!callout) return;
+
+  // Show after 1.5s delay
+  callout.style.display = 'flex';
+  setTimeout(function() {
+    callout.style.opacity = '1';
+  }, 1500);
+
+  function dismissCallout() {
+    if (localStorage.getItem('goatflow_panel_opened') === 'true') return;
+    localStorage.setItem('goatflow_panel_opened', 'true');
+    callout.style.opacity = '0';
+    setTimeout(function() { callout.style.display = 'none'; }, 320);
+  }
+
+  // Detect sidebar toggle button click (mobile expand / desktop collapse)
+  function attachToggleListener() {
+    var toggleSelectors = [
+      '[data-testid="stSidebarNavToggleButton"] button',
+      '[data-testid="collapsedControl"] button',
+      'button[aria-label="open sidebar"]',
+      'button[aria-label="Close sidebar"]',
+      '[data-testid="stSidebarNavToggleButton"]'
+    ];
+    toggleSelectors.forEach(function(sel) {
+      var btn = document.querySelector(sel);
+      if (btn && !btn._gfListened) {
+        btn._gfListened = true;
+        btn.addEventListener('click', dismissCallout, {once: true});
+      }
+    });
+  }
+
+  // Detect any click inside the sidebar
+  function attachSidebarClickListener() {
+    var sidebar = document.querySelector('[data-testid="stSidebar"]');
+    if (sidebar && !sidebar._gfListened) {
+      sidebar._gfListened = true;
+      sidebar.addEventListener('click', dismissCallout, {once: true});
+    }
+  }
+
+  // Poll briefly for DOM readiness then attach listeners
+  var attempts = 0;
+  var poll = setInterval(function() {
+    attachToggleListener();
+    attachSidebarClickListener();
+    attempts++;
+    if (attempts > 20) clearInterval(poll);
+  }, 300);
+})();
+</script>
+""", unsafe_allow_html=True)
+
 st.markdown(f'''
 <div class="goat-header">
     {logo_img}
