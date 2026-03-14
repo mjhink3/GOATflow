@@ -41,3 +41,8 @@ externalPort = 80
 [[ports]]
 localPort = 5001
 externalPort = 3000
+
+[userenv]
+
+[userenv.production]
+PROD_DATABASE_URL = "postgresql://postgres:X%2B6.VXUC9%21y_%256n@db.mazdcgqpewlxkqlswakc.supabase.co:5432/postgres?sslmode=require"
