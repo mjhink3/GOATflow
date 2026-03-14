@@ -1024,9 +1024,8 @@ def complete_signal(signal_id: int, user_id: str):
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute("""
-                UPDATE signals SET completed = TRUE, completed_at = NOW()
+                SELECT xp_reward FROM signals
                 WHERE id = %s AND completed = FALSE AND user_id = %s
-                RETURNING xp_reward
             """, (signal_id, user_id))
             row = cur.fetchone()
             if not row:
@@ -1046,27 +1045,13 @@ def complete_signal(signal_id: int, user_id: str):
                     level = %s
                 WHERE user_id = %s
             """, (new_xp, new_level, user_id))
+            cur.execute("DELETE FROM signals WHERE id = %s AND user_id = %s", (signal_id, user_id))
             conn.commit()
             leveled_up = new_level > old_level
             return row["xp_reward"], xp, leveled_up
     except Exception:
         conn.rollback()
         return None, 0, False
-    finally:
-        conn.close()
-
-
-def metabolize_completed(user_id: str):
-    conn = get_db()
-    try:
-        with conn.cursor() as cur:
-            cur.execute("DELETE FROM signals WHERE completed = TRUE AND user_id = %s", (user_id,))
-            count = cur.rowcount
-            conn.commit()
-            return count
-    except Exception:
-        conn.rollback()
-        return 0
     finally:
         conn.close()
 
@@ -1532,7 +1517,7 @@ with st.sidebar:
     if st.button("🚪 Logout", use_container_width=True, key="logout_btn"):
         for key in ["auth_user_id", "auth_user_name", "auth_display_name",
                      "incognito_signals", "incognito_mode", "just_completed_task",
-                     "just_dropped", "just_purged", "just_metabolized"]:
+                     "just_dropped", "just_purged"]:
             st.session_state.pop(key, None)
         st.rerun()
 
@@ -1649,17 +1634,6 @@ if st.session_state.get("just_purged"):
     ''', unsafe_allow_html=True)
     st.session_state["just_purged"] = False
 
-if st.session_state.get("just_metabolized"):
-    count = st.session_state["just_metabolized"]
-    celeb_inbox_src = f"data:image/png;base64,{celeb_inbox_b64}" if celeb_inbox_b64 else ""
-    inbox_img = f'<img src="{celeb_inbox_src}" style="height:100px;border-radius:50%;margin-bottom:0.5rem;">' if celeb_inbox_src else ''
-    st.markdown(f'''
-    <div class="completed-toast">
-        <div style="text-align:center;">{inbox_img}</div>
-        <div class="completed-toast-text">🧬 Metabolized! {count} completed Bleat{"s" if count != 1 else ""} dissolved. Summit view clear.</div>
-    </div>
-    ''', unsafe_allow_html=True)
-    st.session_state["just_metabolized"] = None
 
 
 @st.dialog("🧀 Cheese Churn Points Earned!")
@@ -1768,18 +1742,7 @@ st.markdown(f'''
 </div>
 ''', unsafe_allow_html=True)
 
-col_queue_label, col_metabolize = st.columns([3, 1])
-with col_queue_label:
-    st.markdown('<div class="section-label">📡 Active Bleats</div>', unsafe_allow_html=True)
-with col_metabolize:
-    if st.button("🧬 Metabolize", key="metabolize_btn", use_container_width=True):
-        count = metabolize_completed(current_user_id)
-        if count > 0:
-            st.session_state["just_metabolized"] = count
-        else:
-            st.session_state["just_metabolized"] = None
-            st.toast("No completed Bleats to metabolize.")
-        st.rerun()
+st.markdown('<div class="section-label">📡 Active Bleats</div>', unsafe_allow_html=True)
 
 display_signals = signals
 
