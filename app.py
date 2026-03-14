@@ -119,6 +119,7 @@ HAY_PUNS = [
     "No days off in the hay game.",
     "Straw by straw, the barn fills up.",
     "You're the reason hay prices are up.",
+    "Hay Hay Hay — another one baled!",
 ]
 
 FRESH_CHEESE_PUNS = [
@@ -1831,6 +1832,7 @@ celeb_daily_flow_b64 = get_celeb_b64("daily_flow")
 celeb_task_completed_b64 = get_celeb_b64("task_completed")
 cheese_earned_b64 = load_image_b64("cheese_earned.png", "cheese_earned_b64")
 hay_bale_b64 = load_image_b64("attached_assets/ChatGPT_Image_Mar_13,_2026,_09_34_11_PM_1773462872978.png", "hay_bale_b64")
+goat_hoof_b64 = load_image_b64("attached_assets/ChatGPT_Image_Mar_13,_2026,_09_57_48_PM_1773464288205.png", "goat_hoof_b64")
 horns_icon_b64 = load_image_b64("attached_assets/ChatGPT_Image_Mar_13,_2026,_09_16_13_PM_1773461790675.png", "horns_icon_b64")
 
 LEVEL_IMAGE_FILES = {
@@ -1860,6 +1862,37 @@ def get_level_bite_style(level: int) -> str:
         return ""
     mask = f"radial-gradient(circle at 100% 0%, transparent {r}px, black {r}px)"
     return f"mask-image:{mask};-webkit-mask-image:{mask};"
+
+if goat_hoof_b64:
+    _hoof_url = f"data:image/png;base64,{goat_hoof_b64}"
+    st.markdown(f"""
+<style>
+/* Replace sidebar toggle arrows with goat hoof icon */
+[data-testid="stSidebarCollapseButton"] button,
+[data-testid="collapsedControl"] button {{
+    background-image: url('{_hoof_url}') !important;
+    background-size: 80% !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 8px !important;
+    transition: opacity 0.2s ease !important;
+}}
+[data-testid="stSidebarCollapseButton"] button:hover,
+[data-testid="collapsedControl"] button:hover {{
+    opacity: 0.75 !important;
+    background-color: transparent !important;
+}}
+[data-testid="stSidebarCollapseButton"] button svg,
+[data-testid="collapsedControl"] button svg {{
+    display: none !important;
+}}
+</style>
+""", unsafe_allow_html=True)
 
 def get_tier_celeb_b64(tier: str) -> str:
     tier_map = {
@@ -2655,7 +2688,7 @@ if st.session_state.get("just_purged"):
 
 
 
-@st.dialog("🌾 Hay Staaackin'!")
+@st.dialog("🌾")
 def show_hay_popup(task_name, xp_gained, leveled_up, xp_tier, hay_earned):
     st.markdown(CONFETTI_JS, unsafe_allow_html=True)
 
