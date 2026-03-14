@@ -1802,6 +1802,7 @@ celeb_power_hour_b64 = get_celeb_b64("power_hour")
 celeb_daily_flow_b64 = get_celeb_b64("daily_flow")
 celeb_task_completed_b64 = get_celeb_b64("task_completed")
 cheese_earned_b64 = load_image_b64("cheese_earned.png", "cheese_earned_b64")
+horns_icon_b64 = load_image_b64("attached_assets/ChatGPT_Image_Mar_13,_2026,_09_16_13_PM_1773461790675.png", "horns_icon_b64")
 
 LEVEL_IMAGE_FILES = {
     1: "attached_assets/WorkGOAT_The_Kid_level_1_1773461158482.png",
@@ -2037,9 +2038,16 @@ with st.sidebar:
         st.info("WorkGOAT is coming. Your Fresh Cheese will be waiting.")
 
     st.markdown("---")
-    st.markdown(f'<div style="text-align:center;font-size:1.1rem;font-weight:800;color:{WHITE};margin-bottom:0.1rem;">🐐 GOAT Horns</div>', unsafe_allow_html=True)
-    st.markdown(f'<div style="text-align:center;font-size:0.8rem;font-weight:600;color:{NEON_VIOLET};margin-bottom:0.3rem;font-style:italic;">Grab life by the horns. Leave the bull behind.</div>', unsafe_allow_html=True)
-    st.markdown(f'<div style="text-align:center;font-size:0.65rem;color:{SILVER};margin-bottom:0.8rem;line-height:1.4;">Your Horns are the rules GOATflow never breaks.<br>Set them once. Let them run everything.</div>', unsafe_allow_html=True)
+    _horns_sidebar_img = f'<img src="data:image/png;base64,{horns_icon_b64}" alt="Horns" style="width:80px;height:80px;object-fit:contain;display:block;margin:0 auto 0.3rem auto;">' if horns_icon_b64 else ''
+    st.markdown(
+        f'<div style="text-align:center;">'
+        f'{_horns_sidebar_img}'
+        f'<div style="font-size:1.1rem;font-weight:800;color:{WHITE};margin-bottom:0.1rem;">Horns</div>'
+        f'<div style="font-size:0.78rem;font-weight:600;color:{NEON_VIOLET};margin-bottom:0.35rem;font-style:italic;">Grab life by the horns. Leave the bull behind.</div>'
+        f'<div style="font-size:0.63rem;color:{SILVER};margin-bottom:0.8rem;line-height:1.5;">Your Horns are the rules GOATflow utilizes to sync your priorities. Monitor, and adjust as you use the app for the GOAT experience.</div>'
+        f'</div>',
+        unsafe_allow_html=True
+    )
 
     saved_horns_text = get_horns(current_user_id)
     current_horns = parse_horns(saved_horns_text)
@@ -2225,12 +2233,13 @@ function gfSkip() {{
 """, unsafe_allow_html=True)
 
 # ── Horns callout indicator (shows after welcome overlay, before first sidebar open) ──
-st.markdown("""
+_horns_callout_img = f'<img src="data:image/png;base64,{horns_icon_b64}" alt="Horns" style="width:36px;height:36px;object-fit:contain;vertical-align:middle;margin-left:6px;">' if horns_icon_b64 else ''
+st.markdown(f"""
 <div id="gf-horns-callout" style="
     display:none;
     position:fixed;
     left:44px;
-    top:28px;
+    top:22px;
     z-index:25;
     pointer-events:none;
     align-items:center;
@@ -2256,8 +2265,10 @@ st.markdown("""
       margin-left:6px;
       white-space:nowrap;
   ">Your Horns &amp; Stats</span>
-</div>
+  {_horns_callout_img}
+</div>""", unsafe_allow_html=True)
 
+st.markdown("""
 <style>
 @keyframes pointLeft {
   0%   { transform: translateX(0px);  opacity: 1;   }
