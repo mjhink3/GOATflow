@@ -2221,6 +2221,19 @@ _logo_src_js  = logo_src.replace('"', '\\"') if logo_src else ""
 # ── First-login onboarding sequence (3 acts, localStorage gated) ───────────
 # NOTE: No blank lines within the HTML block — Streamlit's markdown parser
 # (CommonMark) terminates an HTML block at the first blank line inside a <div>.
+import base64 as _b64
+_animal_names = [
+    "bull","ram","chicken","cow","dog","cat","donkey","lizard",
+    "hamster","sheep","pig","rabbit","duck","eagle","horse"
+]
+def _load_animal_b64(name):
+    path = f"public/images/onboarding/compressed/animal_{name}.jpg"
+    try:
+        with open(path,"rb") as f:
+            return "data:image/jpeg;base64," + _b64.b64encode(f.read()).decode()
+    except Exception:
+        return ""
+_animal_data_urls = [_load_animal_b64(n) for n in _animal_names]
 _ob_html = (
     '<div id="gf-onboarding" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:100;background:#08080f;overflow:hidden;">'
     '<div id="gf-ob-skip" onclick="gfObSkipToAct3()" style="position:absolute;bottom:24px;right:24px;font-family:\'DM Sans\',sans-serif;font-weight:400;font-size:12px;color:#4b5563;cursor:pointer;z-index:110;" onmouseover="this.style.color=\'#9ca3af\'" onmouseout="this.style.color=\'#4b5563\'">Skip intro \u2192</div>'
@@ -2231,7 +2244,7 @@ _ob_html = (
     '</div>'
     '<div id="gf-ob-animal-card" style="display:none;text-align:center;position:relative;">'
     '<div style="position:relative;display:inline-block;margin-bottom:16px;">'
-    '<div id="gf-ob-emoji" style="font-size:96px;line-height:1.2;">\U0001f402</div>'
+    '<img id="gf-ob-animal-img" src="" alt="" style="width:200px;height:200px;object-fit:contain;display:block;margin:0 auto 4px;">'
     '<div id="gf-ob-x" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-52%);font-size:120px;font-weight:900;color:#ef4444;opacity:0;transition:opacity 0.5s ease;pointer-events:none;line-height:1;">\u2715</div>'
     '</div>'
     '<div id="gf-ob-caption" style="font-family:\'Syne\',sans-serif;font-weight:700;font-size:18px;color:#fff;">Bulls \u2014 Full of it.</div>'
@@ -2257,11 +2270,13 @@ _ob_html = (
     '</div>'
     '</div>'
 )
+_animal_imgs_json = '[' + ','.join('"' + u + '"' for u in _animal_data_urls) + ']'
+_ob_html += '<script>window.gfAnimalImgs=' + _animal_imgs_json + ';</script>'
 st.markdown(_ob_html, unsafe_allow_html=True)
 st.markdown(r"""
 <style>
 @media (max-width:768px) {
-  #gf-ob-emoji { font-size:72px !important; }
+  #gf-ob-animal-img { width:150px !important; height:150px !important; }
   #gf-ob-x { font-size:90px !important; }
   .gf-bam-line { font-size:85% !important; }
 }
@@ -2274,21 +2289,21 @@ st.markdown(r"""
   overlay.style.display = 'block';
   var gfObCard = 0, gfObTimer = null, gfObXTimer = null, gfObAborted = false;
   var gfAnimals = [
-    {e:'\u{1F402}', c:'Bulls \u2014 Full of it.',                           d:1800},
-    {e:'\u{1F40F}', c:'Rams \u2014 Too aggressive.',                        d:1800},
-    {e:'\u{1F414}', c:'Chickens \u2014 You already know.',                  d:1800},
-    {e:'\u{1F404}', c:"Cows \u2014 Won\u2019t budge.",                      d:1800},
-    {e:'\u{1F436}', c:"Dogs \u2014 Just wants to be your friend.",          d:1800},
-    {e:'\u{1F431}', c:'Cats \u2014 Only helps themselves.',                 d:1500},
-    {e:'\u{1FACO}', c:'Donkeys \u2014 Think they know everything.',         d:1500},
-    {e:'\u{1F98E}', c:'Lizards \u2014 Cold-blooded about your deadlines.',  d:1500},
-    {e:'\u{1F439}', c:'Hamsters \u2014 Running but going nowhere.',         d:1500},
-    {e:'\u{1F411}', c:'Sheep \u2014 Already asleep.',                       d:1500},
-    {e:'\u{1F437}', c:'Pigs \u2014 Only motivated by lunch.',               d:1100},
-    {e:'\u{1F430}', c:'Rabbits \u2014 Distracted by the next shiny thing.', d:1100},
-    {e:'\u{1F986}', c:'Ducks \u2014 Complete quacks.',                      d:1100},
-    {e:'\u{1F985}', c:"Eagles \u2014 Not always free.",                     d:1100},
-    {e:'\u{1F434}', c:"Horses \u2014 Making their own leaps.",              d:1100}
+    {c:'Bulls \u2014 Full of it.',                           d:1800},
+    {c:'Rams \u2014 Too aggressive.',                        d:1800},
+    {c:'Chickens \u2014 You already know.',                  d:1800},
+    {c:"Cows \u2014 Won\u2019t budge.",                      d:1800},
+    {c:"Dogs \u2014 Just wants to be your friend.",          d:1800},
+    {c:'Cats \u2014 Only helps themselves.',                 d:1500},
+    {c:'Donkeys \u2014 Think they know everything.',         d:1500},
+    {c:'Lizards \u2014 Cold-blooded about your deadlines.',  d:1500},
+    {c:'Hamsters \u2014 Running but going nowhere.',         d:1500},
+    {c:'Sheep \u2014 Already asleep.',                       d:1500},
+    {c:'Pigs \u2014 Only motivated by lunch.',               d:1100},
+    {c:'Rabbits \u2014 Distracted by the next shiny thing.', d:1100},
+    {c:'Ducks \u2014 Complete quacks.',                      d:1100},
+    {c:"Eagles \u2014 Not always free.",                     d:1100},
+    {c:"Horses \u2014 Making their own leaps.",              d:1100}
   ];
   function gfObAnimal(i) {
     if (gfObAborted) return;
@@ -2296,12 +2311,12 @@ st.markdown(r"""
     var a = gfAnimals[i];
     var tc = document.getElementById('gf-ob-title-card');
     var ac = document.getElementById('gf-ob-animal-card');
-    var em = document.getElementById('gf-ob-emoji');
+    var im = document.getElementById('gf-ob-animal-img');
     var cp = document.getElementById('gf-ob-caption');
     var x  = document.getElementById('gf-ob-x');
     if (tc) tc.style.display = 'none';
     if (ac) ac.style.display = 'block';
-    if (em) em.textContent = a.e;
+    if (im && window.gfAnimalImgs && window.gfAnimalImgs[i]) im.src = window.gfAnimalImgs[i];
     if (cp) cp.textContent = a.c;
     if (x)  x.style.opacity = '0';
     gfObXTimer = setTimeout(function() { if (!gfObAborted && x) x.style.opacity = '1'; }, 900);
