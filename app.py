@@ -2219,215 +2219,153 @@ _has_horns_js = "true" if current_horns else "false"
 _logo_src_js  = logo_src.replace('"', '\\"') if logo_src else ""
 
 # ── First-login onboarding sequence (3 acts, localStorage gated) ───────────
-st.markdown(f"""
-<div id="gf-onboarding" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:100;background:#08080f;overflow:hidden;">
-
-  <div id="gf-ob-skip" onclick="gfObSkipToAct3()" style="position:absolute;bottom:24px;right:24px;font-family:'DM Sans',sans-serif;font-weight:400;font-size:12px;color:#4b5563;cursor:pointer;z-index:110;transition:color 0.2s;" onmouseover="this.style.color='#9ca3af'" onmouseout="this.style.color='#4b5563'">Skip intro →</div>
-
-  <div id="gf-act1" style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;">
-    <div id="gf-ob-title-card" style="text-align:center;padding:0 32px;">
-      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:32px;color:#fff;margin-bottom:16px;line-height:1.2;">Other animals have tried to help you.</div>
-      <div style="font-family:'DM Sans',sans-serif;font-weight:400;font-size:16px;color:#6b7280;">This did not go well for anyone.</div>
-    </div>
-    <div id="gf-ob-animal-card" style="display:none;text-align:center;position:relative;">
-      <div style="position:relative;display:inline-block;margin-bottom:16px;">
-        <div id="gf-ob-emoji" style="font-size:96px;line-height:1.2;">🐂</div>
-        <div id="gf-ob-x" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-52%);font-size:120px;font-weight:900;color:#ef4444;opacity:0;transition:opacity 0.5s ease;pointer-events:none;line-height:1;">✕</div>
-      </div>
-      <div id="gf-ob-caption" style="font-family:'Syne',sans-serif;font-weight:700;font-size:18px;color:#fff;">Bulls — Full of it.</div>
-    </div>
-  </div>
-
-  <div id="gf-ob-flash" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;background:#fff;z-index:105;pointer-events:none;"></div>
-
-  <div id="gf-act2" style="display:none;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;text-align:center;padding:32px 24px;box-sizing:border-box;">
-    <img src="{_logo_src_js}" alt="GOATflow" style="width:120px;margin-bottom:32px;animation:logo-float 3.5s ease-in-out infinite;">
-    <div class="gf-bam-line" style="font-family:'Syne',sans-serif;font-weight:800;font-size:28px;color:#fff;max-width:320px;line-height:1.3;opacity:0;transition:opacity 0.4s ease;margin:0 auto;">THIS is what you've always needed.</div>
-    <div class="gf-bam-line" style="font-family:'Syne',sans-serif;font-weight:700;font-size:22px;color:#4ade80;margin-top:16px;opacity:0;transition:opacity 0.4s ease;">GOATS.</div>
-    <div class="gf-bam-line" style="font-family:'DM Sans',sans-serif;font-weight:400;font-size:16px;color:#9ca3af;margin-top:16px;line-height:1.6;max-width:300px;opacity:0;transition:opacity 0.4s ease;margin-left:auto;margin-right:auto;">Leave the asleep to the sheep.<br>You've got to become your Greatest Of All Time self.<br>That takes guts. That takes GOATS.</div>
-    <div class="gf-bam-line" style="font-family:'Syne',sans-serif;font-weight:700;font-size:20px;color:#f59e0b;margin-top:24px;opacity:0;transition:opacity 0.4s ease;">Let's go. 🐐</div>
-    <button id="gf-bam-btn" onclick="gfObAct3()" style="display:none;margin-top:32px;background:#7c3aed;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:16px;border:none;border-radius:8px;padding:14px 40px;cursor:pointer;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Let's Start</button>
-  </div>
-
-  <div id="gf-act3" style="display:none;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;position:relative;" onclick="gfObNextCard()">
-    <div id="gf-ob-card-0" style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px 24px;max-width:360px;width:100%;box-sizing:border-box;">
-      <img src="{_logo_src_js}" style="width:60px;margin-bottom:12px;" alt="GOATflow">
-      <div style="font-size:64px;margin-bottom:16px;">🐐</div>
-      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:22px;color:#f59e0b;margin-bottom:16px;">First things first — set your Horns.</div>
-      <div style="font-family:'DM Sans',sans-serif;font-weight:400;font-size:14px;color:#9ca3af;line-height:1.6;max-width:300px;margin-bottom:16px;">Your Horns are the rules GOATflow never breaks. Family first. Compliance always. Whatever matters most to you — put it in a Horn and the AI obeys it. Every single time.</div>
-      <div style="font-family:'DM Sans',sans-serif;font-weight:500;font-size:13px;color:#a78bfa;">Tap the Horns icon to set yours after this.</div>
-    </div>
-    <div id="gf-ob-card-1" style="display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px 24px;max-width:360px;width:100%;box-sizing:border-box;">
-      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:22px;color:#4ade80;margin-bottom:16px;">Drop the chaos in. Get clarity out.</div>
-      <div style="font-family:'DM Sans',sans-serif;font-weight:400;font-size:14px;color:#9ca3af;line-height:1.6;max-width:300px;margin-bottom:20px;">Snap a photo of a sticky note. Record a voice memo. Paste an email. Upload a PDF. Type a quick thought. Drag and drop a document.<br><br>GOATflow reads all of it and turns it into a prioritized list of Tracks in seconds.</div>
-      <div style="display:flex;gap:20px;justify-content:center;flex-wrap:wrap;">
-        <div style="text-align:center;"><div style="font-size:28px;">📷</div><div style="font-family:'DM Sans',sans-serif;font-size:11px;color:#6b7280;margin-top:4px;">Photo</div></div>
-        <div style="text-align:center;"><div style="font-size:28px;">🎙️</div><div style="font-family:'DM Sans',sans-serif;font-size:11px;color:#6b7280;margin-top:4px;">Voice</div></div>
-        <div style="text-align:center;"><div style="font-size:28px;">📋</div><div style="font-family:'DM Sans',sans-serif;font-size:11px;color:#6b7280;margin-top:4px;">Paste</div></div>
-        <div style="text-align:center;"><div style="font-size:28px;">📄</div><div style="font-family:'DM Sans',sans-serif;font-size:11px;color:#6b7280;margin-top:4px;">PDF</div></div>
-        <div style="text-align:center;"><div style="font-size:28px;">⌨️</div><div style="font-family:'DM Sans',sans-serif;font-size:11px;color:#6b7280;margin-top:4px;">Type</div></div>
-        <div style="text-align:center;"><div style="font-size:28px;">📁</div><div style="font-family:'DM Sans',sans-serif;font-size:11px;color:#6b7280;margin-top:4px;">File</div></div>
-      </div>
-    </div>
-    <div id="gf-ob-card-2" style="display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px 24px;max-width:360px;width:100%;box-sizing:border-box;">
-      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:22px;color:#a78bfa;margin-bottom:16px;">The AI ranks everything against your Horns.</div>
-      <div style="font-family:'DM Sans',sans-serif;font-weight:400;font-size:14px;color:#9ca3af;line-height:1.6;max-width:300px;margin-bottom:24px;">When you drop in ten things at once, GOATflow does not guess what matters most. It already knows — because you told it. Summit Calls are the ones that cannot wait. Standard Tracks are everything else. The list updates every time you add more.</div>
-      <div style="max-width:280px;width:100%;">
-        <div style="border-left:3px solid #ef4444;background:#1a0f0f;border-radius:6px;padding:10px 14px;text-align:left;margin-bottom:8px;font-family:'DM Sans',sans-serif;font-size:13px;color:#fff;">⚡ SUMMIT CALL — File compliance report by 3pm</div>
-        <div style="border-left:3px solid #7c3aed;background:#0f0f1a;border-radius:6px;padding:10px 14px;text-align:left;font-family:'DM Sans',sans-serif;font-size:13px;color:#fff;">📋 TRACK — Reply to vendor email</div>
-      </div>
-    </div>
-    <div id="gf-ob-card-3" style="display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px 24px;max-width:360px;width:100%;box-sizing:border-box;">
-      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:22px;color:#f59e0b;margin-bottom:16px;">Complete Tracks. Earn Hay. 🌾</div>
-      <div style="font-family:'DM Sans',sans-serif;font-weight:400;font-size:14px;color:#9ca3af;line-height:1.6;max-width:300px;margin-bottom:20px;">Every Track you complete earns Hay. 500 Hay converts to 1 Fresh Cheese. 🧀 Fresh Cheese banks in your profile and will port directly to WorkGOAT when it launches — so every task you complete today is building something that lasts.</div>
-      <div style="font-family:'DM Sans',sans-serif;font-size:13px;color:#6b7280;background:#111;border-radius:8px;padding:14px 20px;line-height:1.8;">10 Hay (Standard) → 50 Hay (Summit Call)<br>→ 500 Hay = 🧀 Fresh Cheese</div>
-    </div>
-    <div id="gf-ob-card-4" style="display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px 24px;max-width:360px;width:100%;box-sizing:border-box;">
-      <div style="font-size:64px;margin-bottom:16px;">🐐</div>
-      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:22px;color:#fff;margin-bottom:16px;">If something feels off — add a Horn.</div>
-      <div style="font-family:'DM Sans',sans-serif;font-weight:400;font-size:14px;color:#9ca3af;line-height:1.6;max-width:300px;margin-bottom:20px;">The AI gets sharper every time you use it. If a Track is ranked wrong, add a Horn that fixes it. The more specific your Horns, the more personal GOATflow becomes. This is your system. You run it.</div>
-      <div style="font-family:'Syne',sans-serif;font-weight:700;font-size:16px;color:#4ade80;margin-bottom:24px;">Grab it by the horns. 🐐</div>
-      <button onclick="event.stopPropagation();gfObComplete()" style="background:#7c3aed;color:#fff;font-family:'Syne',sans-serif;font-weight:700;font-size:16px;border:none;border-radius:8px;padding:14px 40px;cursor:pointer;transition:opacity 0.2s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">Let's go →</button>
-    </div>
-    <div id="gf-ob-dots" style="position:absolute;bottom:56px;left:50%;transform:translateX(-50%);display:flex;gap:8px;pointer-events:none;">
-      <div id="gf-dot-0" style="width:8px;height:8px;border-radius:50%;background:#7c3aed;transition:background 0.3s;"></div>
-      <div id="gf-dot-1" style="width:8px;height:8px;border-radius:50%;background:#374151;transition:background 0.3s;"></div>
-      <div id="gf-dot-2" style="width:8px;height:8px;border-radius:50%;background:#374151;transition:background 0.3s;"></div>
-      <div id="gf-dot-3" style="width:8px;height:8px;border-radius:50%;background:#374151;transition:background 0.3s;"></div>
-      <div id="gf-dot-4" style="width:8px;height:8px;border-radius:50%;background:#374151;transition:background 0.3s;"></div>
-    </div>
-    <div onclick="event.stopPropagation();gfObComplete()" style="position:absolute;bottom:24px;right:24px;font-family:'DM Sans',sans-serif;font-weight:400;font-size:12px;color:#4b5563;cursor:pointer;transition:color 0.2s;" onmouseover="this.style.color='#9ca3af'" onmouseout="this.style.color='#4b5563'">Skip tutorial</div>
-  </div>
-</div>
+# NOTE: No blank lines within the HTML block — Streamlit's markdown parser
+# (CommonMark) terminates an HTML block at the first blank line inside a <div>.
+_ob_html = (
+    '<div id="gf-onboarding" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:100;background:#08080f;overflow:hidden;">'
+    '<div id="gf-ob-skip" onclick="gfObSkipToAct3()" style="position:absolute;bottom:24px;right:24px;font-family:\'DM Sans\',sans-serif;font-weight:400;font-size:12px;color:#4b5563;cursor:pointer;z-index:110;" onmouseover="this.style.color=\'#9ca3af\'" onmouseout="this.style.color=\'#4b5563\'">Skip intro \u2192</div>'
+    '<div id="gf-act1" style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;">'
+    '<div id="gf-ob-title-card" style="text-align:center;padding:0 32px;">'
+    '<div style="font-family:\'Syne\',sans-serif;font-weight:700;font-size:32px;color:#fff;margin-bottom:16px;line-height:1.2;">Other animals have tried to help you.</div>'
+    '<div style="font-family:\'DM Sans\',sans-serif;font-weight:400;font-size:16px;color:#6b7280;">This did not go well for anyone.</div>'
+    '</div>'
+    '<div id="gf-ob-animal-card" style="display:none;text-align:center;position:relative;">'
+    '<div style="position:relative;display:inline-block;margin-bottom:16px;">'
+    '<div id="gf-ob-emoji" style="font-size:96px;line-height:1.2;">\U0001f402</div>'
+    '<div id="gf-ob-x" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-52%);font-size:120px;font-weight:900;color:#ef4444;opacity:0;transition:opacity 0.5s ease;pointer-events:none;line-height:1;">\u2715</div>'
+    '</div>'
+    '<div id="gf-ob-caption" style="font-family:\'Syne\',sans-serif;font-weight:700;font-size:18px;color:#fff;">Bulls \u2014 Full of it.</div>'
+    '</div>'
+    '</div>'
+    '<div id="gf-ob-flash" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;background:#fff;z-index:105;pointer-events:none;"></div>'
+    f'<div id="gf-act2" style="display:none;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;text-align:center;padding:32px 24px;box-sizing:border-box;">'
+    f'<img src="{_logo_src_js}" alt="GOATflow" style="width:120px;margin-bottom:32px;animation:logo-float 3.5s ease-in-out infinite;">'
+    '<div class="gf-bam-line" style="font-family:\'Syne\',sans-serif;font-weight:800;font-size:28px;color:#fff;max-width:320px;line-height:1.3;opacity:0;transition:opacity 0.4s ease;margin:0 auto;">THIS is what you\u2019ve always needed.</div>'
+    '<div class="gf-bam-line" style="font-family:\'Syne\',sans-serif;font-weight:700;font-size:22px;color:#4ade80;margin-top:16px;opacity:0;transition:opacity 0.4s ease;">GOATS.</div>'
+    '<div class="gf-bam-line" style="font-family:\'DM Sans\',sans-serif;font-weight:400;font-size:16px;color:#9ca3af;margin-top:16px;line-height:1.6;max-width:300px;opacity:0;transition:opacity 0.4s ease;margin-left:auto;margin-right:auto;">Leave the asleep to the sheep.<br>You\u2019ve got to become your Greatest Of All Time self.<br>That takes guts. That takes GOATS.</div>'
+    '<div class="gf-bam-line" style="font-family:\'Syne\',sans-serif;font-weight:700;font-size:20px;color:#f59e0b;margin-top:24px;opacity:0;transition:opacity 0.4s ease;">Let\u2019s go. \U0001f410</div>'
+    '<button id="gf-bam-btn" onclick="gfObAct3()" style="display:none;margin-top:32px;background:#7c3aed;color:#fff;font-family:\'Syne\',sans-serif;font-weight:700;font-size:16px;border:none;border-radius:8px;padding:14px 40px;cursor:pointer;" onmouseover="this.style.opacity=\'0.85\'" onmouseout="this.style.opacity=\'1\'">Let\u2019s Start</button>'
+    '</div>'
+    '<div id="gf-act3" style="display:none;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;position:relative;" onclick="gfObNextCard()">'
+    f'<div id="gf-ob-card-0" style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px 24px;max-width:360px;width:100%;box-sizing:border-box;"><img src="{_logo_src_js}" style="width:60px;margin-bottom:12px;" alt="GOATflow"><div style="font-size:64px;margin-bottom:16px;">\U0001f410</div><div style="font-family:\'Syne\',sans-serif;font-weight:700;font-size:22px;color:#f59e0b;margin-bottom:16px;">First things first \u2014 set your Horns.</div><div style="font-family:\'DM Sans\',sans-serif;font-weight:400;font-size:14px;color:#9ca3af;line-height:1.6;max-width:300px;margin-bottom:16px;">Your Horns are the rules GOATflow never breaks. Family first. Compliance always. Whatever matters most to you \u2014 put it in a Horn and the AI obeys it. Every single time.</div><div style="font-family:\'DM Sans\',sans-serif;font-weight:500;font-size:13px;color:#a78bfa;">Tap the Horns icon to set yours after this.</div></div>'
+    '<div id="gf-ob-card-1" style="display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px 24px;max-width:360px;width:100%;box-sizing:border-box;"><div style="font-family:\'Syne\',sans-serif;font-weight:700;font-size:22px;color:#4ade80;margin-bottom:16px;">Drop the chaos in. Get clarity out.</div><div style="font-family:\'DM Sans\',sans-serif;font-weight:400;font-size:14px;color:#9ca3af;line-height:1.6;max-width:300px;margin-bottom:20px;">Snap a photo of a sticky note. Record a voice memo. Paste an email. Upload a PDF. Type a quick thought. Drag and drop a document.<br><br>GOATflow reads all of it and turns it into a prioritized list of Tracks in seconds.</div><div style="display:flex;gap:20px;justify-content:center;flex-wrap:wrap;"><div style="text-align:center;"><div style="font-size:28px;">\U0001f4f7</div><div style="font-family:\'DM Sans\',sans-serif;font-size:11px;color:#6b7280;margin-top:4px;">Photo</div></div><div style="text-align:center;"><div style="font-size:28px;">\U0001f399\ufe0f</div><div style="font-family:\'DM Sans\',sans-serif;font-size:11px;color:#6b7280;margin-top:4px;">Voice</div></div><div style="text-align:center;"><div style="font-size:28px;">\U0001f4cb</div><div style="font-family:\'DM Sans\',sans-serif;font-size:11px;color:#6b7280;margin-top:4px;">Paste</div></div><div style="text-align:center;"><div style="font-size:28px;">\U0001f4c4</div><div style="font-family:\'DM Sans\',sans-serif;font-size:11px;color:#6b7280;margin-top:4px;">PDF</div></div><div style="text-align:center;"><div style="font-size:28px;">\u2328\ufe0f</div><div style="font-family:\'DM Sans\',sans-serif;font-size:11px;color:#6b7280;margin-top:4px;">Type</div></div><div style="text-align:center;"><div style="font-size:28px;">\U0001f4c1</div><div style="font-family:\'DM Sans\',sans-serif;font-size:11px;color:#6b7280;margin-top:4px;">File</div></div></div></div>'
+    '<div id="gf-ob-card-2" style="display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px 24px;max-width:360px;width:100%;box-sizing:border-box;"><div style="font-family:\'Syne\',sans-serif;font-weight:700;font-size:22px;color:#a78bfa;margin-bottom:16px;">The AI ranks everything against your Horns.</div><div style="font-family:\'DM Sans\',sans-serif;font-weight:400;font-size:14px;color:#9ca3af;line-height:1.6;max-width:300px;margin-bottom:24px;">When you drop in ten things at once, GOATflow does not guess what matters most. It already knows \u2014 because you told it. Summit Calls are the ones that cannot wait. Standard Tracks are everything else. The list updates every time you add more.</div><div style="max-width:280px;width:100%;"><div style="border-left:3px solid #ef4444;background:#1a0f0f;border-radius:6px;padding:10px 14px;text-align:left;margin-bottom:8px;font-family:\'DM Sans\',sans-serif;font-size:13px;color:#fff;">\u26a1 SUMMIT CALL \u2014 File compliance report by 3pm</div><div style="border-left:3px solid #7c3aed;background:#0f0f1a;border-radius:6px;padding:10px 14px;text-align:left;font-family:\'DM Sans\',sans-serif;font-size:13px;color:#fff;">\U0001f4cb TRACK \u2014 Reply to vendor email</div></div></div>'
+    '<div id="gf-ob-card-3" style="display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px 24px;max-width:360px;width:100%;box-sizing:border-box;"><div style="font-family:\'Syne\',sans-serif;font-weight:700;font-size:22px;color:#f59e0b;margin-bottom:16px;">Complete Tracks. Earn Hay. \U0001f33e</div><div style="font-family:\'DM Sans\',sans-serif;font-weight:400;font-size:14px;color:#9ca3af;line-height:1.6;max-width:300px;margin-bottom:20px;">Every Track you complete earns Hay. 500 Hay converts to 1 Fresh Cheese. \U0001f9c0 Fresh Cheese banks in your profile and will port directly to WorkGOAT when it launches \u2014 so every task you complete today is building something that lasts.</div><div style="font-family:\'DM Sans\',sans-serif;font-size:13px;color:#6b7280;background:#111;border-radius:8px;padding:14px 20px;line-height:1.8;">10 Hay (Standard) \u2192 50 Hay (Summit Call)<br>\u2192 500 Hay = \U0001f9c0 Fresh Cheese</div></div>'
+    '<div id="gf-ob-card-4" style="display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px 24px;max-width:360px;width:100%;box-sizing:border-box;"><div style="font-size:64px;margin-bottom:16px;">\U0001f410</div><div style="font-family:\'Syne\',sans-serif;font-weight:700;font-size:22px;color:#fff;margin-bottom:16px;">If something feels off \u2014 add a Horn.</div><div style="font-family:\'DM Sans\',sans-serif;font-weight:400;font-size:14px;color:#9ca3af;line-height:1.6;max-width:300px;margin-bottom:20px;">The AI gets sharper every time you use it. If a Track is ranked wrong, add a Horn that fixes it. The more specific your Horns, the more personal GOATflow becomes. This is your system. You run it.</div><div style="font-family:\'Syne\',sans-serif;font-weight:700;font-size:16px;color:#4ade80;margin-bottom:24px;">Grab it by the horns. \U0001f410</div><button onclick="event.stopPropagation();gfObComplete()" style="background:#7c3aed;color:#fff;font-family:\'Syne\',sans-serif;font-weight:700;font-size:16px;border:none;border-radius:8px;padding:14px 40px;cursor:pointer;" onmouseover="this.style.opacity=\'0.85\'" onmouseout="this.style.opacity=\'1\'">Let\u2019s go \u2192</button></div>'
+    '<div id="gf-ob-dots" style="position:absolute;bottom:56px;left:50%;transform:translateX(-50%);display:flex;gap:8px;pointer-events:none;"><div id="gf-dot-0" style="width:8px;height:8px;border-radius:50%;background:#7c3aed;transition:background 0.3s;"></div><div id="gf-dot-1" style="width:8px;height:8px;border-radius:50%;background:#374151;transition:background 0.3s;"></div><div id="gf-dot-2" style="width:8px;height:8px;border-radius:50%;background:#374151;transition:background 0.3s;"></div><div id="gf-dot-3" style="width:8px;height:8px;border-radius:50%;background:#374151;transition:background 0.3s;"></div><div id="gf-dot-4" style="width:8px;height:8px;border-radius:50%;background:#374151;transition:background 0.3s;"></div></div>'
+    '<div onclick="event.stopPropagation();gfObComplete()" style="position:absolute;bottom:24px;right:24px;font-family:\'DM Sans\',sans-serif;font-weight:400;font-size:12px;color:#4b5563;cursor:pointer;" onmouseover="this.style.color=\'#9ca3af\'" onmouseout="this.style.color=\'#4b5563\'">Skip tutorial</div>'
+    '</div>'
+    '</div>'
+)
+st.markdown(_ob_html, unsafe_allow_html=True)
+st.markdown(r"""
 <style>
-@media (max-width:768px) {{
-  #gf-ob-emoji {{ font-size:72px !important; }}
-  #gf-ob-x {{ font-size:90px !important; }}
-  .gf-bam-line {{ font-size:85% !important; }}
-}}
+@media (max-width:768px) {
+  #gf-ob-emoji { font-size:72px !important; }
+  #gf-ob-x { font-size:90px !important; }
+  .gf-bam-line { font-size:85% !important; }
+}
 </style>
 <script>
-(function() {{
+(function() {
   if (localStorage.getItem('goatflow_onboarding_complete') === 'true') return;
   var overlay = document.getElementById('gf-onboarding');
   if (!overlay) return;
   overlay.style.display = 'block';
-
-  var gfObCard = 0;
-  var gfObTimer = null;
-  var gfObXTimer = null;
-  var gfObAborted = false;
-
+  var gfObCard = 0, gfObTimer = null, gfObXTimer = null, gfObAborted = false;
   var gfAnimals = [
-    {{e:'🐂',  c:'Bulls \u2014 Full of it.',                           d:1800}},
-    {{e:'🐏',  c:'Rams \u2014 Too aggressive.',                        d:1800}},
-    {{e:'🐔',  c:'Chickens \u2014 You already know.',                  d:1800}},
-    {{e:'🐄',  c:"Cows \u2014 Won't budge.",                           d:1800}},
-    {{e:'🐶',  c:"Dogs \u2014 Just wants to be your friend.",          d:1800}},
-    {{e:'🐱',  c:'Cats \u2014 Only helps themselves.',                 d:1500}},
-    {{e:'🫏',  c:'Donkeys \u2014 Think they know everything.',         d:1500}},
-    {{e:'🦎',  c:'Lizards \u2014 Cold-blooded about your deadlines.',  d:1500}},
-    {{e:'🐹',  c:'Hamsters \u2014 Running but going nowhere.',         d:1500}},
-    {{e:'🐑',  c:'Sheep \u2014 Already asleep.',                       d:1500}},
-    {{e:'🐷',  c:'Pigs \u2014 Only motivated by lunch.',               d:1100}},
-    {{e:'🐰',  c:'Rabbits \u2014 Distracted by the next shiny thing.', d:1100}},
-    {{e:'🦆',  c:'Ducks \u2014 Complete quacks.',                      d:1100}},
-    {{e:'🦅',  c:"Eagles \u2014 Not always free.",                     d:1100}},
-    {{e:'🐴',  c:"Horses \u2014 Making their own leaps.",              d:1100}},
+    {e:'\u{1F402}', c:'Bulls \u2014 Full of it.',                           d:1800},
+    {e:'\u{1F40F}', c:'Rams \u2014 Too aggressive.',                        d:1800},
+    {e:'\u{1F414}', c:'Chickens \u2014 You already know.',                  d:1800},
+    {e:'\u{1F404}', c:"Cows \u2014 Won\u2019t budge.",                      d:1800},
+    {e:'\u{1F436}', c:"Dogs \u2014 Just wants to be your friend.",          d:1800},
+    {e:'\u{1F431}', c:'Cats \u2014 Only helps themselves.',                 d:1500},
+    {e:'\u{1FACO}', c:'Donkeys \u2014 Think they know everything.',         d:1500},
+    {e:'\u{1F98E}', c:'Lizards \u2014 Cold-blooded about your deadlines.',  d:1500},
+    {e:'\u{1F439}', c:'Hamsters \u2014 Running but going nowhere.',         d:1500},
+    {e:'\u{1F411}', c:'Sheep \u2014 Already asleep.',                       d:1500},
+    {e:'\u{1F437}', c:'Pigs \u2014 Only motivated by lunch.',               d:1100},
+    {e:'\u{1F430}', c:'Rabbits \u2014 Distracted by the next shiny thing.', d:1100},
+    {e:'\u{1F986}', c:'Ducks \u2014 Complete quacks.',                      d:1100},
+    {e:'\u{1F985}', c:"Eagles \u2014 Not always free.",                     d:1100},
+    {e:'\u{1F434}', c:"Horses \u2014 Making their own leaps.",              d:1100}
   ];
-
-  function gfObAnimal(i) {{
+  function gfObAnimal(i) {
     if (gfObAborted) return;
-    if (i >= gfAnimals.length) {{ gfObFlash(); return; }}
+    if (i >= gfAnimals.length) { gfObFlash(); return; }
     var a = gfAnimals[i];
-    var titleCard = document.getElementById('gf-ob-title-card');
-    var animalCard = document.getElementById('gf-ob-animal-card');
-    var emoji = document.getElementById('gf-ob-emoji');
-    var caption = document.getElementById('gf-ob-caption');
-    var x = document.getElementById('gf-ob-x');
-    if (titleCard) titleCard.style.display = 'none';
-    if (animalCard) animalCard.style.display = 'block';
-    if (emoji) emoji.textContent = a.e;
-    if (caption) caption.textContent = a.c;
-    if (x) x.style.opacity = '0';
-    gfObXTimer = setTimeout(function() {{ if (!gfObAborted && x) x.style.opacity = '1'; }}, 900);
-    gfObTimer = setTimeout(function() {{ gfObAnimal(i + 1); }}, a.d);
-  }}
-
-  function gfObFlash() {{
-    var flash = document.getElementById('gf-ob-flash');
-    if (flash) {{
-      flash.style.display = 'block';
-      setTimeout(function() {{ flash.style.display = 'none'; gfObShowAct2(); }}, 150);
-    }} else {{ gfObShowAct2(); }}
-  }}
-
-  function gfObShowAct2() {{
+    var tc = document.getElementById('gf-ob-title-card');
+    var ac = document.getElementById('gf-ob-animal-card');
+    var em = document.getElementById('gf-ob-emoji');
+    var cp = document.getElementById('gf-ob-caption');
+    var x  = document.getElementById('gf-ob-x');
+    if (tc) tc.style.display = 'none';
+    if (ac) ac.style.display = 'block';
+    if (em) em.textContent = a.e;
+    if (cp) cp.textContent = a.c;
+    if (x)  x.style.opacity = '0';
+    gfObXTimer = setTimeout(function() { if (!gfObAborted && x) x.style.opacity = '1'; }, 900);
+    gfObTimer  = setTimeout(function() { gfObAnimal(i + 1); }, a.d);
+  }
+  function gfObFlash() {
+    var fl = document.getElementById('gf-ob-flash');
+    if (fl) { fl.style.display = 'block'; setTimeout(function() { fl.style.display = 'none'; gfObShowAct2(); }, 150); }
+    else gfObShowAct2();
+  }
+  function gfObShowAct2() {
     document.getElementById('gf-act1').style.display = 'none';
-    var act2 = document.getElementById('gf-act2');
-    act2.style.display = 'flex';
-    var lines = act2.querySelectorAll('.gf-bam-line');
-    var delay = 0;
-    for (var i = 0; i < lines.length; i++) {{
-      (function(el, d) {{ setTimeout(function() {{ el.style.opacity = '1'; }}, d); }})(lines[i], delay);
+    var a2 = document.getElementById('gf-act2');
+    a2.style.display = 'flex';
+    var lines = a2.querySelectorAll('.gf-bam-line'), delay = 0;
+    for (var i = 0; i < lines.length; i++) {
+      (function(el, d) { setTimeout(function() { el.style.opacity = '1'; }, d); })(lines[i], delay);
       delay += 400;
-    }}
-    setTimeout(function() {{ var btn = document.getElementById('gf-bam-btn'); if (btn) btn.style.display = 'inline-block'; }}, delay + 2000);
-  }}
-
-  window.gfObAct3 = function() {{
+    }
+    setTimeout(function() { var btn = document.getElementById('gf-bam-btn'); if (btn) btn.style.display = 'inline-block'; }, delay + 2000);
+  }
+  window.gfObAct3 = function() {
     var a2 = document.getElementById('gf-act2'); if (a2) a2.style.display = 'none';
     var sk = document.getElementById('gf-ob-skip'); if (sk) sk.style.display = 'none';
-    var act3 = document.getElementById('gf-act3');
-    act3.style.display = 'flex';
-    gfObCard = 0;
-    gfObUpdateDots();
-  }};
-
-  window.gfObNextCard = function() {{
-    if (gfObCard >= 4) {{ gfObComplete(); return; }}
-    var cur = document.getElementById('gf-ob-card-' + gfObCard);
-    if (cur) cur.style.display = 'none';
+    var a3 = document.getElementById('gf-act3'); a3.style.display = 'flex';
+    gfObCard = 0; gfObUpdateDots();
+  };
+  window.gfObNextCard = function() {
+    if (gfObCard >= 4) { gfObComplete(); return; }
+    var cur = document.getElementById('gf-ob-card-' + gfObCard); if (cur) cur.style.display = 'none';
     gfObCard++;
-    var nxt = document.getElementById('gf-ob-card-' + gfObCard);
-    if (nxt) nxt.style.display = 'flex';
+    var nxt = document.getElementById('gf-ob-card-' + gfObCard); if (nxt) nxt.style.display = 'flex';
     gfObUpdateDots();
-  }};
-
-  function gfObUpdateDots() {{
-    for (var i = 0; i <= 4; i++) {{
+  };
+  function gfObUpdateDots() {
+    for (var i = 0; i <= 4; i++) {
       var dot = document.getElementById('gf-dot-' + i);
       if (dot) dot.style.background = (i === gfObCard) ? '#7c3aed' : '#374151';
-    }}
-  }}
-
-  window.gfObComplete = function() {{
+    }
+  }
+  window.gfObComplete = function() {
     localStorage.setItem('goatflow_onboarding_complete', 'true');
     localStorage.setItem('goatflow_welcomed', 'true');
     overlay.style.display = 'none';
-    setTimeout(function() {{
-      var toggle = document.querySelector('[data-testid="stSidebarNavToggleButton"] button, button[aria-label="open sidebar"], [data-testid="collapsedControl"] button, [data-testid="collapsedControl"]');
-      if (toggle) toggle.click();
-    }}, 300);
-  }};
-
-  window.gfObSkipToAct3 = function() {{
+    setTimeout(function() {
+      var t = document.querySelector('[data-testid="stSidebarNavToggleButton"] button, button[aria-label="open sidebar"], [data-testid="collapsedControl"] button, [data-testid="collapsedControl"]');
+      if (t) t.click();
+    }, 300);
+  };
+  window.gfObSkipToAct3 = function() {
     gfObAborted = true;
-    if (gfObTimer) clearTimeout(gfObTimer);
+    if (gfObTimer)  clearTimeout(gfObTimer);
     if (gfObXTimer) clearTimeout(gfObXTimer);
     var a1 = document.getElementById('gf-act1'); if (a1) a1.style.display = 'none';
     var a2 = document.getElementById('gf-act2'); if (a2) a2.style.display = 'none';
     var fl = document.getElementById('gf-ob-flash'); if (fl) fl.style.display = 'none';
     gfObAct3();
-  }};
-
-  window.goatflow_resetOnboarding = function() {{
+  };
+  window.goatflow_resetOnboarding = function() {
     localStorage.removeItem('goatflow_onboarding_complete');
     location.reload();
-  }};
-
-  gfObTimer = setTimeout(function() {{ gfObAnimal(0); }}, 2000);
-}})();
+  };
+  gfObTimer = setTimeout(function() { gfObAnimal(0); }, 2000);
+})();
 </script>
 """, unsafe_allow_html=True)
 
