@@ -2864,18 +2864,19 @@ else:
         if horn_name:
             horn_tag_html = f'<span class="horn-tag">🐐 Ranked by: {safe(horn_name)}</span>'
 
-        st.markdown(f'''
-        <div class="signal-card{card_extra_class}">
-            <div class="signal-weight">{weight:.0f}</div>
-            <div class="signal-task">{safe(sig["task_name"])}{glow_eye_icon}{goat_badge}{horn_badge}</div>
-            <div class="signal-why">{safe(sig["why"])}</div>
-            <div style="margin-top:0.3rem;">
-                <span class="bleat-type-tag {bleat_class}">{bleat_label}</span>
-                <span class="xp-tag {xp_class}">+{xp_amount:,} CCR — {safe(tier)}</span>
-                {horn_tag_html}
-            </div>
-        </div>
-        ''', unsafe_allow_html=True)
+        card_html = (
+            f'<div class="signal-card{card_extra_class}">'
+            f'<div class="signal-weight">{weight:.0f}</div>'
+            f'<div class="signal-task">{safe(sig["task_name"])}{glow_eye_icon}{goat_badge}{horn_badge}</div>'
+            f'<div class="signal-why">{safe(sig["why"])}</div>'
+            f'<div style="margin-top:0.3rem;">'
+            f'<span class="bleat-type-tag {bleat_class}">{bleat_label}</span>'
+            f'<span class="xp-tag {xp_class}">+{xp_amount:,} CCR \u2014 {safe(tier)}</span>'
+            f'{horn_tag_html}'
+            f'</div>'
+            f'</div>'
+        )
+        st.markdown(card_html, unsafe_allow_html=True)
 
         is_incognito_sig = isinstance(sig.get('id'), str) and str(sig['id']).startswith("incog_")
         if st.button(f"✅ Complete", key=f"complete_{sig['id']}", use_container_width=True):
