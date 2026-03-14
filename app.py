@@ -1867,9 +1867,17 @@ if goat_hoof_b64:
     _hoof_url = f"data:image/png;base64,{goat_hoof_b64}"
     st.markdown(f"""
 <style>
-/* Replace sidebar toggle arrows with goat hoof icon */
+/* Replace ALL sidebar toggle arrows (interior collapse + exterior expand) with goat hoof */
 [data-testid="stSidebarCollapseButton"] button,
-[data-testid="collapsedControl"] button {{
+[data-testid="collapsedControl"] button,
+[data-testid="collapsedControl"] > button,
+button[aria-label="Open sidebar"],
+button[aria-label="open sidebar"],
+button[aria-label="Close sidebar"],
+button[aria-label="close sidebar"],
+[data-testid="stSidebarNavToggleButton"] button,
+[data-testid="stSidebarNavToggleButton"],
+[data-testid="collapsedControl"] {{
     background-image: url('{_hoof_url}') !important;
     background-size: 80% !important;
     background-repeat: no-repeat !important;
@@ -1877,18 +1885,27 @@ if goat_hoof_b64:
     background-color: transparent !important;
     border: none !important;
     box-shadow: none !important;
-    width: 40px !important;
-    height: 40px !important;
+    min-width: 38px !important;
+    min-height: 38px !important;
     border-radius: 8px !important;
     transition: opacity 0.2s ease !important;
+    cursor: pointer !important;
 }}
 [data-testid="stSidebarCollapseButton"] button:hover,
-[data-testid="collapsedControl"] button:hover {{
-    opacity: 0.75 !important;
+[data-testid="collapsedControl"] button:hover,
+[data-testid="collapsedControl"]:hover,
+button[aria-label="Open sidebar"]:hover,
+button[aria-label="open sidebar"]:hover {{
+    opacity: 0.7 !important;
     background-color: transparent !important;
 }}
 [data-testid="stSidebarCollapseButton"] button svg,
-[data-testid="collapsedControl"] button svg {{
+[data-testid="collapsedControl"] button svg,
+[data-testid="collapsedControl"] svg,
+[data-testid="stSidebarNavToggleButton"] svg,
+button[aria-label="Open sidebar"] svg,
+button[aria-label="open sidebar"] svg,
+button[aria-label="Close sidebar"] svg {{
     display: none !important;
 }}
 </style>
