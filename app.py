@@ -1226,7 +1226,8 @@ def get_db():
     last_err = None
     for attempt in range(5):
         try:
-            return psycopg2.connect(os.environ["DATABASE_URL"])
+            db_url = os.environ.get("PROD_DATABASE_URL") or os.environ["DATABASE_URL"]
+            return psycopg2.connect(db_url)
         except Exception as e:
             last_err = e
             time.sleep(0.5 * (attempt + 1))
