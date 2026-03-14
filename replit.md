@@ -115,6 +115,18 @@ Users sign in via username/password to access their private dashboard. Each user
 - Incognito Mode: session-only signals, not persisted to DB
 - OpSec Layer panel in sidebar
 
+## Onboarding Tour (Shepherd.js v11)
+- **CRITICAL**: `st.markdown(unsafe_allow_html=True)` does NOT execute `<script>` tags in Streamlit 1.55. Scripts are rendered as DOM nodes but not executed.
+- **Solution**: Use `streamlit.components.v1.html()` (renders in a same-origin iframe with `allow-same-origin` sandbox flag). The iframe can call `window.parent.document.createElement('script')` to inject scripts into the parent page scope.
+- **Architecture**: `_stc.html(_ob_iframe_html, height=0)` — Shepherd.js bundle + CSS injected into `window.parent.document.head`. Tour IIFE injected into body, defines `window.parent.gfStartTour`.
+- AMD-disable wrapper: `(function(){var _d=window.define;window.define=undefined;try{...shepherd...}finally{window.define=_d;}})()` forces UMD global path (avoids Streamlit React's define.amd hijack).
+- Auto-starts when `player.onboarding_done = false` (`gfObForce=true`).
+- Completion/cancel: `pw.history.replaceState(...?ob_done=1)` → Streamlit detects → `mark_onboarding_done()`.
+- Replay: "Replay Tutorial" button in sidebar calls `window.gfStartTour()`.
+- Static files: `static/shepherd.min.js` (45KB) + `static/shepherd.css` (3.4KB).
+- `_stc` imported as `import streamlit.components.v1 as _stc` at top of app.py.
+- **Rebuild pattern**: When rebuilding from /tmp/app_part1.py + /tmp/app_shepherd_section.py + /tmp/app_part3.py, also add `import streamlit.components.v1 as _stc` and `import json as _json` to top-level imports. The shepherd section now has no inline import statements.
+
 ## Dependencies
 - streamlit, openai, PyPDF2, fpdf2, psycopg2-binary, Pillow
 

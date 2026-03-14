@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as _stc
 import os
 import io
 import html
@@ -8,6 +9,7 @@ import math
 import random
 import hashlib
 import secrets
+import json as _json
 import urllib.parse
 import psycopg2
 import psycopg2.extras
@@ -2231,7 +2233,7 @@ with st.sidebar:
             st.session_state.pop(key, None)
         st.rerun()
     st.markdown(
-        '<button onclick="if(window.gfObReshow){gfObReshow();}else{var o=document.getElementById(\'gf-onboarding\');if(o)o.style.display=\'block\';}" '
+        '<button onclick="if(window.gfStartTour){gfStartTour();}" '
         'style="width:100%;background:transparent;border:1px solid #374151;border-radius:8px;color:#6b7280;'
         'font-family:\'DM Sans\',sans-serif;font-size:0.75rem;font-weight:500;padding:8px 0;cursor:pointer;'
         'transition:all 0.2s;margin-top:0.5rem;" '
@@ -2245,191 +2247,193 @@ with st.sidebar:
 _has_horns_js = "true" if current_horns else "false"
 _logo_src_js  = logo_src.replace('"', '\\"') if logo_src else ""
 
-# ── First-login onboarding sequence (3 acts, DB + localStorage gated) ─────
-# NOTE: No blank lines within the HTML block — Streamlit's markdown parser
-# (CommonMark) terminates an HTML block at the first blank line inside a <div>.
+
+# ── First-login onboarding tour (Shepherd.js — via components.v1.html) ──────
+# st.markdown does NOT execute <script> tags in Streamlit 1.55.
+# components.v1.html() renders in a same-origin iframe → scripts execute →
+# we inject Shepherd.js + CSS + tour IIFE into window.parent (main page scope).
+
 _force_onboarding = not player_data.get("onboarding_done", False)
-_ob_username_safe = ''.join(c for c in (current_user_name or 'user') if c.isalnum() or c == '_')
-import base64 as _b64
-_animal_names = [
-    "bull","ram","chicken","cow","dog","cat","donkey","lizard",
-    "hamster","sheep","pig","rabbit","duck","eagle","horse"
-]
-def _load_animal_b64(name):
-    path = f"public/images/onboarding/compressed/animal_{name}.jpg"
-    try:
-        with open(path,"rb") as f:
-            return "data:image/jpeg;base64," + _b64.b64encode(f.read()).decode()
-    except Exception:
-        return ""
-_animal_data_urls = [_load_animal_b64(n) for n in _animal_names]
-_ob_display = 'block' if _force_onboarding else 'none'
-_ob_html = (
-    f'<div id="gf-onboarding" style="display:{_ob_display};position:fixed;top:0;left:0;width:100%;height:100%;z-index:100;background:#08080f;overflow:hidden;">'
-    '<div id="gf-ob-skip" onclick="gfObSkipToAct3()" style="position:absolute;bottom:24px;right:24px;font-family:\'DM Sans\',sans-serif;font-weight:400;font-size:12px;color:#4b5563;cursor:pointer;z-index:110;" onmouseover="this.style.color=\'#9ca3af\'" onmouseout="this.style.color=\'#4b5563\'">Skip intro \u2192</div>'
-    '<div id="gf-act1" style="display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;">'
-    '<div id="gf-ob-title-card" style="text-align:center;padding:0 32px;">'
-    '<div style="font-family:\'Syne\',sans-serif;font-weight:700;font-size:32px;color:#fff;margin-bottom:16px;line-height:1.2;">Other animals have tried to help you.</div>'
-    '<div style="font-family:\'DM Sans\',sans-serif;font-weight:400;font-size:16px;color:#6b7280;">This did not go well for anyone.</div>'
-    '</div>'
-    '<div id="gf-ob-animal-card" style="display:none;text-align:center;position:relative;">'
-    '<div style="position:relative;display:inline-block;margin-bottom:16px;">'
-    '<img id="gf-ob-animal-img" src="" alt="" style="width:200px;height:200px;object-fit:contain;display:block;margin:0 auto 4px;">'
-    '<div id="gf-ob-x" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-52%);font-size:120px;font-weight:900;color:#ef4444;opacity:0;transition:opacity 0.5s ease;pointer-events:none;line-height:1;">\u2715</div>'
-    '</div>'
-    '<div id="gf-ob-caption" style="font-family:\'Syne\',sans-serif;font-weight:700;font-size:18px;color:#fff;">Bulls \u2014 Full of it.</div>'
-    '</div>'
-    '</div>'
-    '<div id="gf-ob-flash" style="display:none;position:absolute;top:0;left:0;width:100%;height:100%;background:#fff;z-index:105;pointer-events:none;"></div>'
-    f'<div id="gf-act2" style="display:none;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;text-align:center;padding:32px 24px;box-sizing:border-box;">'
-    f'<img src="{_logo_src_js}" alt="GOATflow" style="width:120px;margin-bottom:32px;animation:logo-float 3.5s ease-in-out infinite;">'
-    '<div class="gf-bam-line" style="font-family:\'Syne\',sans-serif;font-weight:800;font-size:28px;color:#fff;max-width:320px;line-height:1.3;opacity:0;transition:opacity 0.4s ease;margin:0 auto;">THIS is what you\u2019ve always needed.</div>'
-    '<div class="gf-bam-line" style="font-family:\'Syne\',sans-serif;font-weight:700;font-size:22px;color:#4ade80;margin-top:16px;opacity:0;transition:opacity 0.4s ease;">GOATS.</div>'
-    '<div class="gf-bam-line" style="font-family:\'DM Sans\',sans-serif;font-weight:400;font-size:16px;color:#9ca3af;margin-top:16px;line-height:1.6;max-width:300px;opacity:0;transition:opacity 0.4s ease;margin-left:auto;margin-right:auto;">Leave the asleep to the sheep.<br>You\u2019ve got to become your Greatest Of All Time self.<br>That takes guts. That takes GOATS.</div>'
-    '<div class="gf-bam-line" style="font-family:\'Syne\',sans-serif;font-weight:700;font-size:20px;color:#f59e0b;margin-top:24px;opacity:0;transition:opacity 0.4s ease;">Let\u2019s go. \U0001f410</div>'
-    '<button id="gf-bam-btn" onclick="gfObAct3()" style="display:none;margin-top:32px;background:#7c3aed;color:#fff;font-family:\'Syne\',sans-serif;font-weight:700;font-size:16px;border:none;border-radius:8px;padding:14px 40px;cursor:pointer;" onmouseover="this.style.opacity=\'0.85\'" onmouseout="this.style.opacity=\'1\'">Let\u2019s Start</button>'
-    '</div>'
-    '<div id="gf-act3" style="display:none;flex-direction:column;align-items:center;justify-content:center;width:100%;height:100%;position:relative;" onclick="gfObNextCard()">'
-    f'<div id="gf-ob-card-0" style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px 24px;max-width:360px;width:100%;box-sizing:border-box;"><img src="{_logo_src_js}" style="width:60px;margin-bottom:12px;" alt="GOATflow"><div style="font-size:64px;margin-bottom:16px;">\U0001f410</div><div style="font-family:\'Syne\',sans-serif;font-weight:700;font-size:22px;color:#f59e0b;margin-bottom:16px;">First things first \u2014 set your Horns.</div><div style="font-family:\'DM Sans\',sans-serif;font-weight:400;font-size:14px;color:#9ca3af;line-height:1.6;max-width:300px;margin-bottom:16px;">Your Horns are the rules GOATflow never breaks. Family first. Compliance always. Whatever matters most to you \u2014 put it in a Horn and the AI obeys it. Every single time.</div><div style="font-family:\'DM Sans\',sans-serif;font-weight:500;font-size:13px;color:#a78bfa;">Tap the Horns icon to set yours after this.</div></div>'
-    '<div id="gf-ob-card-1" style="display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px 24px;max-width:360px;width:100%;box-sizing:border-box;"><div style="font-family:\'Syne\',sans-serif;font-weight:700;font-size:22px;color:#4ade80;margin-bottom:16px;">Drop the chaos in. Get clarity out.</div><div style="font-family:\'DM Sans\',sans-serif;font-weight:400;font-size:14px;color:#9ca3af;line-height:1.6;max-width:300px;margin-bottom:20px;">Snap a photo of a sticky note. Record a voice memo. Paste an email. Upload a PDF. Type a quick thought. Drag and drop a document.<br><br>GOATflow reads all of it and turns it into a prioritized list of Tracks in seconds.</div><div style="display:flex;gap:20px;justify-content:center;flex-wrap:wrap;"><div style="text-align:center;"><div style="font-size:28px;">\U0001f4f7</div><div style="font-family:\'DM Sans\',sans-serif;font-size:11px;color:#6b7280;margin-top:4px;">Photo</div></div><div style="text-align:center;"><div style="font-size:28px;">\U0001f399\ufe0f</div><div style="font-family:\'DM Sans\',sans-serif;font-size:11px;color:#6b7280;margin-top:4px;">Voice</div></div><div style="text-align:center;"><div style="font-size:28px;">\U0001f4cb</div><div style="font-family:\'DM Sans\',sans-serif;font-size:11px;color:#6b7280;margin-top:4px;">Paste</div></div><div style="text-align:center;"><div style="font-size:28px;">\U0001f4c4</div><div style="font-family:\'DM Sans\',sans-serif;font-size:11px;color:#6b7280;margin-top:4px;">PDF</div></div><div style="text-align:center;"><div style="font-size:28px;">\u2328\ufe0f</div><div style="font-family:\'DM Sans\',sans-serif;font-size:11px;color:#6b7280;margin-top:4px;">Type</div></div><div style="text-align:center;"><div style="font-size:28px;">\U0001f4c1</div><div style="font-family:\'DM Sans\',sans-serif;font-size:11px;color:#6b7280;margin-top:4px;">File</div></div></div></div>'
-    '<div id="gf-ob-card-2" style="display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px 24px;max-width:360px;width:100%;box-sizing:border-box;"><div style="font-family:\'Syne\',sans-serif;font-weight:700;font-size:22px;color:#a78bfa;margin-bottom:16px;">The AI ranks everything against your Horns.</div><div style="font-family:\'DM Sans\',sans-serif;font-weight:400;font-size:14px;color:#9ca3af;line-height:1.6;max-width:300px;margin-bottom:24px;">When you drop in ten things at once, GOATflow does not guess what matters most. It already knows \u2014 because you told it. Summit Calls are the ones that cannot wait. Standard Tracks are everything else. The list updates every time you add more.</div><div style="max-width:280px;width:100%;"><div style="border-left:3px solid #ef4444;background:#1a0f0f;border-radius:6px;padding:10px 14px;text-align:left;margin-bottom:8px;font-family:\'DM Sans\',sans-serif;font-size:13px;color:#fff;">\u26a1 SUMMIT CALL \u2014 File compliance report by 3pm</div><div style="border-left:3px solid #7c3aed;background:#0f0f1a;border-radius:6px;padding:10px 14px;text-align:left;font-family:\'DM Sans\',sans-serif;font-size:13px;color:#fff;">\U0001f4cb TRACK \u2014 Reply to vendor email</div></div></div>'
-    '<div id="gf-ob-card-3" style="display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px 24px;max-width:360px;width:100%;box-sizing:border-box;"><div style="font-family:\'Syne\',sans-serif;font-weight:700;font-size:22px;color:#f59e0b;margin-bottom:16px;">Complete Tracks. Earn Hay. \U0001f33e</div><div style="font-family:\'DM Sans\',sans-serif;font-weight:400;font-size:14px;color:#9ca3af;line-height:1.6;max-width:300px;margin-bottom:20px;">Every Track you complete earns Hay. 500 Hay converts to 1 Fresh Cheese. \U0001f9c0 Fresh Cheese banks in your profile and will port directly to WorkGOAT when it launches \u2014 so every task you complete today is building something that lasts.</div><div style="font-family:\'DM Sans\',sans-serif;font-size:13px;color:#6b7280;background:#111;border-radius:8px;padding:14px 20px;line-height:1.8;">10 Hay (Standard) \u2192 50 Hay (Summit Call)<br>\u2192 500 Hay = \U0001f9c0 Fresh Cheese</div></div>'
-    '<div id="gf-ob-card-4" style="display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px 24px;max-width:360px;width:100%;box-sizing:border-box;"><div style="font-size:64px;margin-bottom:16px;">\U0001f410</div><div style="font-family:\'Syne\',sans-serif;font-weight:700;font-size:22px;color:#fff;margin-bottom:16px;">If something feels off \u2014 add a Horn.</div><div style="font-family:\'DM Sans\',sans-serif;font-weight:400;font-size:14px;color:#9ca3af;line-height:1.6;max-width:300px;margin-bottom:20px;">The AI gets sharper every time you use it. If a Track is ranked wrong, add a Horn that fixes it. The more specific your Horns, the more personal GOATflow becomes. This is your system. You run it.</div><div style="font-family:\'Syne\',sans-serif;font-weight:700;font-size:16px;color:#4ade80;margin-bottom:24px;">Grab it by the horns. \U0001f410</div><button onclick="event.stopPropagation();gfObComplete()" style="background:#7c3aed;color:#fff;font-family:\'Syne\',sans-serif;font-weight:700;font-size:16px;border:none;border-radius:8px;padding:14px 40px;cursor:pointer;" onmouseover="this.style.opacity=\'0.85\'" onmouseout="this.style.opacity=\'1\'">Let\u2019s go \u2192</button></div>'
-    '<div id="gf-ob-dots" style="position:absolute;bottom:56px;left:50%;transform:translateX(-50%);display:flex;gap:8px;pointer-events:none;"><div id="gf-dot-0" style="width:8px;height:8px;border-radius:50%;background:#7c3aed;transition:background 0.3s;"></div><div id="gf-dot-1" style="width:8px;height:8px;border-radius:50%;background:#374151;transition:background 0.3s;"></div><div id="gf-dot-2" style="width:8px;height:8px;border-radius:50%;background:#374151;transition:background 0.3s;"></div><div id="gf-dot-3" style="width:8px;height:8px;border-radius:50%;background:#374151;transition:background 0.3s;"></div><div id="gf-dot-4" style="width:8px;height:8px;border-radius:50%;background:#374151;transition:background 0.3s;"></div></div>'
-    '<div onclick="event.stopPropagation();gfObComplete()" style="position:absolute;bottom:24px;right:24px;font-family:\'DM Sans\',sans-serif;font-weight:400;font-size:12px;color:#4b5563;cursor:pointer;" onmouseover="this.style.color=\'#9ca3af\'" onmouseout="this.style.color=\'#4b5563\'">Skip tutorial</div>'
-    '</div>'
-    '</div>'
+_gf_ob_force = 'true' if _force_onboarding else 'false'
+
+try:
+    with open("static/shepherd.css") as _sf:
+        _shepherd_css = _sf.read()
+    with open("static/shepherd.min.js") as _sj:
+        _shepherd_js_raw = _sj.read()
+except Exception:
+    _shepherd_css = ""
+    _shepherd_js_raw = ""
+
+# AMD-disable wrapper: forces UMD global path (window.Shepherd) in Streamlit's React environment
+_shepherd_js_wrapped = (
+    "(function(){var _d=window.define;window.define=undefined;try{"
+    + _shepherd_js_raw
+    + "}finally{window.define=_d;}})();"
 )
-_animal_imgs_json = '[' + ','.join('"' + u + '"' for u in _animal_data_urls) + ']'
-_ob_force_js = 'true' if _force_onboarding else 'false'
-_ob_html += ('<script>'
-             'window.gfAnimalImgs=' + _animal_imgs_json + ';'
-             'window.gfObForce=' + _ob_force_js + ';'
-             'window.gfObLsKey="goatflow_ob_' + _ob_username_safe + '";'
-             '</script>')
-st.markdown(_ob_html, unsafe_allow_html=True)
-st.markdown(r"""
-<style>
-@media (max-width:768px) {
-  #gf-ob-animal-img { width:150px !important; height:150px !important; }
-  #gf-ob-x { font-size:90px !important; }
-  .gf-bam-line { font-size:85% !important; }
-}
-</style>
-<script>
+
+# Build the iframe HTML: inject Shepherd bundle + CSS + tour IIFE into parent document
+# using JSON encoding so curly braces in JS/CSS are safe to embed in a Python f-string.
+_shep_js_json  = _json.dumps(_shepherd_js_wrapped)
+_shep_css_json = _json.dumps(
+    _shepherd_css
+    + "\n.shepherd-element{z-index:9999!important;}"
+    + "\n.shepherd-modal-overlay-container{z-index:9998!important;}"
+    + "\n.shepherd-content{background:#0f0f1a!important;border:1px solid #374151!important;"
+    + "border-radius:12px!important;box-shadow:0 20px 40px rgba(0,0,0,0.6),"
+    + "0 0 20px rgba(124,58,237,0.15)!important;min-width:280px;max-width:380px;}"
+    + "\n.shepherd-text{color:#9ca3af!important;font-family:'DM Sans',sans-serif!important;"
+    + "font-size:14px!important;line-height:1.6!important;padding:4px 16px 12px!important;}"
+    + "\n.shepherd-header{background:#0f0f1a!important;border-bottom:1px solid #1f2937!important;"
+    + "padding:16px 40px 12px 16px!important;border-radius:12px 12px 0 0!important;}"
+    + "\n.shepherd-title{color:#ffffff!important;font-family:'Syne',sans-serif!important;"
+    + "font-weight:700!important;font-size:16px!important;}"
+    + "\n.shepherd-footer{background:#0f0f1a!important;border-top:1px solid #1f2937!important;"
+    + "padding:12px 16px!important;border-radius:0 0 12px 12px!important;}"
+    + "\n.shepherd-button{background:#7c3aed!important;color:#fff!important;"
+    + "border:none!important;border-radius:6px!important;font-family:'Syne',sans-serif!important;"
+    + "font-weight:700!important;font-size:13px!important;padding:8px 18px!important;"
+    + "cursor:pointer!important;transition:background 0.2s!important;}"
+    + "\n.shepherd-button:hover{background:#6d28d9!important;}"
+    + "\n.shepherd-button.shepherd-button-secondary{background:transparent!important;"
+    + "color:#6b7280!important;border:1px solid #374151!important;}"
+    + "\n.shepherd-button.shepherd-button-secondary:hover{color:#9ca3af!important;"
+    + "border-color:#4b5563!important;}"
+    + "\n.shepherd-cancel-icon{color:#4b5563!important;}"
+    + "\n.shepherd-cancel-icon:hover{color:#9ca3af!important;}"
+    + "\n.shepherd-arrow::before{background:#0f0f1a!important;border-color:#374151!important;}"
+)
+
+_tour_iife = r"""
 (function() {
-  var _lsKey = window.gfObLsKey || 'goatflow_ob';
-  var _card = 0, _tmr = null, _xtmr = null, _ab = false;
-  var _animals = [
-    {c:'Bulls \u2014 Full of it.',                           d:1800},
-    {c:'Rams \u2014 Too aggressive.',                        d:1800},
-    {c:'Chickens \u2014 You already know.',                  d:1800},
-    {c:"Cows \u2014 Won\u2019t budge.",                      d:1800},
-    {c:"Dogs \u2014 Just wants to be your friend.",          d:1800},
-    {c:'Cats \u2014 Only helps themselves.',                 d:1500},
-    {c:'Donkeys \u2014 Think they know everything.',         d:1500},
-    {c:'Lizards \u2014 Cold-blooded about your deadlines.',  d:1500},
-    {c:'Hamsters \u2014 Running but going nowhere.',         d:1500},
-    {c:'Sheep \u2014 Already asleep.',                       d:1500},
-    {c:'Pigs \u2014 Only motivated by lunch.',               d:1100},
-    {c:'Rabbits \u2014 Distracted by the next shiny thing.', d:1100},
-    {c:'Ducks \u2014 Complete quacks.',                      d:1100},
-    {c:"Eagles \u2014 Not always free.",                     d:1100},
-    {c:"Horses \u2014 Making their own leaps.",              d:1100}
-  ];
-  function _parade(i) {
-    if (_ab) return;
-    if (i >= _animals.length) { _flash(); return; }
-    var a = _animals[i];
-    var tc=document.getElementById('gf-ob-title-card'), ac=document.getElementById('gf-ob-animal-card');
-    var im=document.getElementById('gf-ob-animal-img'), cp=document.getElementById('gf-ob-caption'), x=document.getElementById('gf-ob-x');
-    if (tc) tc.style.display='none';
-    if (ac) ac.style.display='block';
-    if (im && window.gfAnimalImgs && window.gfAnimalImgs[i]) im.src=window.gfAnimalImgs[i];
-    if (cp) cp.textContent=a.c;
-    if (x) x.style.opacity='0';
-    _xtmr=setTimeout(function(){if(!_ab&&x)x.style.opacity='1';},900);
-    _tmr=setTimeout(function(){_parade(i+1);},a.d);
+  var pw = window.parent;
+  function _buildTour() {
+    var t = new pw.Shepherd.Tour({
+      useModalOverlay: true,
+      defaultStepOptions: {
+        cancelIcon: { enabled: true },
+        scrollTo: { behavior: 'smooth', block: 'center' }
+      }
+    });
+    t.addStep({
+      id: 'welcome',
+      title: '\uD83D\uDC10 Welcome to GOATflow.',
+      text: "Other animals have tried to help you. This did not go well for anyone.<br><br>You're running on a different engine now. Here's a quick tour.",
+      buttons: [
+        { text: 'Skip', action: function() { t.cancel(); }, classes: 'shepherd-button-secondary' },
+        { text: "Let's go \u2192", action: t.next }
+      ]
+    });
+    t.addStep({
+      id: 'horns',
+      title: '\uD83E\uDD8C GOAT Horns \u2014 Your Rules',
+      text: 'Horns are the rules GOATflow never breaks. Family first. Legal deadlines always. Whatever matters most to you \u2014 put it in a Horn and the AI obeys it every single time.',
+      attachTo: { element: '[data-testid="stSidebar"]', on: 'right' },
+      buttons: [
+        { text: '\u2190 Back', action: t.back, classes: 'shepherd-button-secondary' },
+        { text: 'Next \u2192', action: t.next }
+      ]
+    });
+    t.addStep({
+      id: 'sieve',
+      title: '\uD83D\uDCE5 The Track Sieve',
+      text: "Drop any chaos in. Snap a photo of a sticky note. Paste an email. Upload a PDF. Record voice. Type a quick thought.<br><br>GOATflow reads all of it and turns it into a prioritized list in seconds.",
+      attachTo: { element: '#gf-sieve-anchor', on: 'top' },
+      buttons: [
+        { text: '\u2190 Back', action: t.back, classes: 'shepherd-button-secondary' },
+        { text: 'Next \u2192', action: t.next }
+      ]
+    });
+    t.addStep({
+      id: 'ranking',
+      title: '\u26A1 Summit Calls vs. Standard Tracks',
+      text: "When you drop in ten things, GOATflow doesn't guess what matters. It already knows \u2014 because you told it via your Horns.<br><br><span style=\"color:#ef4444;font-weight:700;\">\u26A1 Summit Call</span> \u2014 Cannot wait.<br><span style=\"color:#a78bfa;font-weight:700;\">\uD83D\uDCCB Standard Track</span> \u2014 Everything else.",
+      buttons: [
+        { text: '\u2190 Back', action: t.back, classes: 'shepherd-button-secondary' },
+        { text: 'Next \u2192', action: t.next }
+      ]
+    });
+    t.addStep({
+      id: 'hay',
+      title: '\uD83C\uDF3E Earn Hay. Build Fresh Cheese.',
+      text: 'Every Track you complete earns Hay \uD83C\uDF3E. 500 Hay converts to 1 Fresh Cheese \uD83E\uDDC0 \u2014 which ports directly into WorkGOAT when it launches. Every task today builds something that lasts.',
+      attachTo: { element: '[data-testid="stSidebar"]', on: 'right' },
+      buttons: [
+        { text: '\u2190 Back', action: t.back, classes: 'shepherd-button-secondary' },
+        { text: 'Next \u2192', action: t.next }
+      ]
+    });
+    t.addStep({
+      id: 'done',
+      title: '\uD83D\uDC10 Grab it by the horns.',
+      text: 'If something feels off \u2014 add a Horn. The AI gets sharper every time you use it.<br><br>Replay this tour anytime from the <b style="color:#a78bfa">\u2753 Replay Tutorial</b> button at the bottom of the sidebar.',
+      buttons: [
+        { text: '\u2190 Back', action: t.back, classes: 'shepherd-button-secondary' },
+        { text: "Let's go \u2192", action: t.complete }
+      ]
+    });
+    function _markDone() {
+      try { pw.history.replaceState(null, '', pw.location.pathname + '?ob_done=1'); } catch(e) {}
+    }
+    t.on('complete', _markDone);
+    t.on('cancel', _markDone);
+    return t;
   }
-  function _flash() {
-    var fl=document.getElementById('gf-ob-flash');
-    if(fl){fl.style.display='block';setTimeout(function(){fl.style.display='none';_act2();},150);}
-    else _act2();
+  pw.gfStartTour = function() {
+    if (typeof pw.Shepherd === 'undefined') { return; }
+    if (pw._gfTour && pw._gfTour.isActive()) { pw._gfTour.cancel(); }
+    pw._gfTour = _buildTour();
+    pw._gfTour.start();
+  };
+  pw.goatflow_resetOnboarding = function() {
+    try { pw.history.replaceState(null, '', pw.location.pathname); } catch(e) {}
+    pw.location.reload();
+  };
+  if (pw.gfObForce && !pw._gfTourStarted) {
+    if (typeof pw.Shepherd !== 'undefined') {
+      pw._gfTourStarted = true;
+      pw.gfStartTour();
+    }
   }
-  function _act2() {
-    var a1=document.getElementById('gf-act1'); if(a1)a1.style.display='none';
-    var a2=document.getElementById('gf-act2'); if(!a2)return;
-    a2.style.display='flex';
-    var lines=a2.querySelectorAll('.gf-bam-line'),delay=0;
-    for(var i=0;i<lines.length;i++){(function(el,d){setTimeout(function(){el.style.opacity='1';},d);})(lines[i],delay);delay+=400;}
-    setTimeout(function(){var btn=document.getElementById('gf-bam-btn');if(btn)btn.style.display='inline-block';},delay+2000);
-  }
-  function _dots() {
-    for(var i=0;i<=4;i++){var d=document.getElementById('gf-dot-'+i);if(d)d.style.background=(i===_card)?'#7c3aed':'#374151';}
-  }
-  window.gfObAct3=function(){
-    var a2=document.getElementById('gf-act2');if(a2)a2.style.display='none';
-    var sk=document.getElementById('gf-ob-skip');if(sk)sk.style.display='none';
-    var a3=document.getElementById('gf-act3');if(a3)a3.style.display='flex';
-    _card=0;_dots();
-  };
-  window.gfObNextCard=function(){
-    if(_card>=4){window.gfObComplete();return;}
-    var cur=document.getElementById('gf-ob-card-'+_card);if(cur)cur.style.display='none';
-    _card++;
-    var nxt=document.getElementById('gf-ob-card-'+_card);if(nxt)nxt.style.display='flex';
-    _dots();
-  };
-  window.gfObComplete=function(){
-    var ov=document.getElementById('gf-onboarding');
-    if(ov)ov.style.display='none';
-    localStorage.setItem(_lsKey,'true');
-    localStorage.setItem('goatflow_welcomed','true');
-    try{history.replaceState(null,'',window.location.pathname+'?ob_done=1');}catch(e){}
-    setTimeout(function(){
-      var t=document.querySelector('[data-testid="stSidebarNavToggleButton"] button,[data-testid="collapsedControl"] button,[data-testid="collapsedControl"]');
-      if(t)t.click();
-    },300);
-  };
-  window.gfObSkipToAct3=function(){
-    _ab=true;if(_tmr)clearTimeout(_tmr);if(_xtmr)clearTimeout(_xtmr);
-    var a1=document.getElementById('gf-act1');if(a1)a1.style.display='none';
-    var a2=document.getElementById('gf-act2');if(a2)a2.style.display='none';
-    var fl=document.getElementById('gf-ob-flash');if(fl)fl.style.display='none';
-    window.gfObAct3();
-  };
-  window.gfObReshow=function(){
-    if(_tmr)clearTimeout(_tmr);if(_xtmr)clearTimeout(_xtmr);
-    _ab=false;_card=0;
-    var ov=document.getElementById('gf-onboarding');
-    if(!ov)return;
-    var a1=document.getElementById('gf-act1');if(a1)a1.style.display='flex';
-    var a2=document.getElementById('gf-act2');
-    if(a2){a2.style.display='none';var bl=a2.querySelectorAll('.gf-bam-line');for(var i=0;i<bl.length;i++)bl[i].style.opacity='0';}
-    var a3=document.getElementById('gf-act3');if(a3)a3.style.display='none';
-    var tc=document.getElementById('gf-ob-title-card');if(tc)tc.style.display='block';
-    var ac=document.getElementById('gf-ob-animal-card');if(ac)ac.style.display='none';
-    var x=document.getElementById('gf-ob-x');if(x)x.style.opacity='0';
-    var fl=document.getElementById('gf-ob-flash');if(fl)fl.style.display='none';
-    var sk=document.getElementById('gf-ob-skip');if(sk)sk.style.display='block';
-    var bm=document.getElementById('gf-bam-btn');if(bm)bm.style.display='none';
-    ov.style.display='block';
-    _tmr=setTimeout(function(){_parade(0);},2000);
-  };
-  window.goatflow_resetOnboarding=function(){localStorage.removeItem(_lsKey);location.reload();};
-  // If localStorage says tutorial is done, immediately hide the overlay
-  // (handles edge case where server rendered it as block on a repeated rerun)
-  if(localStorage.getItem(_lsKey)==='true'){
-    var _ovH=document.getElementById('gf-onboarding');
-    if(_ovH)_ovH.style.display='none';
-    return;
-  }
-  // New user: overlay is already display:block from server-side render.
-  // Just start the parade timer.
-  _tmr=setTimeout(function(){_parade(0);},2000);
 })();
+"""
+_tour_iife_json = _json.dumps(_tour_iife)
+
+_ob_iframe_html = f"""<!DOCTYPE html><html><body style="margin:0;padding:0;background:transparent;">
+<script>
+(function() {{
+  var pd = window.parent.document;
+  var pw = window.parent;
+
+  // 1. Inject Shepherd CSS into parent <head> (once)
+  if (!pd.getElementById('gf-shepherd-css')) {{
+    var styleEl = pd.createElement('style');
+    styleEl.id = 'gf-shepherd-css';
+    styleEl.textContent = {_shep_css_json};
+    pd.head.appendChild(styleEl);
+  }}
+
+  // 2. Inject Shepherd.js bundle into parent <head> (once, AMD-disabled)
+  if (!pd.getElementById('gf-shepherd-bundle')) {{
+    var bundleEl = pd.createElement('script');
+    bundleEl.id = 'gf-shepherd-bundle';
+    bundleEl.textContent = {_shep_js_json};
+    pd.head.appendChild(bundleEl);
+  }}
+
+  // 3. Set gfObForce flag in parent
+  pw.gfObForce = {_gf_ob_force};
+
+  // 4. Inject tour IIFE into parent (runs with pw.Shepherd now available)
+  var tourEl = pd.createElement('script');
+  tourEl.textContent = {_tour_iife_json};
+  pd.body.appendChild(tourEl);
+}})();
 </script>
-""", unsafe_allow_html=True)
+</body></html>"""
+
+_stc.html(_ob_iframe_html, height=0, scrolling=False)
+
 
 st.markdown(f"""
 <div id="gf-welcome-overlay" style="
@@ -2654,7 +2658,7 @@ st.markdown(f'''
 </div>
 ''', unsafe_allow_html=True)
 
-st.markdown('<div class="churn-label">📊 The Track Sieve — Drop Intel</div>', unsafe_allow_html=True)
+st.markdown('<div id="gf-sieve-anchor" class="churn-label">📊 The Track Sieve — Drop Intel</div>', unsafe_allow_html=True)
 
 # ── Track Sieve one-time tooltip ──────────────────────────────────────────────
 st.markdown("""
