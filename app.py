@@ -1823,6 +1823,15 @@ def get_level_img_src(level: int) -> str:
     b64 = level_images_b64.get(clamped, "")
     return f"data:image/png;base64,{b64}" if b64 else ""
 
+LEVEL_BITE_PX = {1: 0, 2: 9, 3: 16, 4: 23, 5: 30, 6: 37, 7: 45}
+
+def get_level_bite_style(level: int) -> str:
+    r = LEVEL_BITE_PX.get(max(1, min(7, level)), 0)
+    if r == 0:
+        return ""
+    mask = f"radial-gradient(circle at 100% 0%, transparent {r}px, black {r}px)"
+    return f"mask-image:{mask};-webkit-mask-image:{mask};"
+
 def get_tier_celeb_b64(tier: str) -> str:
     tier_map = {
         "Micro": "daily_flow",
@@ -1985,7 +1994,8 @@ with st.sidebar:
 
     _level_img_src = get_level_img_src(cur_level)
     if _level_img_src:
-        avatar_html = f'<img src="{_level_img_src}" alt="{safe(user_rank)}" style="width:110px;height:110px;object-fit:contain;display:block;margin:0 auto;">'
+        _bite = get_level_bite_style(cur_level)
+        avatar_html = f'<img src="{_level_img_src}" alt="{safe(user_rank)}" style="width:110px;height:110px;object-fit:contain;display:block;margin:0 auto;{_bite}">'
     else:
         avatar_html = f'<div style="height:60px;width:60px;border-radius:50%;background:{CARD_BG};border:2px solid {BORDER};display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin:0 auto;">🐐</div>'
 
