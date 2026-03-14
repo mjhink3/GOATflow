@@ -1003,8 +1003,8 @@ CUSTOM_CSS = f"""
     }}
 
     .landing-container img {{
-        height: 90px;
-        margin-bottom: 0.4rem;
+        height: 160px;
+        margin-bottom: 0.5rem;
     }}
 
     .landing-tagline {{
@@ -2283,11 +2283,17 @@ _shepherd_js_wrapped = (
 _shep_js_json  = _json.dumps(_shepherd_js_wrapped)
 _shep_css_json = _json.dumps(
     _shepherd_css
-    + "\n.shepherd-element{z-index:9999!important;}"
+    + "\n.shepherd-element{z-index:9999!important;max-width:min(380px,85vw)!important;"
+    + "box-sizing:border-box!important;}"
     + "\n.shepherd-modal-overlay-container{z-index:9998!important;}"
     + "\n.shepherd-content{background:#0f0f1a!important;border:1px solid #374151!important;"
     + "border-radius:12px!important;box-shadow:0 20px 40px rgba(0,0,0,0.6),"
-    + "0 0 20px rgba(124,58,237,0.15)!important;min-width:280px;max-width:380px;}"
+    + "0 0 20px rgba(124,58,237,0.15)!important;min-width:0;width:100%;box-sizing:border-box;}"
+    + "\n@media(max-width:480px){"
+    + ".shepherd-element{left:50%!important;right:auto!important;"
+    + "transform:translateX(-50%)!important;top:auto!important;}"
+    + ".shepherd-has-cancel-icon .shepherd-cancel-icon{position:absolute;top:12px;right:12px;}"
+    + "}"
     + "\n.shepherd-text{color:#9ca3af!important;font-family:'DM Sans',sans-serif!important;"
     + "font-size:14px!important;line-height:1.6!important;padding:4px 16px 12px!important;}"
     + "\n.shepherd-header{background:#0f0f1a!important;border-bottom:1px solid #1f2937!important;"
@@ -2315,11 +2321,16 @@ _tour_iife = r"""
   var pw = window.parent;  // = window when app is top-level page
   var pd = pw.document;    // = document
   function _buildTour() {
+    var isMobile = pw.innerWidth < 600;
+    var sidebarOn = isMobile ? 'bottom' : 'right';
     var t = new pw.Shepherd.Tour({
       useModalOverlay: true,
       defaultStepOptions: {
         cancelIcon: { enabled: true },
-        scrollTo: { behavior: 'smooth', block: 'center' }
+        scrollTo: { behavior: 'smooth', block: 'center' },
+        floatingUIOptions: {
+          middleware: []
+        }
       }
     });
     t.addStep({
@@ -2335,7 +2346,8 @@ _tour_iife = r"""
       id: 'horns',
       title: '\uD83E\uDD8C GOAT Horns \u2014 Your Rules',
       text: 'Horns are the rules GOATflow never breaks. Family first. Legal deadlines always. Whatever matters most to you \u2014 put it in a Horn and the AI obeys it every single time.',
-      attachTo: { element: '[data-testid="stSidebar"]', on: 'right' },
+      attachTo: { element: '[data-testid="stSidebar"]', on: sidebarOn },
+      scrollTo: true,
       buttons: [
         { text: '\u2190 Back', action: t.back, classes: 'shepherd-button-secondary' },
         { text: 'Next \u2192', action: t.next }
@@ -2346,6 +2358,7 @@ _tour_iife = r"""
       title: '\uD83D\uDCE5 The Track Sieve',
       text: "Drop any chaos in. Snap a photo of a sticky note. Paste an email. Upload a PDF. Record voice. Type a quick thought.<br><br>GOATflow reads all of it and turns it into a prioritized list in seconds.",
       attachTo: { element: '#gf-sieve-anchor', on: 'top' },
+      scrollTo: { behavior: 'smooth', block: 'center' },
       buttons: [
         { text: '\u2190 Back', action: t.back, classes: 'shepherd-button-secondary' },
         { text: 'Next \u2192', action: t.next }
@@ -2355,6 +2368,7 @@ _tour_iife = r"""
       id: 'ranking',
       title: '\u26A1 Summit Calls vs. Standard Tracks',
       text: "When you drop in ten things, GOATflow doesn't guess what matters. It already knows \u2014 because you told it via your Horns.<br><br><span style=\"color:#ef4444;font-weight:700;\">\u26A1 Summit Call</span> \u2014 Cannot wait.<br><span style=\"color:#a78bfa;font-weight:700;\">\uD83D\uDCCB Standard Track</span> \u2014 Everything else.",
+      scrollTo: true,
       buttons: [
         { text: '\u2190 Back', action: t.back, classes: 'shepherd-button-secondary' },
         { text: 'Next \u2192', action: t.next }
@@ -2364,7 +2378,8 @@ _tour_iife = r"""
       id: 'hay',
       title: '\uD83C\uDF3E Earn Hay. Build Fresh Cheese.',
       text: 'Every Track you complete earns Hay \uD83C\uDF3E. 500 Hay converts to 1 Fresh Cheese \uD83E\uDDC0 \u2014 which ports directly into WorkGOAT when it launches. Every task today builds something that lasts.',
-      attachTo: { element: '[data-testid="stSidebar"]', on: 'right' },
+      attachTo: { element: '[data-testid="stSidebar"]', on: sidebarOn },
+      scrollTo: true,
       buttons: [
         { text: '\u2190 Back', action: t.back, classes: 'shepherd-button-secondary' },
         { text: 'Next \u2192', action: t.next }
@@ -2374,6 +2389,7 @@ _tour_iife = r"""
       id: 'done',
       title: '\uD83D\uDC10 Grab it by the horns.',
       text: 'If something feels off \u2014 add a Horn. The AI gets sharper every time you use it.<br><br>Replay this tour anytime from the <b style="color:#a78bfa">\u2753 Replay Tutorial</b> button at the bottom of the sidebar.',
+      scrollTo: true,
       buttons: [
         { text: '\u2190 Back', action: t.back, classes: 'shepherd-button-secondary' },
         { text: "Let's go \u2192", action: t.complete }
