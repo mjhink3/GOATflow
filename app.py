@@ -190,7 +190,7 @@ CUSTOM_CSS = f"""
     }}
 
     .logo-glow-wrap img {{
-        height: 320px;
+        height: 440px;
         display: block;
         border: none;
         border-radius: 0;
@@ -222,7 +222,7 @@ CUSTOM_CSS = f"""
     @media (max-width: 768px) {{
         .goat-header-tagline {{ font-size: 15px; }}
         .goat-header-sub {{ font-size: 12px; }}
-        .logo-glow-wrap img {{ height: 220px; }}
+        .logo-glow-wrap img {{ height: 300px; }}
     }}
 
     .trust-badge {{
