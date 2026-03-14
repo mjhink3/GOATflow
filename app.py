@@ -2,6 +2,7 @@ import streamlit as st
 import os
 import io
 import html
+import re
 import base64
 import math
 import random
@@ -1721,7 +1722,11 @@ def run_churn_engine(existing_signals: list[dict], files_data: list[dict], extra
     return parsed
 
 
-def safe(text: str) -> str:
+def safe(text) -> str:
+    if text is None:
+        return ""
+    text = str(text)
+    text = re.sub(r'<[^>]*>', '', text)
     return html.escape(text)
 
 
