@@ -2233,6 +2233,88 @@ st.markdown(f'''
 
 st.markdown('<div class="churn-label">📊 The Track Sieve — Drop Intel</div>', unsafe_allow_html=True)
 
+# ── Track Sieve one-time tooltip ──────────────────────────────────────────────
+st.markdown("""
+<div id="gf-sieve-tooltip" style="
+    display:none;
+    position:relative;
+    background:rgba(124,58,237,0.15);
+    border:1px solid rgba(124,58,237,0.4);
+    border-radius:8px;
+    padding:10px 14px;
+    max-width:100%;
+    margin-bottom:10px;
+    opacity:0;
+    transition:opacity 0.3s ease;
+">
+  <span style="font-size:13px;color:#c4b5fd;font-family:'DM Sans',sans-serif;font-weight:400;line-height:1.5;">
+    ⚡ Drop anything in here — voice memo, photo, email, sticky note.
+    GOATflow metabolizes it into prioritized Tracks.
+  </span>
+  <span onclick="gfDismissSieveTooltip()" style="
+      position:absolute;top:8px;right:10px;
+      font-size:11px;color:#6b7280;
+      cursor:pointer;pointer-events:auto;
+      line-height:1;
+  ">✕</span>
+</div>
+
+<script>
+(function() {
+  var shown = localStorage.getItem('goatflow_sieve_tooltip_shown') === 'true';
+  if (shown) return;
+
+  var tip = document.getElementById('gf-sieve-tooltip');
+  if (!tip) return;
+
+  // Mark as shown immediately
+  localStorage.setItem('goatflow_sieve_tooltip_shown', 'true');
+
+  // Show with fade-in
+  tip.style.display = 'block';
+  requestAnimationFrame(function() {
+    requestAnimationFrame(function() {
+      tip.style.opacity = '1';
+    });
+  });
+
+  // Auto-dismiss after 5 seconds
+  var autoDismiss = setTimeout(gfDismissSieveTooltip, 5000);
+
+  // Dismiss on click anywhere in the Sieve area (file uploader / text area zone)
+  function attachSieveClickListener() {
+    // Find the stMain container that holds the sieve inputs
+    var containers = document.querySelectorAll('[data-testid="stFileUploadDropzone"], [data-testid="stFileUploader"], [data-testid="stTextArea"]');
+    containers.forEach(function(el) {
+      if (!el._gfSieveTip) {
+        el._gfSieveTip = true;
+        el.addEventListener('click', gfDismissSieveTooltip, {once: true, passive: true});
+        el.addEventListener('touchstart', gfDismissSieveTooltip, {once: true, passive: true});
+      }
+    });
+  }
+
+  var attempts = 0;
+  var poll = setInterval(function() {
+    attachSieveClickListener();
+    attempts++;
+    if (attempts > 15) clearInterval(poll);
+  }, 350);
+
+  window._gfSieveAutoDismiss = autoDismiss;
+})();
+
+function gfDismissSieveTooltip() {
+  var tip = document.getElementById('gf-sieve-tooltip');
+  if (!tip || tip._gfDismissed) return;
+  tip._gfDismissed = true;
+  if (window._gfSieveAutoDismiss) clearTimeout(window._gfSieveAutoDismiss);
+  tip.style.opacity = '0';
+  setTimeout(function() { tip.style.display = 'none'; }, 320);
+}
+</script>
+""", unsafe_allow_html=True)
+
 col_files, col_text = st.columns([1, 1])
 
 if st.session_state.get("_clear_bleat_text"):
