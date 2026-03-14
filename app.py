@@ -342,6 +342,132 @@ CUSTOM_CSS = f"""
         border: 1px solid rgba(255, 59, 59, 0.35);
     }}
 
+    .horn-tag {{
+        display: inline-block;
+        font-size: 0.58rem;
+        font-weight: 600;
+        padding: 0.1rem 0.45rem;
+        border-radius: 4px;
+        background: rgba(97,0,255,0.12);
+        color: #B388FF;
+        border: 1px solid rgba(97,0,255,0.25);
+        margin-right: 0.3rem;
+        margin-top: 0.25rem;
+        font-style: italic;
+    }}
+
+    .horn-chip {{
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(97,0,255,0.10);
+        border: 1px solid rgba(97,0,255,0.3);
+        border-radius: 20px;
+        padding: 0.3rem 0.7rem;
+        font-size: 0.75rem;
+        color: {WHITE};
+        margin: 0.2rem 0;
+        width: 100%;
+    }}
+
+    .horn-chip-text {{
+        flex: 1;
+        font-size: 0.75rem;
+        color: {WHITE};
+        line-height: 1.3;
+    }}
+
+    .horn-chip-delete {{
+        font-size: 0.7rem;
+        color: #FF6B6B;
+        cursor: pointer;
+        font-weight: 700;
+    }}
+
+    .horns-onboarding {{
+        background: linear-gradient(135deg, rgba(97,0,255,0.12), rgba(139,92,246,0.08));
+        border: 1px solid {PURPLE};
+        border-radius: 14px;
+        padding: 1.5rem;
+        text-align: center;
+        margin-bottom: 1.5rem;
+    }}
+
+    .horns-onboarding-title {{
+        font-size: 1.1rem;
+        font-weight: 800;
+        color: {WHITE};
+        margin-bottom: 0.6rem;
+    }}
+
+    .horns-onboarding-desc {{
+        font-size: 0.85rem;
+        color: {SILVER};
+        line-height: 1.5;
+        margin-bottom: 1rem;
+    }}
+
+    .conflict-card {{
+        background: linear-gradient(135deg, rgba(255,120,0,0.12), rgba(255,59,59,0.08));
+        border: 1px solid rgba(255,120,0,0.4);
+        border-radius: 12px;
+        padding: 1rem 1.2rem;
+        margin-bottom: 1rem;
+    }}
+
+    .conflict-title {{
+        font-size: 0.85rem;
+        font-weight: 800;
+        color: #FFB347;
+        margin-bottom: 0.5rem;
+    }}
+
+    .conflict-desc {{
+        font-size: 0.8rem;
+        color: {SILVER};
+        line-height: 1.5;
+        margin-bottom: 0.8rem;
+    }}
+
+    .voice-drop-btn {{
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(97,0,255,0.15);
+        border: 1px solid rgba(97,0,255,0.4);
+        border-radius: 8px;
+        padding: 0.35rem 0.85rem;
+        color: {WHITE};
+        font-size: 0.8rem;
+        font-weight: 700;
+        cursor: pointer;
+        width: 100%;
+        justify-content: center;
+        margin-top: 0.5rem;
+        transition: background 0.2s;
+    }}
+
+    .voice-drop-btn:hover {{
+        background: rgba(97,0,255,0.28);
+    }}
+
+    .voice-drop-btn.recording {{
+        background: rgba(255,59,59,0.2);
+        border-color: rgba(255,59,59,0.6);
+        animation: pulse-red 1s ease-in-out infinite;
+    }}
+
+    @keyframes pulse-red {{
+        0%, 100% {{ box-shadow: 0 0 6px rgba(255,59,59,0.4); }}
+        50% {{ box-shadow: 0 0 16px rgba(255,59,59,0.8); }}
+    }}
+
+    @media (max-width: 768px) {{
+        .sieve-cols {{
+            flex-direction: column-reverse;
+        }}
+    }}
+
     .xp-tag {{
         display: inline-block;
         font-size: 0.65rem;
@@ -934,6 +1060,27 @@ def ensure_schema():
                 )
             """)
 
+            cur.execute("""
+                SELECT column_name FROM information_schema.columns
+                WHERE table_name = 'signals' AND column_name = 'horn_applied_name'
+            """)
+            if not cur.fetchone():
+                cur.execute("ALTER TABLE signals ADD COLUMN horn_applied_name TEXT DEFAULT ''")
+
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS operational_log (
+                    id SERIAL PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    task_name TEXT NOT NULL,
+                    task_why TEXT NOT NULL DEFAULT '',
+                    resolution TEXT NOT NULL DEFAULT 'completed',
+                    horn_applied_name TEXT NOT NULL DEFAULT '',
+                    priority_score REAL NOT NULL DEFAULT 5.0,
+                    xp_tier TEXT NOT NULL DEFAULT 'Standard',
+                    resolved_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
+
             conn.commit()
     finally:
         conn.close()
@@ -1024,7 +1171,8 @@ def complete_signal(signal_id: int, user_id: str):
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute("""
-                SELECT xp_reward FROM signals
+                SELECT xp_reward, task_name, why, operational_weight, horn_applied_name
+                FROM signals
                 WHERE id = %s AND completed = FALSE AND user_id = %s
             """, (signal_id, user_id))
             row = cur.fetchone()
@@ -1046,6 +1194,11 @@ def complete_signal(signal_id: int, user_id: str):
                 WHERE user_id = %s
             """, (new_xp, new_level, user_id))
             cur.execute("DELETE FROM signals WHERE id = %s AND user_id = %s", (signal_id, user_id))
+            cur.execute("""
+                INSERT INTO operational_log (user_id, task_name, task_why, resolution, horn_applied_name, priority_score, xp_tier)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (user_id, row["task_name"], row["why"] or "", "completed",
+                  row["horn_applied_name"] or "", row["operational_weight"], row["xp_reward"]))
             conn.commit()
             leveled_up = new_level > old_level
             return row["xp_reward"], xp, leveled_up
@@ -1056,7 +1209,7 @@ def complete_signal(signal_id: int, user_id: str):
         conn.close()
 
 
-def get_directives(user_id: str):
+def get_horns(user_id: str) -> str:
     conn = get_db()
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
@@ -1069,7 +1222,7 @@ def get_directives(user_id: str):
         conn.close()
 
 
-def save_directives(user_id: str, rules_text: str):
+def save_horns(user_id: str, rules_text: str):
     conn = get_db()
     try:
         with conn.cursor() as cur:
@@ -1082,6 +1235,44 @@ def save_directives(user_id: str, rules_text: str):
         conn.close()
 
 
+def parse_horns(rules_text: str) -> list[str]:
+    return [h.strip() for h in rules_text.splitlines() if h.strip()]
+
+
+def log_operation(user_id: str, task_name: str, task_why: str, resolution: str,
+                  horn_applied_name: str, priority_score: float, xp_tier: str):
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO operational_log (user_id, task_name, task_why, resolution, horn_applied_name, priority_score, xp_tier)
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+            """, (user_id, task_name, task_why, resolution, horn_applied_name, priority_score, xp_tier))
+            conn.commit()
+    except Exception:
+        try:
+            conn.rollback()
+        except Exception:
+            pass
+    finally:
+        conn.close()
+
+
+def get_operational_log(user_id: str, filter_type: str = "all") -> list[dict]:
+    conn = get_db()
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            if filter_type == "all":
+                cur.execute("SELECT * FROM operational_log WHERE user_id = %s ORDER BY resolved_at DESC LIMIT 200", (user_id,))
+            else:
+                cur.execute("SELECT * FROM operational_log WHERE user_id = %s AND resolution = %s ORDER BY resolved_at DESC LIMIT 200", (user_id, filter_type))
+            return [dict(r) for r in cur.fetchall()]
+    except Exception:
+        return []
+    finally:
+        conn.close()
+
+
 def save_signals(user_id: str, signals_data: list[dict]):
     conn = get_db()
     try:
@@ -1089,6 +1280,7 @@ def save_signals(user_id: str, signals_data: list[dict]):
             for s in signals_data:
                 directive_applied = s.get("directive_applied", False)
                 bleat_type = s.get("bleat_type", "Routine Grazing")
+                horn_applied_name = s.get("horn_applied_name", "")
                 cur.execute(
                     "SELECT id FROM signals WHERE task_name = %s AND completed = FALSE AND user_id = %s",
                     (s["task_name"], user_id)
@@ -1096,13 +1288,13 @@ def save_signals(user_id: str, signals_data: list[dict]):
                 existing = cur.fetchone()
                 if existing:
                     cur.execute("""
-                        UPDATE signals SET why = %s, xp_reward = %s, operational_weight = %s, directive_applied = %s, bleat_type = %s WHERE id = %s
-                    """, (s["why"], s["xp_reward"], s["operational_weight"], directive_applied, bleat_type, existing[0]))
+                        UPDATE signals SET why = %s, xp_reward = %s, operational_weight = %s, directive_applied = %s, bleat_type = %s, horn_applied_name = %s WHERE id = %s
+                    """, (s["why"], s["xp_reward"], s["operational_weight"], directive_applied, bleat_type, horn_applied_name, existing[0]))
                 else:
                     cur.execute("""
-                        INSERT INTO signals (task_name, why, xp_reward, operational_weight, directive_applied, bleat_type, user_id)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s)
-                    """, (s["task_name"], s["why"], s["xp_reward"], s["operational_weight"], directive_applied, bleat_type, user_id))
+                        INSERT INTO signals (task_name, why, xp_reward, operational_weight, directive_applied, bleat_type, horn_applied_name, user_id)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    """, (s["task_name"], s["why"], s["xp_reward"], s["operational_weight"], directive_applied, bleat_type, horn_applied_name, user_id))
             conn.commit()
     finally:
         conn.close()
@@ -1113,8 +1305,9 @@ class Signal(BaseModel):
     why: str = Field(description="One sentence explaining why this matters")
     xp_reward: str = Field(description="One of: Micro, Standard, High-Leverage, GOAT — based on complexity and operational impact")
     operational_weight: float = Field(ge=0, le=10, description="Priority weight 0-10, higher = more urgent")
-    directive_applied: bool = Field(default=False, description="True if this task's priority was influenced by a user-defined GOAT Directive")
-    bleat_type: str = Field(default="Routine Grazing", description="Either 'Routine Grazing' (low impact, daily maintenance) or 'Summit-Level Bleat' (high impact, crisis, urgent)")
+    directive_applied: bool = Field(default=False, description="True if this task's priority was influenced by a user-defined GOAT Horn")
+    bleat_type: str = Field(default="Routine Grazing", description="Either 'Routine Grazing' (low impact, daily maintenance) or 'Summit Call' (high impact, crisis, urgent)")
+    horn_applied_name: str = Field(default="", description="The exact text of the GOAT Horn that governed this task's priority ranking. Empty string if no horn applied.")
 
 
 class ChurnOutput(BaseModel):
@@ -1132,16 +1325,16 @@ def get_openai_client():
 SYSTEM_PROMPT_BASE = """You are the GOATflow Churn Engine — the tactical input layer for the WorkGOAT Ecosystem.
 
 You receive two things:
-1. EXISTING TASKS (called 'Bleats'): The current task list (may be empty).
+1. EXISTING TASKS (called 'Tracks'): The current task list (may be empty).
 2. NEW INPUT: New information from the user (text, document content, or image descriptions).
 
 Your job:
-- Analyze the new input and extract actionable tasks (Bleats).
-- MERGE any new Bleats that overlap with existing ones (don't duplicate).
+- Analyze the new input and extract actionable tasks (Tracks).
+- MERGE any new Tracks that overlap with existing ones (don't duplicate).
 - Re-sort the ENTIRE list by 'Operational Weight' (0-10 scale, 10 = most urgent).
-- Classify each Bleat as either:
+- Classify each Track as either:
   * 'Routine Grazing' — low impact, daily maintenance, routine checks, standard workflow
-  * 'Summit-Level Bleat' — high impact, crisis-level, urgent deadlines, legal issues, safety concerns, facility emergencies
+  * 'Summit Call' — high impact, crisis-level, urgent deadlines, legal issues, safety concerns, facility emergencies
 - Assign a Cheese Churn Rate (CCR) tier:
   * Micro (100 CCR) — quick fixes, simple acknowledgments, routine checks
   * Standard (500 CCR) — moderate tasks requiring some effort or coordination
@@ -1155,9 +1348,10 @@ Rules:
 - Return ALL tasks (existing + new, merged where appropriate).
 - Sort by operational_weight descending.
 - xp_reward (CCR tier) must be exactly one of: Micro, Standard, High-Leverage, GOAT
-- bleat_type must be exactly one of: Routine Grazing, Summit-Level Bleat
-- Summit-Level Bleats should generally have operational_weight >= 7
-- For directive_applied: set to true ONLY if a GOAT Directive directly influenced this task's priority or ranking. If no directives exist, always set to false."""
+- bleat_type must be exactly one of: Routine Grazing, Summit Call
+- Summit Calls should generally have operational_weight >= 7
+- For directive_applied: set to true ONLY if a GOAT Horn directly influenced this task's priority or ranking. If no horns exist, always set to false.
+- For horn_applied_name: set to the exact text of the Horn that governed this task's ranking. Empty string if no horn applied."""
 
 
 def extract_pdf_text(file_bytes: bytes) -> str:
@@ -1170,16 +1364,18 @@ def extract_pdf_text(file_bytes: bytes) -> str:
     return "\n".join(parts)
 
 
-def build_system_prompt(directives_text: str) -> str:
+def build_system_prompt(horns_text: str) -> str:
     prompt = SYSTEM_PROMPT_BASE
-    if directives_text.strip():
+    if horns_text.strip():
+        horns_list = [h.strip() for h in horns_text.strip().splitlines() if h.strip()]
+        horns_formatted = "\n".join(f"- {h}" for h in horns_list)
         prompt += f"""
 
 ---
-GOAT DIRECTIVES (User-defined operational rules — you MUST strictly follow these):
-{directives_text.strip()}
+GOAT HORNS (User-defined operational rules — you MUST strictly follow these):
+{horns_formatted}
 
-IMPORTANT: These directives override default ranking logic. If a directive says a category should be Priority 1, boost its operational_weight to 9-10. If a directive says to deprioritize something, lower its weight. Set directive_applied = true for any task whose ranking was changed by these directives."""
+IMPORTANT: These Horns override default ranking logic. If a Horn says a category should be Priority 1, boost its operational_weight to 9-10. If a Horn says to deprioritize something, lower its weight. Set directive_applied = true and horn_applied_name = the exact Horn text for any task whose ranking was changed by a Horn."""
     return prompt
 
 
@@ -1192,9 +1388,9 @@ def run_churn_engine(existing_signals: list[dict], files_data: list[dict], extra
         for s in existing_signals:
             bt = s.get('bleat_type', 'Routine Grazing')
             lines.append(f"- [{s['operational_weight']:.1f}] [{bt}] {s['task_name']}: {s['why']} (CCR Tier: {s['xp_reward']})")
-        existing_desc = "EXISTING BLEATS:\n" + "\n".join(lines)
+        existing_desc = "EXISTING TRACKS:\n" + "\n".join(lines)
     else:
-        existing_desc = "EXISTING BLEATS: (none)"
+        existing_desc = "EXISTING TRACKS: (none)"
 
     new_input_parts = []
     if extra_text.strip():
@@ -1206,7 +1402,7 @@ def run_churn_engine(existing_signals: list[dict], files_data: list[dict], extra
     new_input = "\n\n".join(new_input_parts) if new_input_parts else "(no text input)"
 
     user_content = []
-    user_content.append({"type": "text", "text": f"{existing_desc}\n\nNEW INPUT:\n{new_input}\n\nMerge, classify as Routine Grazing or Summit-Level Bleat, re-prioritize, and return the full sorted Bleat list."})
+    user_content.append({"type": "text", "text": f"{existing_desc}\n\nNEW INPUT:\n{new_input}\n\nMerge, classify as Routine Grazing or Summit Call, re-prioritize, and return the full sorted Track list."})
 
     for fd in files_data:
         if fd["type"] == "image":
@@ -1468,37 +1664,63 @@ with st.sidebar:
     ''', unsafe_allow_html=True)
 
     st.markdown("---")
-    st.markdown(f'<div style="text-align:center;font-size:1.1rem;font-weight:800;color:{WHITE};margin-bottom:0.2rem;">🐐 GOAT Directives</div>', unsafe_allow_html=True)
-    st.markdown(f'<div style="text-align:center;font-size:0.7rem;color:{SILVER};margin-bottom:1rem;">Permanent operational rules that override default ranking</div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="text-align:center;font-size:1.1rem;font-weight:800;color:{WHITE};margin-bottom:0.1rem;">🐐 GOAT Horns</div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="text-align:center;font-size:0.8rem;font-weight:600;color:{NEON_VIOLET};margin-bottom:0.3rem;font-style:italic;">Grab life by the horns. Leave the bull behind.</div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="text-align:center;font-size:0.65rem;color:{SILVER};margin-bottom:0.8rem;line-height:1.4;">Your Horns are the rules GOATflow never breaks.<br>Set them once. Let them run everything.</div>', unsafe_allow_html=True)
 
-    saved_directives = get_directives(current_user_id)
-    directives_input = st.text_area(
-        "Operational Rules",
-        value=saved_directives,
-        height=180,
-        placeholder="Type your permanent operational rules here...\n\nExample:\n• Family events are always Priority 1\n• Focus on Labor Relations on Tuesdays\n• Legal deadlines override general admin",
-        key="directives_text",
+    saved_horns_text = get_horns(current_user_id)
+    current_horns = parse_horns(saved_horns_text)
+
+    if current_horns:
+        for i, horn in enumerate(current_horns):
+            col_horn, col_del = st.columns([5, 1])
+            with col_horn:
+                st.markdown(f'<div class="horn-chip"><span class="horn-chip-text">🐐 {safe(horn)}</span></div>', unsafe_allow_html=True)
+            with col_del:
+                if st.button("✕", key=f"del_horn_{i}", help="Remove this Horn"):
+                    new_horns = [h for j, h in enumerate(current_horns) if j != i]
+                    save_horns(current_user_id, "\n".join(new_horns))
+                    st.rerun()
+    else:
+        st.markdown(f'<div style="font-size:0.75rem;color:{SILVER};text-align:center;padding:0.5rem;font-style:italic;">No Horns set yet.</div>', unsafe_allow_html=True)
+
+    new_horn_input = st.text_input(
+        "Add a Horn",
+        placeholder="e.g. Family always comes before work deadlines.",
+        key="new_horn_input",
         label_visibility="collapsed",
     )
+    if st.button("🐐 Lock In My Horns", use_container_width=True, key="add_horn_btn"):
+        if new_horn_input.strip():
+            new_horns = current_horns + [new_horn_input.strip()]
+            save_horns(current_user_id, "\n".join(new_horns))
+            st.success("Horn locked in!")
+            st.rerun()
+        else:
+            st.warning("Type a Horn first.")
 
-    if st.button("💾 Save Directives", use_container_width=True, key="save_directives_btn"):
-        save_directives(current_user_id, directives_input)
-        st.success("Directives saved!")
+    if current_horns:
+        st.markdown(f'<div style="font-size:0.6rem;color:{SILVER};margin-top:0.4rem;">Click ✕ next to any Horn to remove it.</div>', unsafe_allow_html=True)
 
     st.markdown(f'<div class="sidebar-section-label">⚡ Quick Scripts</div>', unsafe_allow_html=True)
-    st.markdown(f'<div style="font-size:0.7rem;color:{SILVER};margin-bottom:0.6rem;">Click to copy, then paste into Directives above</div>', unsafe_allow_html=True)
+    st.markdown(f'<div style="font-size:0.7rem;color:{SILVER};margin-bottom:0.6rem;">Click to copy, then paste as a Horn above</div>', unsafe_allow_html=True)
 
     for qs in QUICK_SCRIPTS:
         st.code(qs["text"], language=None)
 
     st.markdown("---")
+    if st.button("📜 Your Trail", use_container_width=True, key="trail_btn"):
+        st.session_state["show_trail"] = True
+        st.rerun()
+
+    st.markdown("---")
     st.markdown(f'<div style="text-align:center;font-size:1.1rem;font-weight:800;color:{WHITE};margin-bottom:0.2rem;">🛡️ OpSec Layer</div>', unsafe_allow_html=True)
     st.markdown(f'<div style="text-align:center;font-size:0.7rem;color:{SILVER};margin-bottom:0.6rem;">Operations Security Controls</div>', unsafe_allow_html=True)
 
-    incognito_mode = st.toggle("🕶️ Incognito Mode", key="incognito_mode", help="When ON, Bleats are session-only and will NOT be saved to the database.")
+    incognito_mode = st.toggle("🕶️ Incognito Mode", key="incognito_mode", help="When ON, Tracks are session-only and will NOT be saved to the database.")
     if incognito_mode:
         st.markdown('<div style="text-align:center;"><span class="incognito-badge">🕶️ INCOGNITO ACTIVE</span></div>', unsafe_allow_html=True)
-        st.markdown(f'<div style="font-size:0.65rem;color:{NEON_VIOLET};text-align:center;margin-top:0.3rem;">Bleats exist only in this session. Nothing is persisted.</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="font-size:0.65rem;color:{NEON_VIOLET};text-align:center;margin-top:0.3rem;">Tracks exist only in this session. Nothing is persisted.</div>', unsafe_allow_html=True)
 
     st.markdown(f'''
     <div style="margin-top:0.8rem;padding:0.6rem;background:{CARD_BG};border-radius:8px;border:1px solid {BORDER};">
@@ -1533,18 +1755,9 @@ st.markdown(f'''
 </div>
 ''', unsafe_allow_html=True)
 
-st.markdown('<div class="churn-label">📊 The Bleat Sieve — Drop Intel</div>', unsafe_allow_html=True)
+st.markdown('<div class="churn-label">📊 The Track Sieve — Drop Intel</div>', unsafe_allow_html=True)
 
 col_files, col_text = st.columns([1, 1])
-
-with col_files:
-    uploaded_files = st.file_uploader(
-        "Drop files here",
-        type=["pdf", "png", "jpg", "jpeg", "webp", "gif", "txt", "csv"],
-        accept_multiple_files=True,
-        help="Photos, PDFs, screenshots, text files",
-        label_visibility="collapsed",
-    )
 
 if st.session_state.get("_clear_bleat_text"):
     st.session_state["bleat_text_input"] = ""
@@ -1558,8 +1771,78 @@ with col_text:
         label_visibility="collapsed",
         key="bleat_text_input",
     )
+    st.markdown("""
+    <div id="voice-drop-container">
+      <button class="voice-drop-btn" id="voice-btn" onclick="toggleVoiceDrop()">🎙️ Voice Drop</button>
+    </div>
+    <div id="voice-status" style="font-size:0.65rem;color:#8B5CF6;text-align:center;margin-top:0.2rem;min-height:1rem;"></div>
+    <script>
+    var voiceRecognition = null;
+    var voiceActive = false;
+    function toggleVoiceDrop() {
+        var btn = document.getElementById('voice-btn');
+        var status = document.getElementById('voice-status');
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            status.textContent = 'Voice not supported in this browser.';
+            return;
+        }
+        if (voiceActive) {
+            if (voiceRecognition) voiceRecognition.stop();
+            voiceActive = false;
+            btn.textContent = '🎙️ Voice Drop';
+            btn.classList.remove('recording');
+            status.textContent = '';
+            return;
+        }
+        var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        voiceRecognition = new SR();
+        voiceRecognition.continuous = true;
+        voiceRecognition.interimResults = true;
+        voiceRecognition.lang = 'en-US';
+        voiceActive = true;
+        btn.textContent = '⏹ Stop Recording';
+        btn.classList.add('recording');
+        status.textContent = 'Listening...';
+        voiceRecognition.onresult = function(event) {
+            var transcript = '';
+            for (var i = 0; i < event.results.length; i++) {
+                transcript += event.results[i][0].transcript;
+            }
+            var textArea = window.parent.document.querySelector('textarea[data-testid="stTextArea"]') ||
+                           document.querySelector('textarea');
+            if (textArea) {
+                var nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+                nativeInputValueSetter.call(textArea, transcript);
+                textArea.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        };
+        voiceRecognition.onerror = function(e) {
+            status.textContent = 'Error: ' + e.error;
+            voiceActive = false;
+            btn.textContent = '🎙️ Voice Drop';
+            btn.classList.remove('recording');
+        };
+        voiceRecognition.onend = function() {
+            if (voiceActive) {
+                voiceRecognition.start();
+            }
+        };
+        voiceRecognition.start();
+    }
+    </script>
+    """, unsafe_allow_html=True)
 
-drop_btn = st.button("⚡ Drop Into Churn Engine", use_container_width=True, key="drop_btn")
+with col_files:
+    uploaded_files = st.file_uploader(
+        "Drop files here",
+        type=["pdf", "png", "jpg", "jpeg", "webp", "gif", "txt", "csv"],
+        accept_multiple_files=True,
+        help="Photos, PDFs, screenshots, text files",
+        label_visibility="collapsed",
+    )
+
+drop_btn = st.button("⚡ Drop Into Churn Engine", use_container_width=True, key="drop_btn",
+                     help="GOATflow will metabolize your input and rank everything against your Horns.")
 
 if drop_btn:
     has_files = uploaded_files and len(uploaded_files) > 0
@@ -1595,8 +1878,8 @@ if drop_btn:
                 existing = get_active_signals(current_user_id)
                 if is_incognito:
                     existing = existing + st.session_state.get("incognito_signals", [])
-                current_directives = get_directives(current_user_id)
-                result = run_churn_engine(existing, files_data, extra_text or "", current_directives)
+                current_horns_text = get_horns(current_user_id)
+                result = run_churn_engine(existing, files_data, extra_text or "", current_horns_text)
 
                 files_data.clear()
 
@@ -1623,7 +1906,7 @@ if st.session_state.get("just_dropped"):
     incog_label = ' <span class="incognito-badge">🕶️ INCOGNITO</span>' if incognito_active else ''
     st.markdown(f'''
     <div class="completed-toast">
-        <div class="completed-toast-text">⚡ Cheese Churn complete — Bleats re-prioritized{incog_label}</div>
+        <div class="completed-toast-text">⚡ Cheese Churn complete — Tracks re-prioritized{incog_label}</div>
     </div>
     ''', unsafe_allow_html=True)
     st.session_state["just_dropped"] = False
@@ -1693,22 +1976,22 @@ if st.session_state.get("incognito_mode", False):
 player = get_player(current_user_id)
 
 active_count = len(signals)
-summit_count = sum(1 for s in signals if s.get("bleat_type") == "Summit-Level Bleat")
+summit_count = sum(1 for s in signals if s.get("bleat_type") in ("Summit-Level Bleat", "Summit Call"))
 level, xp_into, xp_needed = compute_level(player["total_xp"])
 cur_pasture = pasture_name(level)
 
-linkedin_total_text = f"I'm at {cur_pasture} (Level {level}) with {player['total_xp']:,} Cheese Churn Points on GOATflow! {player['tasks_completed']} Bleats completed. Part of the WorkGOAT Ecosystem."
+linkedin_total_text = f"I'm at {cur_pasture} (Level {level}) with {player['total_xp']:,} Cheese Churn Points on GOATflow! {player['tasks_completed']} Tracks completed. Part of the WorkGOAT Ecosystem."
 linkedin_total_url = "https://www.linkedin.com/sharing/share-offsite/?" + urllib.parse.urlencode({"url": "https://workgoat.vip", "title": linkedin_total_text, "summary": linkedin_total_text})
 
 st.markdown(f'''
 <div class="stats-row">
     <div class="stat-box">
         <div class="stat-value">{active_count}</div>
-        <div class="stat-label">Active Bleats</div>
+        <div class="stat-label">Active Tracks</div>
     </div>
-    <div class="stat-box">
+    <div class="stat-box" title="Tracks that cannot wait. Address these first.">
         <div class="stat-value" style="color:#FF6B6B;">{summit_count}</div>
-        <div class="stat-label">Summit Bleats</div>
+        <div class="stat-label">Summit Calls</div>
     </div>
     <div class="stat-box">
         <div class="stat-value">{player["tasks_completed"]}</div>
@@ -1742,7 +2025,109 @@ st.markdown(f'''
 </div>
 ''', unsafe_allow_html=True)
 
-st.markdown('<div class="section-label">📡 Active Bleats</div>', unsafe_allow_html=True)
+_horns_for_onboard = parse_horns(get_horns(current_user_id))
+if not _horns_for_onboard and not signals:
+    st.markdown(f'''
+    <div class="horns-onboarding">
+        <div class="horns-onboarding-title">🐐 Set your Horns first.</div>
+        <div class="horns-onboarding-desc">Your Horns tell GOATflow what never moves — no matter what else comes in. Open the sidebar and add your first Horn to get started.</div>
+    </div>
+    ''', unsafe_allow_html=True)
+
+horn_conflicts = []
+if signals:
+    horn_tracks = {}
+    for sig in signals:
+        hn = (sig.get("horn_applied_name") or "").strip()
+        if hn and sig.get("directive_applied"):
+            if hn not in horn_tracks:
+                horn_tracks[hn] = []
+            horn_tracks[hn].append(sig)
+    horn_names_used = list(horn_tracks.keys())
+    if len(horn_names_used) >= 2:
+        track_a = horn_tracks[horn_names_used[0]][0]
+        track_b = horn_tracks[horn_names_used[1]][0]
+        if abs(track_a.get("operational_weight", 0) - track_b.get("operational_weight", 0)) < 1.5:
+            horn_conflicts = [(track_a, horn_names_used[0], track_b, horn_names_used[1])]
+
+if horn_conflicts and not st.session_state.get("conflict_resolved"):
+    ta, ha, tb, hb = horn_conflicts[0]
+    st.markdown(f'''
+    <div class="conflict-card">
+        <div class="conflict-title">⚡ GOATflow found a priority conflict.</div>
+        <div class="conflict-desc">
+            <strong>{safe(ta["task_name"])}</strong> matches your Horn "<em>{safe(ha)}</em>"
+            and <strong>{safe(tb["task_name"])}</strong> matches your Horn "<em>{safe(hb)}</em>".
+            How do you want to resolve this right now?
+        </div>
+    </div>
+    ''', unsafe_allow_html=True)
+    col_keep, col_manual = st.columns(2)
+    with col_keep:
+        if st.button("✅ Keep AI Ranking", key="conflict_keep_btn", use_container_width=True):
+            log_operation(current_user_id, f"CONFLICT: {ta['task_name']} vs {tb['task_name']}",
+                          f"Horns: {ha} vs {hb}", "reordered", f"{ha} / {hb}", 0.0, "Standard")
+            st.session_state["conflict_resolved"] = True
+            st.rerun()
+    with col_manual:
+        if st.button("🔀 I'll Reorder Manually", key="conflict_manual_btn", use_container_width=True):
+            log_operation(current_user_id, f"CONFLICT: {ta['task_name']} vs {tb['task_name']}",
+                          f"Horns: {ha} vs {hb}", "reordered", f"{ha} / {hb}", 0.0, "Standard")
+            st.session_state["conflict_resolved"] = True
+            st.toast("You can drag and reorder your Tracks manually.")
+            st.rerun()
+
+if st.session_state.get("show_trail"):
+    st.session_state["show_trail"] = False
+    @st.dialog("📜 Your Trail", width="large")
+    def show_trail_dialog():
+        filter_col1, filter_col2, filter_col3, filter_col4 = st.columns(4)
+        with filter_col1:
+            if st.button("All", key="trail_all", use_container_width=True):
+                st.session_state["trail_filter"] = "all"
+                st.rerun()
+        with filter_col2:
+            if st.button("Completed", key="trail_completed", use_container_width=True):
+                st.session_state["trail_filter"] = "completed"
+                st.rerun()
+        with filter_col3:
+            if st.button("Dismissed", key="trail_dismissed", use_container_width=True):
+                st.session_state["trail_filter"] = "dismissed"
+                st.rerun()
+        with filter_col4:
+            if st.button("Reordered", key="trail_reordered", use_container_width=True):
+                st.session_state["trail_filter"] = "reordered"
+                st.rerun()
+        trail_filter = st.session_state.get("trail_filter", "all")
+        trail_entries = get_operational_log(current_user_id, trail_filter)
+        if not trail_entries:
+            st.markdown(f'<div style="text-align:center;color:{SILVER};padding:2rem;font-style:italic;">No entries yet. Complete your first Track to start your Trail.</div>', unsafe_allow_html=True)
+        else:
+            for entry in trail_entries:
+                res = entry.get("resolution", "completed")
+                res_color = {"completed": NEON_GREEN, "dismissed": "#888", "reordered": "#FFB347"}.get(res, SILVER)
+                res_icon = {"completed": "✅", "dismissed": "🗑️", "reordered": "🔀"}.get(res, "•")
+                horn_label = f'<span style="color:#B388FF;font-size:0.7rem;font-style:italic;">🐐 {safe(entry["horn_applied_name"])}</span>' if entry.get("horn_applied_name") else ""
+                ts = entry.get("resolved_at", "")
+                ts_str = str(ts)[:16] if ts else ""
+                st.markdown(f'''
+                <div style="border-left:3px solid {res_color};padding:0.5rem 0.8rem;margin-bottom:0.5rem;background:{CARD_BG};border-radius:0 8px 8px 0;">
+                    <div style="display:flex;justify-content:space-between;align-items:center;">
+                        <span style="font-size:0.85rem;font-weight:700;color:{WHITE};">{res_icon} {safe(entry["task_name"])}</span>
+                        <span style="font-size:0.65rem;color:{SILVER};">{ts_str}</span>
+                    </div>
+                    <div style="font-size:0.75rem;color:{SILVER};margin-top:0.2rem;">{safe(entry.get("task_why",""))}</div>
+                    <div style="margin-top:0.3rem;display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+                        <span style="font-size:0.65rem;color:{res_color};font-weight:700;">{res.upper()}</span>
+                        <span style="font-size:0.65rem;color:{SILVER};">Priority: {entry.get("priority_score",0):.0f}</span>
+                        <span style="font-size:0.65rem;color:{SILVER};">CCR: {entry.get("xp_tier","")}</span>
+                        {horn_label}
+                    </div>
+                </div>
+                ''', unsafe_allow_html=True)
+    show_trail_dialog()
+
+st.markdown('<div class="section-label">📡 Active Tracks</div>', unsafe_allow_html=True)
 
 display_signals = signals
 
@@ -1750,7 +2135,7 @@ if not display_signals:
     st.markdown('''
     <div class="empty-state">
         <div class="empty-state-icon">🐐</div>
-        <div class="empty-state-text">No active Bleats. Drop intel into the Bleat Sieve above.</div>
+        <div class="empty-state-text">No active Tracks. Drop intel into the Track Sieve above.</div>
     </div>
     ''', unsafe_allow_html=True)
 else:
@@ -1763,9 +2148,9 @@ else:
         weight = sig['operational_weight']
         bleat_type = sig.get('bleat_type', 'Routine Grazing')
 
-        is_summit = bleat_type == "Summit-Level Bleat"
+        is_summit = bleat_type in ("Summit-Level Bleat", "Summit Call")
         bleat_class = "bleat-summit" if is_summit else "bleat-routine"
-        bleat_label = "🔺 Summit-Level Bleat" if is_summit else "🌿 Routine Grazing"
+        bleat_label = "⚡ Summit Call" if is_summit else "🌿 Routine Grazing"
 
         is_high_leverage = tier == "High-Leverage"
         card_extra_class = " high-leverage-glow" if is_high_leverage else ""
@@ -1779,17 +2164,23 @@ else:
         if weight >= 8.0:
             goat_badge = '<span class="goat-badge">🐐 GOAT</span>'
 
-        directive_badge = ""
-        if sig.get('directive_applied', False):
-            directive_badge = '<span class="directive-badge">⚡ Directive Applied</span>'
+        horn_name = (sig.get("horn_applied_name") or "").strip()
+        horn_badge = '<span class="directive-badge">⚡ Horn Applied</span>' if sig.get('directive_applied', False) else ""
+
+        horn_tag_html = ""
+        if horn_name:
+            horn_tag_html = f'<span class="horn-tag">🐐 Ranked by: {safe(horn_name)}</span>'
 
         st.markdown(f'''
         <div class="signal-card{card_extra_class}">
             <div class="signal-weight">{weight:.0f}</div>
-            <div class="signal-task">{safe(sig["task_name"])}{glow_eye_icon}{goat_badge}{directive_badge}</div>
+            <div class="signal-task">{safe(sig["task_name"])}{glow_eye_icon}{goat_badge}{horn_badge}</div>
             <div class="signal-why">{safe(sig["why"])}</div>
-            <span class="bleat-type-tag {bleat_class}">{bleat_label}</span>
-            <span class="xp-tag {xp_class}">+{xp_amount:,} CCR — {safe(tier)}</span>
+            <div style="margin-top:0.3rem;">
+                <span class="bleat-type-tag {bleat_class}">{bleat_label}</span>
+                <span class="xp-tag {xp_class}">+{xp_amount:,} CCR — {safe(tier)}</span>
+                {horn_tag_html}
+            </div>
         </div>
         ''', unsafe_allow_html=True)
 
