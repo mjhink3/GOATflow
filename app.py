@@ -726,8 +726,8 @@ CUSTOM_CSS = f"""
     }}
 
     .landing-container img {{
-        height: 340px;
-        margin-bottom: 1.5rem;
+        height: 400px;
+        margin-bottom: 2.5rem;
     }}
 
     .landing-tagline {{
@@ -1336,9 +1336,7 @@ user_info = get_current_user()
 if not user_info:
     st.markdown(f'''
     <div class="landing-container">
-        {f'<img src="{logo_src}" alt="GOATflow">' if logo_src else '<div style="font-size:3rem;font-weight:900;color:#6100ff;margin-bottom:1.5rem;">🐐 GOATflow</div>'}
-        <div class="landing-tagline">Metabolize your to-do list.</div>
-        <div class="landing-sub">The Operational Metabolizer.</div>
+        {f'<img src="{logo_src}" alt="GOATflow">' if logo_src else '<div style="font-size:3rem;font-weight:900;color:#6100ff;margin-bottom:2.5rem;">🐐 GOATflow</div>'}
         <div class="landing-features">
             <div class="landing-feature">
                 <div class="landing-feature-icon">⚡</div>
