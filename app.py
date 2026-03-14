@@ -50,17 +50,17 @@ PASTURE_NAMES = {
 ASCENSION_RANKS = {
     1: "The Kid",
     2: "The Starter",
-    3: "The Starter",
-    4: "The Builder",
-    5: "The Builder",
-    6: "The Architect",
-    7: "The GOAT",
+    3: "The Builder",
+    4: "The Climber",
+    5: "The Leader",
+    6: "The Visionary",
+    7: "The G.O.A.T.",
 }
 
 
 def ascension_rank(level: int) -> str:
     if level >= 7:
-        return "The GOAT"
+        return "The G.O.A.T."
     return ASCENSION_RANKS.get(level, "The Kid")
 
 
@@ -1803,6 +1803,25 @@ celeb_daily_flow_b64 = get_celeb_b64("daily_flow")
 celeb_task_completed_b64 = get_celeb_b64("task_completed")
 cheese_earned_b64 = load_image_b64("cheese_earned.png", "cheese_earned_b64")
 
+LEVEL_IMAGE_FILES = {
+    1: "attached_assets/WorkGOAT_The_Kid_level_1_1773461158482.png",
+    2: "attached_assets/WorkGOAT_The_Starter_level_2_1773461158486.png",
+    3: "attached_assets/WorkGOAT_The_Builder_level_3_1773461158475.png",
+    4: "attached_assets/WorkGOAT_The_Climber_level_4_1773461158478.png",
+    5: "attached_assets/WorkGOAT_The_Leader_level_5_1773461158484.png",
+    6: "attached_assets/WorkGOAT_The_Visionary_level_6_1773461158488.png",
+    7: "attached_assets/WorkGOAT_The_G.O.A.T._level_7_1773461158480.png",
+}
+level_images_b64 = {
+    lvl: load_image_b64(path, f"level_img_{lvl}")
+    for lvl, path in LEVEL_IMAGE_FILES.items()
+}
+
+def get_level_img_src(level: int) -> str:
+    clamped = max(1, min(7, level))
+    b64 = level_images_b64.get(clamped, "")
+    return f"data:image/png;base64,{b64}" if b64 else ""
+
 def get_tier_celeb_b64(tier: str) -> str:
     tier_map = {
         "Micro": "daily_flow",
@@ -1959,15 +1978,15 @@ with st.sidebar:
 
     st.markdown("---")
 
-    if use_crown and celeb_power_hour_b64:
-        crown_src = f"data:image/png;base64,{celeb_power_hour_b64}"
-        avatar_html = f'<img src="{crown_src}" style="height:60px;border-radius:50%;border:2px solid {NEON_VIOLET};">'
-    else:
-        avatar_html = f'<div style="height:60px;width:60px;border-radius:50%;background:{CARD_BG};border:2px solid {BORDER};display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin:0 auto;">🐐</div>'
-
     level_data = compute_level(player_data["total_xp"])
     cur_level, cur_xp_into, cur_xp_needed = level_data
     sidebar_pasture = pasture_name(cur_level)
+
+    _level_img_src = get_level_img_src(cur_level)
+    if _level_img_src:
+        avatar_html = f'<img src="{_level_img_src}" alt="{safe(user_rank)}" style="width:110px;height:110px;object-fit:contain;display:block;margin:0 auto;">'
+    else:
+        avatar_html = f'<div style="height:60px;width:60px;border-radius:50%;background:{CARD_BG};border:2px solid {BORDER};display:flex;align-items:center;justify-content:center;font-size:1.5rem;margin:0 auto;">🐐</div>'
 
     st.markdown(f'''
     <div style="text-align:center;padding:0.3rem 0;">
