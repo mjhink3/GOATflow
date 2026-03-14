@@ -194,7 +194,6 @@ CUSTOM_CSS = f"""
     .logo-glow-wrap img {{
         height: 320px;
         display: block;
-        mix-blend-mode: screen;
         border: none;
         border-radius: 0;
         box-shadow: none;
@@ -210,6 +209,7 @@ CUSTOM_CSS = f"""
         letter-spacing: 0.03em;
         text-align: center;
         margin-top: 8px;
+        text-shadow: 0 0 20px rgba(124, 58, 237, 0.4);
     }}
 
     .goat-header-sub {{
