@@ -2306,7 +2306,8 @@ _shep_css_json = _json.dumps(
 
 _tour_iife = r"""
 (function() {
-  var pw = window.parent;
+  var pw = window.parent;  // = window when app is top-level page
+  var pd = pw.document;    // = document
   function _buildTour() {
     var t = new pw.Shepherd.Tour({
       useModalOverlay: true,
@@ -2389,15 +2390,333 @@ _tour_iife = r"""
     try { pw.history.replaceState(null, '', pw.location.pathname); } catch(e) {}
     pw.location.reload();
   };
-  if (pw.gfObForce && !pw._gfTourStarted) {
-    if (typeof pw.Shepherd !== 'undefined') {
-      pw._gfTourStarted = true;
-      pw.gfStartTour();
+  // Bind Replay Tutorial button click via DOM listener (Streamlit strips onclick attrs).
+  // Poll until the button is found in the sidebar, then bind once.
+  function _bindReplayBtn() {
+    var walker = pd.createTreeWalker(pd.body, 4 /* NodeFilter.SHOW_TEXT */);
+    var node;
+    while ((node = walker.nextNode())) {
+      if (node.nodeValue && node.nodeValue.indexOf('Replay Tutorial') !== -1) {
+        var target = node.parentElement;
+        while (target && target.tagName === 'SPAN') target = target.parentElement;
+        if (target && !target._gfReplayBound) {
+          target._gfReplayBound = true;
+          target.style.cursor = 'pointer';
+          target.addEventListener('click', function(e) {
+            e.stopPropagation();
+            if (typeof pw.gfStartTour === 'function') pw.gfStartTour();
+          });
+          return true;
+        }
+      }
     }
+    return false;
   }
+  if (!_bindReplayBtn()) {
+    var _rbTimer = pw.setInterval(function() {
+      if (_bindReplayBtn()) pw.clearInterval(_rbTimer);
+    }, 600);
+    pw.setTimeout(function() { pw.clearInterval(_rbTimer); }, 30000);
+  }
+  // Auto-start is handled by slideshow; gfStartTour() is called from there.
 })();
 """
-_tour_iife_json = _json.dumps(_tour_iife)
+
+# ── Animal elimination slideshow IIFE ─────────────────────────────────────────
+# Runs before the Shepherd tour for first-time users (gfObForce=true).
+# Each slide: fade-in 0.5s → SVG X draws 1s → caption fades 0.75s → pause 0.75s → next.
+# After all 15 animals: GOATflow logo celebration → gfStartTour().
+# Skip Intro button available throughout.
+_slideshow_iife = r"""
+(function() {
+  var pw = window.parent;
+  var pd = pw.document;
+
+  if (!pw.gfObForce || pw._gfSlideshowStarted) return;
+  pw._gfSlideshowStarted = true;
+
+  var ANIMALS = [
+    { key: 'bull',    caption: "Bulls are full of it" },
+    { key: 'ram',     caption: "Rams are too rough" },
+    { key: 'chicken', caption: "Chickens are too chicken" },
+    { key: 'cow',     caption: "Cows don\u2019t like to mooove" },
+    { key: 'dog',     caption: "Dogs are too friendly" },
+    { key: 'cat',     caption: "Cats are too self-centered" },
+    { key: 'donkey',  caption: "Donkeys are know-it-alls" },
+    { key: 'lizard',  caption: "Lizards are cold-blooded" },
+    { key: 'hamster', caption: "Hamsters run fast nowhere" },
+    { key: 'sheep',   caption: "Sheep love sleep" },
+    { key: 'pig',     caption: "Pigs are too food-centric" },
+    { key: 'rabbit',  caption: "Rabbits are too hyper-minded" },
+    { key: 'duck',    caption: "Ducks are complete quacks" },
+    { key: 'eagle',   caption: "Eagles aren\u2019t always free to help" },
+    { key: 'horse',   caption: "Horses are making their own leaps" }
+  ];
+
+  var T_FADEIN  = 500;
+  var T_X_DRAW  = 1000;
+  var T_CAPTION = 750;
+  var T_PAUSE   = 750;
+  var T_BETWEEN = 300;
+  var LINE_LEN  = 372; // sqrt(300^2 + 220^2) for 320x240 image with 10px inset
+
+  var overlay, imgEl, svgEl, line1, line2, captionEl, titleEl, dotsWrap;
+  var slideTimer = null;
+  var done = false;
+
+  function clearTimer() { if (slideTimer) { clearTimeout(slideTimer); slideTimer = null; } }
+
+  function finishSlideshow(skipTour) {
+    if (done) return;
+    done = true;
+    clearTimer();
+    if (overlay) {
+      overlay.style.transition = 'opacity 0.35s';
+      overlay.style.opacity = '0';
+      setTimeout(function() {
+        if (overlay && overlay.parentNode) overlay.parentNode.removeChild(overlay);
+        if (!skipTour && typeof pw.gfStartTour === 'function') pw.gfStartTour();
+      }, 350);
+    } else {
+      if (!skipTour && typeof pw.gfStartTour === 'function') pw.gfStartTour();
+    }
+  }
+
+  function updateDots(idx) {
+    if (!dotsWrap) return;
+    var dots = dotsWrap.children;
+    for (var i = 0; i < dots.length; i++) {
+      if (i < idx)       { dots[i].style.background = '#4b5563'; dots[i].style.transform = 'scale(1)'; }
+      else if (i === idx){ dots[i].style.background = '#7c3aed'; dots[i].style.transform = 'scale(1.6)'; }
+      else               { dots[i].style.background = '#1f2937'; dots[i].style.transform = 'scale(1)'; }
+    }
+  }
+
+  function resetX() {
+    line1.style.transition = 'none';
+    line2.style.transition = 'none';
+    line1.style.strokeDasharray = LINE_LEN;
+    line1.style.strokeDashoffset = LINE_LEN;
+    line2.style.strokeDasharray = LINE_LEN;
+    line2.style.strokeDashoffset = LINE_LEN;
+  }
+
+  function drawX() {
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        var dur = (T_X_DRAW / 1000) + 's';
+        line1.style.transition = 'stroke-dashoffset ' + dur + ' linear';
+        line2.style.transition = 'stroke-dashoffset ' + dur + ' linear';
+        line1.style.strokeDashoffset = '0';
+        line2.style.strokeDashoffset = '0';
+      });
+    });
+  }
+
+  function showLogo() {
+    if (done) return;
+    // Fade out slide content
+    imgEl.style.opacity   = '0';
+    titleEl.style.opacity = '0';
+    captionEl.style.opacity = '0';
+    resetX();
+
+    slideTimer = setTimeout(function() {
+      if (done) return;
+      // Replace content area with logo finale
+      var stage = pd.getElementById('gf-ss-stage');
+      if (!stage) return;
+      stage.innerHTML = '';
+
+      var logoImg = pd.createElement('img');
+      logoImg.src = '/app/static/goatflow_logo_nobg.png';
+      logoImg.style.cssText = 'width:260px;max-width:80vw;opacity:0;transition:opacity 0.8s;display:block;margin:0 auto;';
+      stage.appendChild(logoImg);
+
+      var tag = pd.createElement('div');
+      tag.textContent = 'The choice is clear.';
+      tag.style.cssText = 'margin-top:20px;color:#a78bfa;font-family:"Syne",sans-serif;font-size:22px;font-weight:700;opacity:0;transition:opacity 0.8s;text-align:center;';
+      stage.appendChild(tag);
+
+      var sub = pd.createElement('div');
+      sub.textContent = 'Starting your tour\u2026';
+      sub.style.cssText = 'margin-top:10px;color:#6b7280;font-size:14px;font-family:"DM Sans",sans-serif;opacity:0;transition:opacity 0.6s;text-align:center;';
+      stage.appendChild(sub);
+
+      requestAnimationFrame(function() {
+        requestAnimationFrame(function() {
+          logoImg.style.opacity = '1';
+          slideTimer = setTimeout(function() { tag.style.opacity = '1'; }, 400);
+          slideTimer = setTimeout(function() { sub.style.opacity = '1'; }, 800);
+          slideTimer = setTimeout(function() { finishSlideshow(false); }, 2400);
+        });
+      });
+    }, T_BETWEEN);
+  }
+
+  function showSlide(idx) {
+    if (done) return;
+    clearTimer();
+    updateDots(idx);
+    var animal = ANIMALS[idx];
+
+    imgEl.style.transition = 'none';
+    imgEl.style.opacity    = '0';
+    captionEl.style.transition = 'none';
+    captionEl.style.opacity = '0';
+    titleEl.style.transition = 'none';
+    titleEl.style.opacity   = '0';
+    captionEl.textContent   = animal.caption;
+    titleEl.textContent     = animal.key.charAt(0).toUpperCase() + animal.key.slice(1);
+    resetX();
+
+    function startAnim() {
+      if (done) return;
+      // Phase 1: fade in image + title
+      requestAnimationFrame(function() {
+        imgEl.style.transition   = 'opacity ' + (T_FADEIN/1000) + 's ease';
+        titleEl.style.transition = 'opacity ' + (T_FADEIN/1000) + 's ease';
+        imgEl.style.opacity   = '1';
+        titleEl.style.opacity = '0.7';
+      });
+
+      // Phase 2: draw X
+      slideTimer = setTimeout(function() {
+        if (done) return;
+        drawX();
+
+        // Phase 3: show caption
+        slideTimer = setTimeout(function() {
+          if (done) return;
+          captionEl.style.transition = 'opacity ' + (T_CAPTION/1000) + 's ease';
+          captionEl.style.opacity = '1';
+
+          // Phase 4: pause then next
+          slideTimer = setTimeout(function() {
+            if (done) return;
+            // fade out
+            imgEl.style.transition   = 'opacity ' + (T_BETWEEN/1000) + 's ease';
+            titleEl.style.transition = 'opacity ' + (T_BETWEEN/1000) + 's ease';
+            captionEl.style.transition = 'opacity ' + (T_BETWEEN/1000) + 's ease';
+            imgEl.style.opacity = titleEl.style.opacity = captionEl.style.opacity = '0';
+
+            slideTimer = setTimeout(function() {
+              if (done) return;
+              if (idx + 1 < ANIMALS.length) {
+                imgEl.src = '/app/static/onboarding/animal_' + ANIMALS[idx+1].key + '.jpg';
+                showSlide(idx + 1);
+              } else {
+                showLogo();
+              }
+            }, T_BETWEEN);
+          }, T_PAUSE);
+        }, T_X_DRAW);
+      }, T_FADEIN);
+    }
+
+    // Preload image then animate
+    var nextSrc = '/app/static/onboarding/animal_' + animal.key + '.jpg';
+    if (imgEl.src.endsWith(nextSrc.split('/').pop()) && imgEl.complete) {
+      startAnim();
+    } else {
+      imgEl.onload = startAnim;
+      imgEl.onerror = startAnim;
+      imgEl.src = nextSrc;
+    }
+  }
+
+  // ── Build overlay ──────────────────────────────────────────────────────────
+  overlay = pd.createElement('div');
+  overlay.id = 'gf-slideshow-overlay';
+  overlay.style.cssText = [
+    'position:fixed;top:0;left:0;width:100%;height:100%;',
+    'background:#08080f;z-index:99999;',
+    'display:flex;flex-direction:column;align-items:center;justify-content:center;',
+    'font-family:"DM Sans","Syne",sans-serif;'
+  ].join('');
+
+  // Skip button
+  var skipBtn = pd.createElement('button');
+  skipBtn.textContent = 'Skip Intro \u2192';
+  skipBtn.style.cssText = [
+    'position:fixed;top:20px;right:24px;',
+    'background:transparent;border:1px solid #374151;',
+    'color:#6b7280;padding:7px 16px;border-radius:6px;',
+    'font-family:"DM Sans",sans-serif;font-size:13px;font-weight:500;',
+    'cursor:pointer;z-index:100000;transition:border-color 0.2s,color 0.2s;'
+  ].join('');
+  skipBtn.onmouseover = function() { this.style.borderColor='#7c3aed'; this.style.color='#a78bfa'; };
+  skipBtn.onmouseout  = function() { this.style.borderColor='#374151'; this.style.color='#6b7280'; };
+  skipBtn.onclick     = function() { finishSlideshow(false); };
+  overlay.appendChild(skipBtn);
+
+  // Progress dots
+  dotsWrap = pd.createElement('div');
+  dotsWrap.style.cssText = 'position:fixed;bottom:28px;left:50%;transform:translateX(-50%);display:flex;gap:7px;z-index:100000;align-items:center;';
+  for (var di = 0; di < ANIMALS.length; di++) {
+    var dot = pd.createElement('div');
+    dot.style.cssText = 'width:6px;height:6px;border-radius:50%;background:#1f2937;transition:background 0.3s,transform 0.2s;';
+    dotsWrap.appendChild(dot);
+  }
+  overlay.appendChild(dotsWrap);
+
+  // Animal label (title)
+  titleEl = pd.createElement('div');
+  titleEl.style.cssText = 'color:#6b7280;font-size:12px;font-weight:500;text-transform:uppercase;letter-spacing:2.5px;margin-bottom:18px;opacity:0;';
+  overlay.appendChild(titleEl);
+
+  // Stage: image + SVG
+  var stage = pd.createElement('div');
+  stage.id = 'gf-ss-stage';
+  stage.style.cssText = 'position:relative;width:320px;height:240px;';
+
+  imgEl = pd.createElement('img');
+  imgEl.style.cssText = 'width:320px;height:240px;object-fit:contain;opacity:0;border-radius:10px;display:block;';
+  stage.appendChild(imgEl);
+
+  // SVG X overlay
+  svgEl = pd.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svgEl.setAttribute('viewBox', '0 0 320 240');
+  svgEl.setAttribute('width', '320');
+  svgEl.setAttribute('height', '240');
+  svgEl.style.cssText = 'position:absolute;top:0;left:0;pointer-events:none;overflow:visible;';
+
+  line1 = pd.createElementNS('http://www.w3.org/2000/svg', 'line');
+  line1.setAttribute('x1', '10');  line1.setAttribute('y1', '10');
+  line1.setAttribute('x2', '310'); line1.setAttribute('y2', '230');
+  line1.setAttribute('stroke', '#ef4444');
+  line1.setAttribute('stroke-width', '9');
+  line1.setAttribute('stroke-linecap', 'round');
+
+  line2 = pd.createElementNS('http://www.w3.org/2000/svg', 'line');
+  line2.setAttribute('x1', '310'); line2.setAttribute('y1', '10');
+  line2.setAttribute('x2', '10');  line2.setAttribute('y2', '230');
+  line2.setAttribute('stroke', '#ef4444');
+  line2.setAttribute('stroke-width', '9');
+  line2.setAttribute('stroke-linecap', 'round');
+
+  svgEl.appendChild(line1);
+  svgEl.appendChild(line2);
+  stage.appendChild(svgEl);
+  overlay.appendChild(stage);
+
+  // Caption
+  captionEl = pd.createElement('div');
+  captionEl.style.cssText = 'margin-top:22px;color:#9ca3af;font-size:17px;font-family:"DM Sans",sans-serif;font-style:italic;opacity:0;text-align:center;max-width:360px;line-height:1.5;';
+  overlay.appendChild(captionEl);
+
+  pd.body.appendChild(overlay);
+
+  // Preload first image and start
+  var firstImg = new pw.Image();
+  firstImg.onload = function() { showSlide(0); };
+  firstImg.onerror = function() { showSlide(0); };
+  firstImg.src = '/app/static/onboarding/animal_bull.jpg';
+})();
+"""
+
+_tour_iife_json      = _json.dumps(_tour_iife)
+_slideshow_iife_json = _json.dumps(_slideshow_iife)
 
 _ob_iframe_html = f"""<!DOCTYPE html><html><body style="margin:0;padding:0;background:transparent;">
 <script>
@@ -2424,10 +2743,15 @@ _ob_iframe_html = f"""<!DOCTYPE html><html><body style="margin:0;padding:0;backg
   // 3. Set gfObForce flag in parent
   pw.gfObForce = {_gf_ob_force};
 
-  // 4. Inject tour IIFE into parent (runs with pw.Shepherd now available)
+  // 4. Inject tour IIFE (defines pw.gfStartTour — no auto-start, slideshow handles that)
   var tourEl = pd.createElement('script');
   tourEl.textContent = {_tour_iife_json};
   pd.body.appendChild(tourEl);
+
+  // 5. Inject slideshow IIFE (runs before tour for first-time users)
+  var ssEl = pd.createElement('script');
+  ssEl.textContent = {_slideshow_iife_json};
+  pd.body.appendChild(ssEl);
 }})();
 </script>
 </body></html>"""

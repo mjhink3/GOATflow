@@ -115,17 +115,44 @@ Users sign in via username/password to access their private dashboard. Each user
 - Incognito Mode: session-only signals, not persisted to DB
 - OpSec Layer panel in sidebar
 
-## Onboarding Tour (Shepherd.js v11)
-- **CRITICAL**: `st.markdown(unsafe_allow_html=True)` does NOT execute `<script>` tags in Streamlit 1.55. Scripts are rendered as DOM nodes but not executed.
-- **Solution**: Use `streamlit.components.v1.html()` (renders in a same-origin iframe with `allow-same-origin` sandbox flag). The iframe can call `window.parent.document.createElement('script')` to inject scripts into the parent page scope.
-- **Architecture**: `_stc.html(_ob_iframe_html, height=0)` — Shepherd.js bundle + CSS injected into `window.parent.document.head`. Tour IIFE injected into body, defines `window.parent.gfStartTour`.
-- AMD-disable wrapper: `(function(){var _d=window.define;window.define=undefined;try{...shepherd...}finally{window.define=_d;}})()` forces UMD global path (avoids Streamlit React's define.amd hijack).
-- Auto-starts when `player.onboarding_done = false` (`gfObForce=true`).
+## Onboarding Flow (Slideshow → Shepherd.js Tour)
+
+### Key Technical Facts
+- **CRITICAL**: `st.markdown(unsafe_allow_html=True)` does NOT execute `<script>` tags in Streamlit 1.55.
+- **Solution**: Use `streamlit.components.v1.html()` — same-origin iframe; `window.parent.document.createElement('script')` injects scripts into the parent page scope.
+- AMD-disable wrapper forces Shepherd.js UMD global path (avoids Streamlit React's `define.amd` hijack).
+- `pw = window.parent` may equal `window` (top-level) or parent Replit frame — `pw.document` is always correct target.
+- Streamlit also strips `onclick` / all `on*` event handler attributes from `st.markdown` HTML. Use DOM TreeWalker to bind click listeners programmatically.
+
+### Slideshow (Animal Elimination — 15 animals)
+- Runs BEFORE the Shepherd tour for first-time users (`gfObForce=true` when `onboarding_done=false`).
+- Sequence per slide: image fade-in (0.5s) → SVG X draws across (1.0s) → caption fades in (0.75s) → pause (0.75s) → next. ~3s per slide.
+- Animal order: bull, ram, chicken, cow, dog, cat, donkey, lizard, hamster, sheep, pig, rabbit, duck, eagle, horse.
+- After all 15: GOATflow logo + "The choice is clear." celebration → `pw.gfStartTour()`.
+- "Skip Intro →" button: fixed top-right, `z-index: 100000`, skips directly to tour.
+- Progress dots: 15 dots bottom-center, active = purple `#7c3aed`.
+- Images: `static/onboarding/animal_[name].jpg` (compressed JPGs ~20-31KB each), served at `/app/static/onboarding/`.
+- Logo: `static/goatflow_logo_nobg.png`.
+- Guard: `pw._gfSlideshowStarted = true` prevents slideshow restart on Streamlit reruns.
+
+### Shepherd.js Tour (6 steps)
+- Defined in `_tour_iife` (Python raw string), JSON-encoded, injected into parent document head via `components.v1.html`.
+- Steps: welcome → horns → sieve → ranking → hay → done.
+- `pw.gfStartTour()` defined in parent window; called by slideshow completion AND by Replay Tutorial button.
+- Replay Tutorial button: Streamlit strips `onclick`, so `_bindReplayBtn()` in tour IIFE uses TreeWalker to find text node "Replay Tutorial" and binds DOM click listener.
 - Completion/cancel: `pw.history.replaceState(...?ob_done=1)` → Streamlit detects → `mark_onboarding_done()`.
-- Replay: "Replay Tutorial" button in sidebar calls `window.gfStartTour()`.
-- Static files: `static/shepherd.min.js` (45KB) + `static/shepherd.css` (3.4KB).
-- `_stc` imported as `import streamlit.components.v1 as _stc` at top of app.py.
-- **Rebuild pattern**: When rebuilding from /tmp/app_part1.py + /tmp/app_shepherd_section.py + /tmp/app_part3.py, also add `import streamlit.components.v1 as _stc` and `import json as _json` to top-level imports. The shepherd section now has no inline import statements.
+
+### Static Files
+- `static/shepherd.min.js` (45KB), `static/shepherd.css` (3.4KB)
+- `static/onboarding/animal_*.jpg` (15 compressed JPGs)
+- `static/goatflow_logo_nobg.png`
+
+### Imports at Top of app.py
+- `import streamlit.components.v1 as _stc`
+- `import json as _json`
+
+### Rebuild Pattern
+From `/tmp/app_part1.py` + `/tmp/app_shepherd_section.py` + `/tmp/app_part3.py`: make sure `_stc` and `_json` imports are at the top level (they're in app_part1.py already). Shepherd section has no inline imports. Apply patches: (1) Help button onclick → `gfStartTour()` (now uses DOM binding so onclick not needed), (2) `id="gf-sieve-anchor"` on churn-label div.
 
 ## Dependencies
 - streamlit, openai, PyPDF2, fpdf2, psycopg2-binary, Pillow
