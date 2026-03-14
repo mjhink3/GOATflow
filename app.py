@@ -188,6 +188,13 @@ CUSTOM_CSS = f"""
         font-family: 'DM Sans', sans-serif;
     }}
 
+    section[data-testid="stMainBlockContainer"],
+    .main .block-container,
+    div.block-container {{
+        padding-top: 1rem !important;
+        padding-bottom: 1rem !important;
+    }}
+
     header[data-testid="stHeader"] {{
         background-color: #08080f;
     }}
@@ -988,8 +995,7 @@ CUSTOM_CSS = f"""
 
     .landing-container {{
         text-align: center;
-        padding: 3rem 1rem 5rem 1rem;
-        min-height: 80vh;
+        padding: 0.25rem 1rem 0.25rem 1rem;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -997,24 +1003,24 @@ CUSTOM_CSS = f"""
     }}
 
     .landing-container img {{
-        height: 400px;
-        margin-bottom: 1.5rem;
+        height: 90px;
+        margin-bottom: 0.4rem;
     }}
 
     .landing-tagline {{
-        font-size: 1.5rem;
+        font-size: 1.05rem;
         font-weight: 800;
         font-family: 'Syne', sans-serif;
         color: {WHITE};
-        margin: 8px auto 0.5rem auto;
-        line-height: 1.4;
+        margin: 2px auto 0.2rem auto;
+        line-height: 1.35;
         max-width: 400px;
         text-align: center;
         text-shadow: 0 0 20px rgba(124, 58, 237, 0.4);
     }}
 
     @media (max-width: 768px) {{
-        .landing-tagline {{ font-size: 22px; }}
+        .landing-tagline {{ font-size: 0.95rem; }}
     }}
 
     .landing-sub {{
@@ -1944,7 +1950,7 @@ if not user_info:
     <div class="landing-container">
         {f'<img src="{logo_src}" alt="GOATflow">' if logo_src else '<div style="font-size:3rem;font-weight:900;font-family:Syne,sans-serif;color:#fff;margin-bottom:2rem;">🐐 GOATflow</div>'}
         <div class="landing-tagline">Grab life by the horns.<br>Leave the bull behind.</div>
-        <div style="font-size:0.82rem;font-weight:500;color:#22c55e;margin-top:0.5rem;font-family:'DM Sans',sans-serif;letter-spacing:0.01em;opacity:0.9;">GOATflow metabolizes chaotic inputs into prioritized operational action and evolves with you.</div>
+        <div style="font-size:0.76rem;font-weight:500;color:#22c55e;margin-top:0.15rem;font-family:'DM Sans',sans-serif;letter-spacing:0.01em;opacity:0.9;">GOATflow metabolizes chaotic inputs into prioritized operational action and evolves with you.</div>
     </div>
     ''', unsafe_allow_html=True)
 
