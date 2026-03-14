@@ -1133,57 +1133,28 @@ CUSTOM_CSS = f"""
 TERRAIN_HTML = """
 <div id="terrain-bg" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;overflow:hidden;">
 
-  <div class="terrain-layer" style="position:absolute;width:100%;height:45vh;top:0;background:#0e0e1e;clip-path:polygon(0% 100%,0% 75%,8% 45%,15% 60%,22% 20%,30% 55%,38% 10%,47% 50%,55% 30%,63% 55%,72% 15%,80% 45%,88% 35%,95% 55%,100% 40%,100% 100%);">
-    <span style="position:absolute;right:16px;bottom:12px;font-family:'DM Sans',sans-serif;font-size:9px;color:rgba(255,255,255,0.07);letter-spacing:0.15em;text-transform:uppercase;">The Summit</span>
-  </div>
+  <div class="terrain-layer" style="position:absolute;width:100%;height:30%;top:0;background:#0e0e1e;opacity:0.25;pointer-events:none;clip-path:polygon(0% 100%,0% 75%,8% 45%,15% 60%,22% 20%,30% 55%,38% 10%,47% 50%,55% 30%,63% 55%,72% 15%,80% 45%,88% 35%,95% 55%,100% 40%,100% 100%);"></div>
 
-  <div class="terrain-layer" style="position:absolute;width:100%;height:35vh;top:30vh;background:#0f0f20;clip-path:polygon(0% 100%,0% 50%,5% 45%,5% 20%,12% 18%,12% 45%,25% 40%,35% 35%,35% 15%,45% 12%,45% 35%,60% 30%,70% 28%,70% 10%,80% 8%,80% 28%,90% 32%,100% 28%,100% 100%);">
-    <span style="position:absolute;right:16px;bottom:12px;font-family:'DM Sans',sans-serif;font-size:9px;color:rgba(255,255,255,0.07);letter-spacing:0.15em;text-transform:uppercase;">The High Cliffs</span>
-  </div>
+  <div class="terrain-layer" style="position:absolute;width:100%;height:25%;top:18%;background:#0f0f20;opacity:0.25;pointer-events:none;clip-path:polygon(0% 100%,0% 50%,5% 45%,5% 20%,12% 18%,12% 45%,25% 40%,35% 35%,35% 15%,45% 12%,45% 35%,60% 30%,70% 28%,70% 10%,80% 8%,80% 28%,90% 32%,100% 28%,100% 100%);"></div>
 
-  <div class="terrain-layer" style="position:absolute;width:100%;height:30vh;top:55vh;background:#101022;clip-path:polygon(0% 100%,0% 60%,10% 45%,20% 50%,35% 35%,50% 40%,65% 30%,80% 42%,90% 38%,100% 45%,100% 100%);">
-    <span style="position:absolute;right:16px;bottom:12px;font-family:'DM Sans',sans-serif;font-size:9px;color:rgba(255,255,255,0.07);letter-spacing:0.15em;text-transform:uppercase;">The Ridgeline</span>
-  </div>
+  <div class="terrain-layer" style="position:absolute;width:100%;height:22%;top:35%;background:#101022;opacity:0.25;pointer-events:none;clip-path:polygon(0% 100%,0% 60%,10% 45%,20% 50%,35% 35%,50% 40%,65% 30%,80% 42%,90% 38%,100% 45%,100% 100%);"></div>
 
-  <div class="terrain-layer" style="position:absolute;width:100%;height:30vh;top:75vh;background:#111124;clip-path:polygon(0% 100%,0% 65%,15% 55%,30% 60%,45% 50%,60% 58%,75% 48%,90% 55%,100% 52%,100% 100%);">
-    <span style="position:absolute;right:16px;bottom:12px;font-family:'DM Sans',sans-serif;font-size:9px;color:rgba(255,255,255,0.07);letter-spacing:0.15em;text-transform:uppercase;">The Foothills</span>
-  </div>
+  <div class="terrain-layer" style="position:absolute;width:100%;height:20%;top:52%;background:#111124;opacity:0.25;pointer-events:none;clip-path:polygon(0% 100%,0% 65%,15% 55%,30% 60%,45% 50%,60% 58%,75% 48%,90% 55%,100% 52%,100% 100%);"></div>
 
-  <div class="terrain-layer" style="position:absolute;width:100%;height:25vh;top:95vh;background:#121226;clip-path:polygon(0% 100%,0% 72%,20% 68%,40% 72%,60% 67%,80% 71%,100% 68%,100% 100%);">
-    <span style="position:absolute;right:16px;bottom:12px;font-family:'DM Sans',sans-serif;font-size:9px;color:rgba(255,255,255,0.07);letter-spacing:0.15em;text-transform:uppercase;">The Grazing Grounds</span>
-  </div>
+  <div class="terrain-layer" style="position:absolute;width:100%;height:18%;top:68%;background:#121226;opacity:0.25;pointer-events:none;clip-path:polygon(0% 100%,0% 72%,20% 68%,40% 72%,60% 67%,80% 71%,100% 68%,100% 100%);"></div>
 
-  <div class="terrain-layer" style="position:absolute;width:100%;height:20vh;top:112vh;background:#13132a;clip-path:polygon(0% 100%,0% 80%,100% 80%,100% 100%);">
-    <span style="position:absolute;right:16px;bottom:12px;font-family:'DM Sans',sans-serif;font-size:9px;color:rgba(255,255,255,0.07);letter-spacing:0.15em;text-transform:uppercase;">The Pen</span>
-  </div>
+  <div class="terrain-layer" style="position:absolute;width:100%;height:20%;top:82%;background:#13132a;opacity:0.25;pointer-events:none;clip-path:polygon(0% 100%,0% 80%,100% 80%,100% 100%);"></div>
 
 </div>
 
-<script>
-(function() {
-  function applyParallax() {
-    var scrolled = window.scrollY || window.pageYOffset || 0;
-    var isMobile = window.innerWidth < 768;
-    var layers = document.querySelectorAll('.terrain-layer');
-    layers.forEach(function(layer, index) {
-      var speed = (isMobile ? 0.5 : 1.0) * (0.1 + index * 0.05);
-      layer.style.transform = 'translateY(' + (scrolled * speed) + 'px)';
-    });
-  }
-
-  window.addEventListener('scroll', applyParallax, {passive: true});
-
-  // Also listen on Streamlit's main scroll container
-  var observer = new MutationObserver(function() {
-    var main = document.querySelector('[data-testid="stMain"]') || document.querySelector('main');
-    if (main) {
-      main.addEventListener('scroll', applyParallax, {passive: true});
-      observer.disconnect();
-    }
-  });
-  observer.observe(document.body, {childList: true, subtree: true});
-})();
-</script>
+<div id="terrain-labels" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:2;pointer-events:none;">
+  <span style="position:fixed;right:12px;top:8%;font-family:'DM Sans',sans-serif;font-size:8px;color:rgba(255,255,255,0.06);letter-spacing:0.2em;text-transform:uppercase;">The Summit</span>
+  <span style="position:fixed;right:12px;top:24%;font-family:'DM Sans',sans-serif;font-size:8px;color:rgba(255,255,255,0.06);letter-spacing:0.2em;text-transform:uppercase;">The High Cliffs</span>
+  <span style="position:fixed;right:12px;top:40%;font-family:'DM Sans',sans-serif;font-size:8px;color:rgba(255,255,255,0.06);letter-spacing:0.2em;text-transform:uppercase;">The Ridgeline</span>
+  <span style="position:fixed;right:12px;top:56%;font-family:'DM Sans',sans-serif;font-size:8px;color:rgba(255,255,255,0.06);letter-spacing:0.2em;text-transform:uppercase;">The Foothills</span>
+  <span style="position:fixed;right:12px;top:72%;font-family:'DM Sans',sans-serif;font-size:8px;color:rgba(255,255,255,0.06);letter-spacing:0.2em;text-transform:uppercase;">The Grazing Grounds</span>
+  <span style="position:fixed;right:12px;top:86%;font-family:'DM Sans',sans-serif;font-size:8px;color:rgba(255,255,255,0.06);letter-spacing:0.2em;text-transform:uppercase;">The Pen</span>
+</div>
 """
 
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
