@@ -2284,9 +2284,10 @@ st.markdown(r"""
 <script>
 (function() {
   if (localStorage.getItem('goatflow_onboarding_complete') === 'true') return;
-  var overlay = document.getElementById('gf-onboarding');
-  if (!overlay) return;
-  overlay.style.display = 'block';
+  function gfObInit() {
+    var overlay = document.getElementById('gf-onboarding');
+    if (!overlay) { setTimeout(gfObInit, 120); return; }
+    overlay.style.display = 'block';
   var gfObCard = 0, gfObTimer = null, gfObXTimer = null, gfObAborted = false;
   var gfAnimals = [
     {c:'Bulls \u2014 Full of it.',                           d:1800},
@@ -2380,6 +2381,8 @@ st.markdown(r"""
     location.reload();
   };
   gfObTimer = setTimeout(function() { gfObAnimal(0); }, 2000);
+  }
+  gfObInit();
 })();
 </script>
 """, unsafe_allow_html=True)
