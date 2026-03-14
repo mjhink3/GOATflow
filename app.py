@@ -1532,7 +1532,7 @@ with st.sidebar:
     if st.button("🚪 Logout", use_container_width=True, key="logout_btn"):
         for key in ["auth_user_id", "auth_user_name", "auth_display_name",
                      "incognito_signals", "incognito_mode", "just_completed_task",
-                     "just_dropped", "just_purged", "just_metabolized", "daily_shot"]:
+                     "just_dropped", "just_purged", "just_metabolized"]:
             st.session_state.pop(key, None)
         st.rerun()
 
@@ -1768,16 +1768,9 @@ st.markdown(f'''
 </div>
 ''', unsafe_allow_html=True)
 
-col_queue_label, col_daily_shot, col_metabolize = st.columns([2, 1, 1])
+col_queue_label, col_metabolize = st.columns([3, 1])
 with col_queue_label:
     st.markdown('<div class="section-label">📡 Active Bleats</div>', unsafe_allow_html=True)
-with col_daily_shot:
-    daily_shot_active = st.session_state.get("daily_shot", False)
-    if len(signals) > 0:
-        shot_label = "📡 Full Queue" if daily_shot_active else "✨ Daily Shot"
-        if st.button(shot_label, key="daily_shot_btn", use_container_width=True):
-            st.session_state["daily_shot"] = not daily_shot_active
-            st.rerun()
 with col_metabolize:
     if st.button("🧬 Metabolize", key="metabolize_btn", use_container_width=True):
         count = metabolize_completed(current_user_id)
@@ -1789,13 +1782,6 @@ with col_metabolize:
         st.rerun()
 
 display_signals = signals
-if st.session_state.get("daily_shot", False) and len(signals) > 3:
-    display_signals = signals[:3]
-    st.markdown(f'''
-    <div class="completed-toast">
-        <div class="completed-toast-text">✨ Daily Shot — Focused Metabolism: Top 3 Priorities Only</div>
-    </div>
-    ''', unsafe_allow_html=True)
 
 if not display_signals:
     st.markdown('''
