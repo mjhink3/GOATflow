@@ -977,8 +977,15 @@ CUSTOM_CSS = f"""
         font-weight: 800;
         font-family: 'Syne', sans-serif;
         color: {WHITE};
-        margin-bottom: 0.5rem;
-        line-height: 1.3;
+        margin: 8px auto 0.5rem auto;
+        line-height: 1.4;
+        max-width: 400px;
+        text-align: center;
+        text-shadow: 0 0 20px rgba(124, 58, 237, 0.4);
+    }}
+
+    @media (max-width: 768px) {{
+        .landing-tagline {{ font-size: 22px; }}
     }}
 
     .landing-sub {{
@@ -1753,7 +1760,7 @@ if not user_info:
     st.markdown(f'''
     <div class="landing-container">
         {f'<img src="{logo_src}" alt="GOATflow">' if logo_src else '<div style="font-size:3rem;font-weight:900;font-family:Syne,sans-serif;color:#fff;margin-bottom:2rem;">🐐 GOATflow</div>'}
-        <div class="landing-tagline">Grab life by the horns. Leave the bull behind.</div>
+        <div class="landing-tagline">Grab life by the horns.<br>Leave the bull behind.</div>
         <div class="landing-sub">Metabolize your to-do list.</div>
     </div>
     ''', unsafe_allow_html=True)
@@ -1979,7 +1986,6 @@ st.markdown(f'''
 <div class="goat-header">
     {logo_img}
     <div class="goat-header-tagline">Grab life by the horns. Leave the bull behind.</div>
-    <div class="goat-header-sub">Metabolize your to-do list.</div>
     <div style="margin-top:0.5rem;">
         <span class="trust-badge">🛡️
             <span class="trust-tooltip">GOATflow uses Stateless Processing. Your sensitive documents are analyzed and then immediately destroyed.</span>
