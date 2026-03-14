@@ -1969,7 +1969,7 @@ user_rank = ascension_rank(user_level)
 use_crown = user_level >= 5
 
 with st.sidebar:
-    sidebar_logo = f'<img src="{logo_src}" alt="GOATflow" style="height:50px;">' if logo_src else '<div style="font-size:1.2rem;font-weight:900;color:#6100ff;">🐐 GOATflow</div>'
+    sidebar_logo = f'<img src="{logo_src}" alt="GOATflow" style="height:90px;object-fit:contain;">' if logo_src else '<div style="font-size:1.2rem;font-weight:900;color:#6100ff;">🐐 GOATflow</div>'
     st.markdown(f'''
     <div style="text-align:center;padding:0.5rem 0 0.2rem 0;">
         {sidebar_logo}
