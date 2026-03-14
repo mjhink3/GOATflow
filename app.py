@@ -1929,6 +1929,7 @@ if not user_info:
     <div class="landing-container">
         {f'<img src="{logo_src}" alt="GOATflow">' if logo_src else '<div style="font-size:3rem;font-weight:900;font-family:Syne,sans-serif;color:#fff;margin-bottom:2rem;">🐐 GOATflow</div>'}
         <div class="landing-tagline">Grab life by the horns.<br>Leave the bull behind.</div>
+        <div style="font-size:0.82rem;font-weight:500;color:#22c55e;margin-top:0.5rem;font-family:'DM Sans',sans-serif;letter-spacing:0.01em;opacity:0.9;">GOATflow metabolizes chaotic inputs into prioritized operational action and evolves with you.</div>
     </div>
     ''', unsafe_allow_html=True)
 
@@ -2431,7 +2432,6 @@ st.markdown(f'''
 <div class="goat-header">
     {logo_img}
     <div class="goat-header-tagline">Grab life by the horns. Leave the bull behind.</div>
-    <div style="font-size:0.82rem;font-weight:500;color:#22c55e;margin-top:0.4rem;font-family:'DM Sans',sans-serif;letter-spacing:0.01em;opacity:0.9;">GOATflow metabolizes chaotic inputs into prioritized operational action and evolves with you.</div>
     <div style="margin-top:0.5rem;">
         <span class="trust-badge">🛡️
             <span class="trust-tooltip">GOATflow uses Stateless Processing. Your sensitive documents are analyzed and then immediately destroyed.</span>
