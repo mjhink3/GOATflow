@@ -152,15 +152,12 @@ CUSTOM_CSS = f"""
     @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap');
 
     .stApp {{
-        background-color: #0a0a0f;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cg fill='none' stroke='%231a1a3e' stroke-width='1' opacity='0.4'%3E%3Cellipse cx='300' cy='300' rx='280' ry='200'/%3E%3Cellipse cx='300' cy='300' rx='240' ry='165'/%3E%3Cellipse cx='300' cy='300' rx='200' ry='130'/%3E%3Cellipse cx='300' cy='300' rx='160' ry='100'/%3E%3Cellipse cx='300' cy='300' rx='120' ry='72'/%3E%3Cellipse cx='300' cy='300' rx='80' ry='48'/%3E%3Cellipse cx='150' cy='150' rx='130' ry='90'/%3E%3Cellipse cx='150' cy='150' rx='100' ry='65'/%3E%3Cellipse cx='150' cy='150' rx='70' ry='42'/%3E%3Cellipse cx='450' cy='450' rx='140' ry='95'/%3E%3Cellipse cx='450' cy='450' rx='105' ry='68'/%3E%3Cellipse cx='450' cy='450' rx='70' ry='44'/%3E%3C/g%3E%3C/svg%3E");
-        background-repeat: repeat;
-        background-size: 600px 600px;
+        background-color: #08080f;
         font-family: 'DM Sans', sans-serif;
     }}
 
     header[data-testid="stHeader"] {{
-        background-color: #0a0a0f;
+        background-color: #08080f;
     }}
 
     section[data-testid="stSidebar"] {{
@@ -1133,7 +1130,64 @@ CUSTOM_CSS = f"""
 </style>
 """
 
+TERRAIN_HTML = """
+<div id="terrain-bg" style="position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;overflow:hidden;">
+
+  <div class="terrain-layer" style="position:absolute;width:100%;height:45vh;top:0;background:#0e0e1e;clip-path:polygon(0% 100%,0% 75%,8% 45%,15% 60%,22% 20%,30% 55%,38% 10%,47% 50%,55% 30%,63% 55%,72% 15%,80% 45%,88% 35%,95% 55%,100% 40%,100% 100%);">
+    <span style="position:absolute;right:16px;bottom:12px;font-family:'DM Sans',sans-serif;font-size:9px;color:rgba(255,255,255,0.07);letter-spacing:0.15em;text-transform:uppercase;">The Summit</span>
+  </div>
+
+  <div class="terrain-layer" style="position:absolute;width:100%;height:35vh;top:30vh;background:#0f0f20;clip-path:polygon(0% 100%,0% 50%,5% 45%,5% 20%,12% 18%,12% 45%,25% 40%,35% 35%,35% 15%,45% 12%,45% 35%,60% 30%,70% 28%,70% 10%,80% 8%,80% 28%,90% 32%,100% 28%,100% 100%);">
+    <span style="position:absolute;right:16px;bottom:12px;font-family:'DM Sans',sans-serif;font-size:9px;color:rgba(255,255,255,0.07);letter-spacing:0.15em;text-transform:uppercase;">The High Cliffs</span>
+  </div>
+
+  <div class="terrain-layer" style="position:absolute;width:100%;height:30vh;top:55vh;background:#101022;clip-path:polygon(0% 100%,0% 60%,10% 45%,20% 50%,35% 35%,50% 40%,65% 30%,80% 42%,90% 38%,100% 45%,100% 100%);">
+    <span style="position:absolute;right:16px;bottom:12px;font-family:'DM Sans',sans-serif;font-size:9px;color:rgba(255,255,255,0.07);letter-spacing:0.15em;text-transform:uppercase;">The Ridgeline</span>
+  </div>
+
+  <div class="terrain-layer" style="position:absolute;width:100%;height:30vh;top:75vh;background:#111124;clip-path:polygon(0% 100%,0% 65%,15% 55%,30% 60%,45% 50%,60% 58%,75% 48%,90% 55%,100% 52%,100% 100%);">
+    <span style="position:absolute;right:16px;bottom:12px;font-family:'DM Sans',sans-serif;font-size:9px;color:rgba(255,255,255,0.07);letter-spacing:0.15em;text-transform:uppercase;">The Foothills</span>
+  </div>
+
+  <div class="terrain-layer" style="position:absolute;width:100%;height:25vh;top:95vh;background:#121226;clip-path:polygon(0% 100%,0% 72%,20% 68%,40% 72%,60% 67%,80% 71%,100% 68%,100% 100%);">
+    <span style="position:absolute;right:16px;bottom:12px;font-family:'DM Sans',sans-serif;font-size:9px;color:rgba(255,255,255,0.07);letter-spacing:0.15em;text-transform:uppercase;">The Grazing Grounds</span>
+  </div>
+
+  <div class="terrain-layer" style="position:absolute;width:100%;height:20vh;top:112vh;background:#13132a;clip-path:polygon(0% 100%,0% 80%,100% 80%,100% 100%);">
+    <span style="position:absolute;right:16px;bottom:12px;font-family:'DM Sans',sans-serif;font-size:9px;color:rgba(255,255,255,0.07);letter-spacing:0.15em;text-transform:uppercase;">The Pen</span>
+  </div>
+
+</div>
+
+<script>
+(function() {
+  function applyParallax() {
+    var scrolled = window.scrollY || window.pageYOffset || 0;
+    var isMobile = window.innerWidth < 768;
+    var layers = document.querySelectorAll('.terrain-layer');
+    layers.forEach(function(layer, index) {
+      var speed = (isMobile ? 0.5 : 1.0) * (0.1 + index * 0.05);
+      layer.style.transform = 'translateY(' + (scrolled * speed) + 'px)';
+    });
+  }
+
+  window.addEventListener('scroll', applyParallax, {passive: true});
+
+  // Also listen on Streamlit's main scroll container
+  var observer = new MutationObserver(function() {
+    var main = document.querySelector('[data-testid="stMain"]') || document.querySelector('main');
+    if (main) {
+      main.addEventListener('scroll', applyParallax, {passive: true});
+      observer.disconnect();
+    }
+  });
+  observer.observe(document.body, {childList: true, subtree: true});
+})();
+</script>
+"""
+
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
+st.markdown(TERRAIN_HTML, unsafe_allow_html=True)
 
 
 def get_db():
