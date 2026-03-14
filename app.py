@@ -153,9 +153,9 @@ CUSTOM_CSS = f"""
 
     .stApp {{
         background-color: #0a0a0f;
-        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='800'%3E%3Cstyle%3Epath%7Bfill:none;stroke:%231a1a2e;stroke-width:1.2%7D%3C/style%3E%3Cpath d='M400,400 C480,350 560,390 540,480 C520,570 420,600 320,560 C220,520 190,420 240,340 C290,260 320,450 400,400Z' opacity='0.9'/%3E%3Cpath d='M400,400 C510,330 620,380 600,510 C580,640 420,670 280,610 C140,550 110,410 180,300 C250,190 290,470 400,400Z' opacity='0.7'/%3E%3Cpath d='M400,400 C540,310 680,370 660,540 C640,710 420,740 240,660 C60,580 30,400 120,260 C210,120 260,490 400,400Z' opacity='0.5'/%3E%3Cpath d='M400,400 C450,375 500,405 485,455 C470,505 410,520 360,495 C310,470 300,415 335,375 C370,335 350,425 400,400Z' opacity='1'/%3E%3Cpath d='M400,400 C570,290 740,360 720,570 C700,780 420,810 200,710 C-20,610 -50,390 60,220 C170,50 230,510 400,400Z' opacity='0.35'/%3E%3Cpath d='M400,400 C600,270 800,350 780,600 C760,850 420,880 160,760 C-100,640 -130,380 0,180 C130,−20 200,530 400,400Z' opacity='0.2'/%3E%3C/svg%3E");
-        background-size: 800px 800px;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Cg fill='none' stroke='%231a1a3e' stroke-width='1' opacity='0.4'%3E%3Cellipse cx='300' cy='300' rx='280' ry='200'/%3E%3Cellipse cx='300' cy='300' rx='240' ry='165'/%3E%3Cellipse cx='300' cy='300' rx='200' ry='130'/%3E%3Cellipse cx='300' cy='300' rx='160' ry='100'/%3E%3Cellipse cx='300' cy='300' rx='120' ry='72'/%3E%3Cellipse cx='300' cy='300' rx='80' ry='48'/%3E%3Cellipse cx='150' cy='150' rx='130' ry='90'/%3E%3Cellipse cx='150' cy='150' rx='100' ry='65'/%3E%3Cellipse cx='150' cy='150' rx='70' ry='42'/%3E%3Cellipse cx='450' cy='450' rx='140' ry='95'/%3E%3Cellipse cx='450' cy='450' rx='105' ry='68'/%3E%3Cellipse cx='450' cy='450' rx='70' ry='44'/%3E%3C/g%3E%3C/svg%3E");
         background-repeat: repeat;
+        background-size: 600px 600px;
         font-family: 'DM Sans', sans-serif;
     }}
 
@@ -174,10 +174,57 @@ CUSTOM_CSS = f"""
         position: relative;
     }}
 
-    .goat-header img {{
+    @keyframes logo-float {{
+        0% {{ transform: translateY(0px); }}
+        50% {{ transform: translateY(-4px); }}
+        100% {{ transform: translateY(0px); }}
+    }}
+
+    .logo-glow-wrap {{
+        display: inline-block;
+        position: relative;
+        background: radial-gradient(ellipse at center, rgba(124,58,237,0.2) 0%, transparent 70%);
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        background-color: transparent;
+        animation: logo-float 3.5s ease-in-out infinite;
+    }}
+
+    .logo-glow-wrap img {{
         height: 320px;
-        margin-bottom: 0;
+        display: block;
+        mix-blend-mode: screen;
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        background: none;
         cursor: pointer;
+    }}
+
+    .goat-header-tagline {{
+        font-family: 'Syne', sans-serif;
+        font-weight: 700;
+        font-size: 18px;
+        color: #ffffff;
+        letter-spacing: 0.03em;
+        text-align: center;
+        margin-top: 8px;
+    }}
+
+    .goat-header-sub {{
+        font-family: 'DM Sans', sans-serif;
+        font-weight: 400;
+        font-size: 14px;
+        color: #9ca3af;
+        text-align: center;
+        margin-top: 4px;
+    }}
+
+    @media (max-width: 768px) {{
+        .goat-header-tagline {{ font-size: 15px; }}
+        .goat-header-sub {{ font-size: 12px; }}
+        .logo-glow-wrap img {{ height: 220px; }}
     }}
 
     .trust-badge {{
@@ -1674,7 +1721,11 @@ setTimeout(function() {
 
 logo_b64 = get_logo_b64()
 logo_src = f"data:image/png;base64,{logo_b64}" if logo_b64 else ""
-logo_img = f'<img src="{logo_src}" alt="GOATflow">' if logo_src else '<div style="font-size:2rem;font-weight:900;color:#6100ff;">GOATflow</div>'
+logo_img = (
+    f'<div class="logo-glow-wrap"><img src="{logo_src}" alt="GOATflow"></div>'
+    if logo_src else
+    '<div style="font-size:2rem;font-weight:900;font-family:Syne,sans-serif;color:#6100ff;">GOATflow</div>'
+)
 
 celeb_levelup_b64 = load_image_b64("celeb_levelup_new.png", "celeb_levelup_new_b64")
 celeb_inbox_b64 = get_celeb_b64("inbox_cleared")
@@ -1927,7 +1978,9 @@ with st.sidebar:
 st.markdown(f'''
 <div class="goat-header">
     {logo_img}
-    <div style="margin-top:0.2rem;">
+    <div class="goat-header-tagline">Grab life by the horns. Leave the bull behind.</div>
+    <div class="goat-header-sub">Metabolize your to-do list.</div>
+    <div style="margin-top:0.5rem;">
         <span class="trust-badge">🛡️
             <span class="trust-tooltip">GOATflow uses Stateless Processing. Your sensitive documents are analyzed and then immediately destroyed.</span>
         </span>
