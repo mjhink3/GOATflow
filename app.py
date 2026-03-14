@@ -1127,6 +1127,39 @@ CUSTOM_CSS = f"""
         font-weight: 600;
         color: {NEON_GREEN};
     }}
+
+    /* ── Login page entrance animations ── */
+    @keyframes gfFadeSlideDown {{
+        from {{ opacity: 0; transform: translateY(-20px); }}
+        to   {{ opacity: 1; transform: translateY(0); }}
+    }}
+    @keyframes gfFadeSlideUp {{
+        from {{ opacity: 0; transform: translateY(10px); }}
+        to   {{ opacity: 1; transform: translateY(0); }}
+    }}
+    @keyframes gfFadeIn {{
+        from {{ opacity: 0; }}
+        to   {{ opacity: 1; }}
+    }}
+    .landing-container img {{
+        animation: gfFadeSlideDown 600ms ease-out 0ms both;
+    }}
+    .landing-tagline {{
+        animation: gfFadeSlideUp 500ms ease-out 400ms both;
+    }}
+    .landing-sub {{
+        animation: gfFadeSlideUp 500ms ease-out 700ms both;
+    }}
+    .global-footer {{
+        animation: gfFadeIn 300ms ease-out 1100ms both;
+    }}
+
+    /* ── Ambient particle ── */
+    @keyframes gfParticleFloat {{
+        0%   {{ transform: translateY(0);           opacity: 0.4; }}
+        50%  {{ transform: translateY(var(--ty, -20px)); opacity: 0.7; }}
+        100% {{ transform: translateY(0);           opacity: 0.4; }}
+    }}
 </style>
 """
 
@@ -1841,6 +1874,62 @@ if not user_info:
         GOATflow is a subsidiary of the WorkGOAT Ecosystem. Build your legacy at <a href="https://workgoat.vip" target="_blank" rel="noopener noreferrer">workgoat.vip</a>
     </div>
     ''', unsafe_allow_html=True)
+
+    # Login page: form entrance animation + ambient particles
+    st.markdown("""
+<script>
+(function() {
+  // ── Form / tabs fade-in ───────────────────────────────────────────────────
+  function animateForm() {
+    var tabs = document.querySelector('[data-testid="stTabs"]');
+    if (tabs && !tabs._gfLoginAnim) {
+      tabs._gfLoginAnim = true;
+      tabs.style.opacity = '0';
+      tabs.style.transition = 'opacity 400ms ease-out';
+      setTimeout(function() { tabs.style.opacity = '1'; }, 900);
+    }
+  }
+  var formAttempts = 0;
+  var formPoll = setInterval(function() {
+    animateForm();
+    formAttempts++;
+    if (formAttempts > 30 || document.querySelector('[data-testid="stTabs"]')) {
+      clearInterval(formPoll);
+      animateForm();
+    }
+  }, 80);
+
+  // ── Ambient particles ─────────────────────────────────────────────────────
+  var existingLayer = document.getElementById('gf-particles');
+  if (existingLayer) return; // guard against double-inject on hot-reload
+
+  var layer = document.createElement('div');
+  layer.id = 'gf-particles';
+  layer.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:3;pointer-events:none;overflow:hidden;';
+  document.body.appendChild(layer);
+
+  for (var i = 0; i < 12; i++) {
+    var dot = document.createElement('div');
+    var dur   = (4 + Math.random() * 4).toFixed(2);
+    var delay = (Math.random() * 4).toFixed(2);
+    var ty    = -(15 + Math.random() * 15).toFixed(0);
+    dot.style.cssText = [
+      'position:absolute',
+      'width:3px',
+      'height:3px',
+      'border-radius:50%',
+      'background:rgba(124,58,237,0.4)',
+      'left:' + (Math.random() * 98).toFixed(1) + '%',
+      'top:'  + (Math.random() * 95).toFixed(1) + '%',
+      'animation:gfParticleFloat ' + dur + 's ease-in-out ' + delay + 's infinite',
+      '--ty:' + ty + 'px'
+    ].join(';');
+    layer.appendChild(dot);
+  }
+})();
+</script>
+""", unsafe_allow_html=True)
+
     st.stop()
 
 current_user_id = user_info["id"]
