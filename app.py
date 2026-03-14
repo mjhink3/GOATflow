@@ -149,15 +149,18 @@ def get_current_user():
 
 CUSTOM_CSS = f"""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap');
 
     .stApp {{
-        background-color: {BLACK};
-        font-family: 'Inter', sans-serif;
+        background-color: #0a0a0f;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='800' height='800'%3E%3Cstyle%3Epath%7Bfill:none;stroke:%231a1a2e;stroke-width:1.2%7D%3C/style%3E%3Cpath d='M400,400 C480,350 560,390 540,480 C520,570 420,600 320,560 C220,520 190,420 240,340 C290,260 320,450 400,400Z' opacity='0.9'/%3E%3Cpath d='M400,400 C510,330 620,380 600,510 C580,640 420,670 280,610 C140,550 110,410 180,300 C250,190 290,470 400,400Z' opacity='0.7'/%3E%3Cpath d='M400,400 C540,310 680,370 660,540 C640,710 420,740 240,660 C60,580 30,400 120,260 C210,120 260,490 400,400Z' opacity='0.5'/%3E%3Cpath d='M400,400 C450,375 500,405 485,455 C470,505 410,520 360,495 C310,470 300,415 335,375 C370,335 350,425 400,400Z' opacity='1'/%3E%3Cpath d='M400,400 C570,290 740,360 720,570 C700,780 420,810 200,710 C-20,610 -50,390 60,220 C170,50 230,510 400,400Z' opacity='0.35'/%3E%3Cpath d='M400,400 C600,270 800,350 780,600 C760,850 420,880 160,760 C-100,640 -130,380 0,180 C130,−20 200,530 400,400Z' opacity='0.2'/%3E%3C/svg%3E");
+        background-size: 800px 800px;
+        background-repeat: repeat;
+        font-family: 'DM Sans', sans-serif;
     }}
 
     header[data-testid="stHeader"] {{
-        background-color: {BLACK};
+        background-color: #0a0a0f;
     }}
 
     section[data-testid="stSidebar"] {{
@@ -279,17 +282,39 @@ CUSTOM_CSS = f"""
     }}
 
     .signal-card {{
-        background: {CARD_BG};
-        border: 1px solid {BORDER};
-        border-radius: 12px;
+        background: #0f0f1a;
+        border: none;
+        border-left: 4px solid #7c3aed;
+        border-radius: 8px;
         padding: 1.1rem 1.2rem;
         margin-bottom: 0.7rem;
         position: relative;
-        transition: border-color 0.2s;
+        transition: box-shadow 0.2s;
     }}
 
     .signal-card:hover {{
-        border-color: {PURPLE};
+        box-shadow: 0 0 12px rgba(124, 58, 237, 0.25);
+    }}
+
+    .signal-card-summit {{
+        background: #1a0f0f !important;
+        border-left-color: #ff4444 !important;
+    }}
+
+    .signal-card-summit:hover {{
+        box-shadow: 0 0 12px rgba(255, 68, 68, 0.25) !important;
+    }}
+
+    .signal-card-standard {{
+        background: #0f0f1a;
+        border-left-color: #7c3aed;
+    }}
+
+    .signal-card-completed {{
+        background: #0a1a0f;
+        border-left: 4px solid #22c55e;
+        border-radius: 8px;
+        opacity: 0.6;
     }}
 
     .signal-weight {{
@@ -357,22 +382,32 @@ CUSTOM_CSS = f"""
     }}
 
     .horn-chip {{
-        display: inline-flex;
+        display: flex;
         align-items: center;
-        gap: 6px;
-        background: rgba(97,0,255,0.10);
-        border: 1px solid rgba(97,0,255,0.3);
-        border-radius: 20px;
-        padding: 0.3rem 0.7rem;
-        font-size: 0.75rem;
+        gap: 8px;
+        background: rgba(245,158,11,0.06);
+        border: none;
+        border-left: 3px solid #f59e0b;
+        border-radius: 6px;
+        padding: 0.45rem 0.8rem;
+        font-size: 0.78rem;
+        font-family: 'DM Sans', sans-serif;
+        font-weight: 500;
         color: {WHITE};
-        margin: 0.2rem 0;
+        margin: 0.25rem 0;
         width: 100%;
+        transition: box-shadow 0.2s;
+    }}
+
+    .horn-chip:hover {{
+        box-shadow: 0 0 8px rgba(245, 158, 11, 0.3);
     }}
 
     .horn-chip-text {{
         flex: 1;
-        font-size: 0.75rem;
+        font-size: 0.78rem;
+        font-family: 'DM Sans', sans-serif;
+        font-weight: 500;
         color: {WHITE};
         line-height: 1.3;
     }}
@@ -603,6 +638,7 @@ CUSTOM_CSS = f"""
         font-size: 1.5rem;
         font-weight: 800;
         color: {WHITE};
+        font-family: 'Syne', sans-serif;
     }}
 
     .stat-label {{
@@ -612,22 +648,49 @@ CUSTOM_CSS = f"""
         text-transform: uppercase;
         letter-spacing: 0.1em;
         margin-top: 0.15rem;
+        font-family: 'DM Sans', sans-serif;
+    }}
+
+    .stat-sub {{
+        font-size: 0.55rem;
+        color: {SILVER};
+        margin-top: 0.1rem;
+        font-family: 'DM Sans', sans-serif;
     }}
 
     .stButton > button {{
-        background: linear-gradient(135deg, {PURPLE}, #4A00CC);
+        background: #7c3aed;
         color: #FFFFFF;
         border: none;
-        border-radius: 10px;
+        border-radius: 6px;
         padding: 0.6rem 2rem;
         font-weight: 700;
-        font-family: 'Inter', sans-serif;
+        font-family: 'Syne', sans-serif;
         letter-spacing: 0.02em;
+        transition: box-shadow 0.2s;
     }}
 
     .stButton > button:hover {{
-        background: linear-gradient(135deg, #7722FF, #5500DD);
-        box-shadow: 0 4px 20px rgba(97, 0, 255, 0.35);
+        background: #7c3aed;
+        box-shadow: 0 0 16px rgba(124, 58, 237, 0.5);
+    }}
+
+    .btn-secondary {{
+        background: transparent !important;
+        border: 1px solid #7c3aed !important;
+        color: #7c3aed !important;
+        box-shadow: none !important;
+    }}
+
+    .btn-secondary:hover {{
+        box-shadow: none !important;
+        background: rgba(124,58,237,0.08) !important;
+    }}
+
+    .btn-destructive {{
+        background: #1a1a1a !important;
+        color: #ff4444 !important;
+        border: none !important;
     }}
 
     div[data-testid="stAlert"] {{
@@ -697,6 +760,7 @@ CUSTOM_CSS = f"""
         letter-spacing: 0.12em;
         margin-bottom: 0.5rem;
         margin-top: 0.5rem;
+        font-family: 'Syne', sans-serif;
     }}
 
     .spacer-bottom {{
@@ -823,7 +887,7 @@ CUSTOM_CSS = f"""
         text-align: center;
         font-size: 0.6rem;
         color: #666;
-        font-family: 'Inter', sans-serif;
+        font-family: 'DM Sans', sans-serif;
     }}
 
     .global-footer a {{
@@ -848,50 +912,138 @@ CUSTOM_CSS = f"""
 
     .landing-container {{
         text-align: center;
-        padding: 2rem 1rem 4rem 1rem;
+        padding: 3rem 1rem 5rem 1rem;
+        min-height: 80vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
     }}
 
     .landing-container img {{
         height: 400px;
-        margin-bottom: 2.5rem;
+        margin-bottom: 1.5rem;
     }}
 
     .landing-tagline {{
-        font-size: 1.4rem;
+        font-size: 1.5rem;
         font-weight: 800;
+        font-family: 'Syne', sans-serif;
         color: {WHITE};
         margin-bottom: 0.5rem;
         line-height: 1.3;
     }}
 
     .landing-sub {{
-        font-size: 0.95rem;
-        font-weight: 500;
-        color: {SILVER};
-        margin-bottom: 2rem;
-        font-style: italic;
-    }}
-
-    .landing-features {{
-        display: flex;
-        gap: 1rem;
-        justify-content: center;
-        flex-wrap: wrap;
+        font-size: 0.9rem;
+        font-weight: 400;
+        font-family: 'DM Sans', sans-serif;
+        color: #9ca3af;
         margin-bottom: 2.5rem;
     }}
 
+    .landing-features {{
+        display: none;
+    }}
+
     .landing-feature {{
-        background: {CARD_BG};
-        border: 1px solid {BORDER};
-        border-radius: 12px;
-        padding: 1.2rem 1rem;
-        width: 200px;
-        text-align: center;
+        display: none;
     }}
 
     .landing-feature-icon {{
-        font-size: 2rem;
-        margin-bottom: 0.4rem;
+        display: none;
+    }}
+
+    .churn-overlay {{
+        position: relative;
+        min-height: 80px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 1.5rem;
+        background: #0f0f1a;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+    }}
+
+    .churn-topo-anim {{
+        width: 80px;
+        height: 80px;
+        margin-bottom: 0.8rem;
+    }}
+
+    .churn-topo-ring {{
+        animation: topo-resolve 2.5s ease-in-out infinite;
+        transform-origin: center;
+        fill: none;
+        stroke: #7c3aed;
+    }}
+
+    @keyframes topo-resolve {{
+        0% {{ stroke-width: 3; opacity: 0.2; r: 5; }}
+        50% {{ stroke-width: 1.5; opacity: 0.8; }}
+        100% {{ stroke-width: 3; opacity: 0.2; }}
+    }}
+
+    .churn-text-cycle {{
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.85rem;
+        color: #9ca3af;
+        text-align: center;
+        animation: text-fade 2.4s ease-in-out infinite;
+    }}
+
+    @keyframes text-fade {{
+        0%, 100% {{ opacity: 0.3; }}
+        50% {{ opacity: 1; }}
+    }}
+
+    .hay-toast {{
+        background: linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.05));
+        border: 1px solid rgba(245,158,11,0.3);
+        border-radius: 8px;
+        padding: 0.7rem 1rem;
+        margin-bottom: 0.7rem;
+        text-align: center;
+        font-family: 'DM Sans', sans-serif;
+    }}
+
+    .hay-toast-text {{
+        color: #f59e0b;
+        font-size: 0.85rem;
+        font-weight: 500;
+    }}
+
+    .cheese-toast {{
+        background: linear-gradient(135deg, rgba(34,197,94,0.15), rgba(34,197,94,0.05));
+        border: 1px solid rgba(34,197,94,0.35);
+        border-radius: 8px;
+        padding: 0.8rem 1rem;
+        margin-bottom: 0.7rem;
+        text-align: center;
+        font-family: 'DM Sans', sans-serif;
+        animation: cheese-pulse 0.6s ease-out;
+    }}
+
+    @keyframes cheese-pulse {{
+        0% {{ transform: scale(0.95); opacity: 0; }}
+        100% {{ transform: scale(1); opacity: 1; }}
+    }}
+
+    .cheese-toast-text {{
+        color: #22c55e;
+        font-size: 0.9rem;
+        font-weight: 500;
+    }}
+
+    .track-stagger {{
+        animation: slide-up 0.35s ease-out backwards;
+    }}
+
+    @keyframes slide-up {{
+        from {{ opacity: 0; transform: translateY(12px); }}
+        to {{ opacity: 1; transform: translateY(0); }}
     }}
 
     .landing-feature-title {{
@@ -979,7 +1131,9 @@ def ensure_schema():
                     user_id TEXT NOT NULL UNIQUE,
                     total_xp INTEGER NOT NULL DEFAULT 0,
                     level INTEGER NOT NULL DEFAULT 1,
-                    tasks_completed INTEGER NOT NULL DEFAULT 0
+                    tasks_completed INTEGER NOT NULL DEFAULT 0,
+                    hay INTEGER NOT NULL DEFAULT 0,
+                    fresh_cheese INTEGER NOT NULL DEFAULT 0
                 )
             """)
             cur.execute("""
@@ -994,6 +1148,10 @@ def ensure_schema():
                     EXCEPTION WHEN duplicate_table THEN NULL;
                     END $$;
                 """)
+            for pcol in [("hay", "INTEGER NOT NULL", "0"), ("fresh_cheese", "INTEGER NOT NULL", "0")]:
+                cur.execute(f"SELECT column_name FROM information_schema.columns WHERE table_name = 'player' AND column_name = '{pcol[0]}'")
+                if not cur.fetchone():
+                    cur.execute(f"ALTER TABLE player ADD COLUMN {pcol[0]} {pcol[1]} DEFAULT {pcol[2]}")
 
             cur.execute("""
                 SELECT constraint_name FROM information_schema.table_constraints
@@ -1146,7 +1304,7 @@ def get_player(user_id: str):
                 conn.commit()
             return dict(row)
     except Exception:
-        return {"user_id": user_id, "total_xp": 0, "level": 1, "tasks_completed": 0}
+        return {"user_id": user_id, "total_xp": 0, "level": 1, "tasks_completed": 0, "hay": 0, "fresh_cheese": 0}
     finally:
         conn.close()
 
@@ -1166,33 +1324,59 @@ def get_active_signals(user_id: str):
         conn.close()
 
 
+HAY_BASE = {"Standard": 10, "Micro": 10, "High-Leverage": 10, "GOAT": 10}
+HAY_SUMMIT_BONUS = 50
+HAY_SPEED_BONUS = 10
+HAY_TO_CHEESE = 500
+
+
 def complete_signal(signal_id: int, user_id: str):
     conn = get_db()
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute("""
-                SELECT xp_reward, task_name, why, operational_weight, horn_applied_name
+                SELECT xp_reward, task_name, why, operational_weight, horn_applied_name, bleat_type, created_at
                 FROM signals
                 WHERE id = %s AND completed = FALSE AND user_id = %s
             """, (signal_id, user_id))
             row = cur.fetchone()
             if not row:
                 conn.rollback()
-                return None, 0, False
+                return None, 0, False, 0, 0, False
             xp = XP_TIERS.get(row["xp_reward"], 500)
-            cur.execute("SELECT total_xp FROM player WHERE user_id = %s", (user_id,))
+            cur.execute("SELECT total_xp, hay, fresh_cheese FROM player WHERE user_id = %s", (user_id,))
             player_row = cur.fetchone()
             old_xp = player_row["total_xp"] if player_row else 0
+            old_hay = player_row["hay"] if player_row else 0
+            old_cheese = player_row["fresh_cheese"] if player_row else 0
             old_level, _, _ = compute_level(old_xp)
             new_xp = old_xp + xp
             new_level, _, _ = compute_level(new_xp)
+
+            is_summit = row["bleat_type"] in ("Summit-Level Bleat", "Summit Call")
+            hay_earned = HAY_SUMMIT_BONUS if is_summit else HAY_BASE.get(row["xp_reward"], 10)
+            import datetime
+            if row["created_at"]:
+                age = datetime.datetime.utcnow() - row["created_at"].replace(tzinfo=None)
+                if age.total_seconds() < 86400:
+                    hay_earned += HAY_SPEED_BONUS
+
+            new_hay = old_hay + hay_earned
+            # HAY DECAY — reserved for WorkGOAT integration phase
+            cheese_gained = new_hay // HAY_TO_CHEESE
+            new_hay_remainder = new_hay % HAY_TO_CHEESE
+            new_cheese = old_cheese + cheese_gained
+            cheese_converted = cheese_gained > 0
+
             cur.execute("""
                 UPDATE player
                 SET total_xp = %s,
                     tasks_completed = tasks_completed + 1,
-                    level = %s
+                    level = %s,
+                    hay = %s,
+                    fresh_cheese = %s
                 WHERE user_id = %s
-            """, (new_xp, new_level, user_id))
+            """, (new_xp, new_level, new_hay_remainder, new_cheese, user_id))
             cur.execute("DELETE FROM signals WHERE id = %s AND user_id = %s", (signal_id, user_id))
             cur.execute("""
                 INSERT INTO operational_log (user_id, task_name, task_why, resolution, horn_applied_name, priority_score, xp_tier)
@@ -1201,10 +1385,10 @@ def complete_signal(signal_id: int, user_id: str):
                   row["horn_applied_name"] or "", row["operational_weight"], row["xp_reward"]))
             conn.commit()
             leveled_up = new_level > old_level
-            return row["xp_reward"], xp, leveled_up
+            return row["xp_reward"], xp, leveled_up, hay_earned, new_hay_remainder, cheese_converted
     except Exception:
         conn.rollback()
-        return None, 0, False
+        return None, 0, False, 0, 0, False
     finally:
         conn.close()
 
@@ -1517,29 +1701,9 @@ user_info = get_current_user()
 if not user_info:
     st.markdown(f'''
     <div class="landing-container">
-        {f'<img src="{logo_src}" alt="GOATflow">' if logo_src else '<div style="font-size:3rem;font-weight:900;color:#6100ff;margin-bottom:2.5rem;">🐐 GOATflow</div>'}
-        <div class="landing-features">
-            <div class="landing-feature">
-                <div class="landing-feature-icon">⚡</div>
-                <div class="landing-feature-title">Churn Engine</div>
-                <div class="landing-feature-desc">AI-powered task classification and prioritization</div>
-            </div>
-            <div class="landing-feature">
-                <div class="landing-feature-icon">🧀</div>
-                <div class="landing-feature-title">Cheese Churn Rate</div>
-                <div class="landing-feature-desc">Gamified XP system with pasture progression</div>
-            </div>
-            <div class="landing-feature">
-                <div class="landing-feature-icon">🛡️</div>
-                <div class="landing-feature-title">Stateless Privacy</div>
-                <div class="landing-feature-desc">Source files purged after analysis</div>
-            </div>
-            <div class="landing-feature">
-                <div class="landing-feature-icon">🐐</div>
-                <div class="landing-feature-title">WorkGOAT Ecosystem</div>
-                <div class="landing-feature-desc">Part of the complete operational intelligence platform</div>
-            </div>
-        </div>
+        {f'<img src="{logo_src}" alt="GOATflow">' if logo_src else '<div style="font-size:3rem;font-weight:900;font-family:Syne,sans-serif;color:#fff;margin-bottom:2rem;">🐐 GOATflow</div>'}
+        <div class="landing-tagline">Grab life by the horns. Leave the bull behind.</div>
+        <div class="landing-sub">Metabolize your to-do list.</div>
     </div>
     ''', unsafe_allow_html=True)
 
@@ -1641,9 +1805,11 @@ with st.sidebar:
     </div>
     ''', unsafe_allow_html=True)
 
+    sb_hay = player_data.get("hay", 0)
+    sb_cheese = player_data.get("fresh_cheese", 0)
     st.markdown(f'''
     <div style="margin-top:0.5rem;padding:0.6rem;background:{CARD_BG};border-radius:8px;border:1px solid {BORDER};">
-        <div style="font-size:0.7rem;font-weight:700;color:{WHITE};margin-bottom:0.4rem;">📊 My Stats</div>
+        <div style="font-size:0.7rem;font-weight:700;color:{WHITE};margin-bottom:0.4rem;font-family:Syne,sans-serif;">📊 My Stats</div>
         <div style="display:flex;justify-content:space-between;margin-bottom:0.2rem;">
             <span style="font-size:0.6rem;color:{SILVER};">Total Grit (XP)</span>
             <span style="font-size:0.6rem;font-weight:700;color:{NEON_GREEN};">{player_data["total_xp"]:,}</span>
@@ -1656,12 +1822,27 @@ with st.sidebar:
             <span style="font-size:0.6rem;color:{SILVER};">Ascension Rank</span>
             <span style="font-size:0.6rem;font-weight:700;color:{WHITE};">{safe(user_rank)}</span>
         </div>
-        <div style="display:flex;justify-content:space-between;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:0.2rem;">
             <span style="font-size:0.6rem;color:{SILVER};">Next Fence</span>
             <span style="font-size:0.6rem;font-weight:700;color:{SILVER};">{cur_xp_into:,}/{cur_xp_needed:,}</span>
         </div>
+        <div style="border-top:1px solid {BORDER};margin:0.4rem 0;"></div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:0.15rem;">
+            <span style="font-size:0.6rem;color:{SILVER};">🌾 Hay Balance</span>
+            <span style="font-size:0.6rem;font-weight:700;color:#f59e0b;">{sb_hay}/{HAY_TO_CHEESE}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:0.3rem;">
+            <span style="font-size:0.6rem;color:{SILVER};">Fresh Cheese Banked</span>
+            <span style="font-size:0.6rem;font-weight:700;color:#22c55e;">🧀 {sb_cheese}</span>
+        </div>
+        <div style="font-size:0.52rem;color:#6b7280;text-align:right;margin-bottom:0.3rem;">
+            Ports to WorkGOAT when available — <a href="https://workgoat.vip" target="_blank" style="color:#7c3aed;text-decoration:none;">workgoat.vip</a>
+        </div>
     </div>
     ''', unsafe_allow_html=True)
+
+    if st.button("Port to WorkGOAT", key="port_workgoat_btn", use_container_width=True, help="WorkGOAT is coming. Your Fresh Cheese will be waiting."):
+        st.info("WorkGOAT is coming. Your Fresh Cheese will be waiting.")
 
     st.markdown("---")
     st.markdown(f'<div style="text-align:center;font-size:1.1rem;font-weight:800;color:{WHITE};margin-bottom:0.1rem;">🐐 GOAT Horns</div>', unsafe_allow_html=True)
@@ -1739,7 +1920,7 @@ with st.sidebar:
     if st.button("🚪 Logout", use_container_width=True, key="logout_btn"):
         for key in ["auth_user_id", "auth_user_name", "auth_display_name",
                      "incognito_signals", "incognito_mode", "just_completed_task",
-                     "just_dropped", "just_purged"]:
+                     "just_dropped", "just_purged", "hay_earned_toast", "cheese_converted_toast"]:
             st.session_state.pop(key, None)
         st.rerun()
 
@@ -1851,7 +2032,25 @@ if drop_btn:
     if not has_files and not has_text:
         st.warning("Drop some files or paste text to feed the engine.")
     else:
-        with st.spinner("Churn Engine processing..."):
+        churn_placeholder = st.empty()
+        churn_placeholder.markdown('''
+<div class="churn-overlay">
+    <svg class="churn-topo-anim" viewBox="0 0 100 100">
+        <ellipse class="churn-topo-ring" cx="50" cy="50" rx="8" ry="6" style="animation-delay:0s;"/>
+        <ellipse class="churn-topo-ring" cx="50" cy="50" rx="18" ry="13" style="animation-delay:0.3s;"/>
+        <ellipse class="churn-topo-ring" cx="50" cy="50" rx="28" ry="20" style="animation-delay:0.6s;"/>
+        <ellipse class="churn-topo-ring" cx="50" cy="50" rx="38" ry="28" style="animation-delay:0.9s;"/>
+        <ellipse class="churn-topo-ring" cx="50" cy="50" rx="46" ry="35" style="animation-delay:1.2s;"/>
+    </svg>
+    <div class="churn-text-cycle" id="churnText">Reading the terrain...</div>
+</div>
+<script>
+var msgs=["Reading the terrain...","Filtering the noise...","Surfacing your Tracks..."];
+var i=0;
+setInterval(function(){i=(i+1)%msgs.length;var el=document.getElementById("churnText");if(el)el.textContent=msgs[i];},800);
+</script>
+''', unsafe_allow_html=True)
+        with st.spinner(""):
             try:
                 files_data = []
                 if uploaded_files:
@@ -1899,6 +2098,7 @@ if drop_btn:
             except Exception as e:
                 import traceback
                 traceback.print_exc()
+                churn_placeholder.empty()
                 st.error(f"The Churn Engine hit a snag: {e}")
 
 if st.session_state.get("just_dropped"):
@@ -1960,6 +2160,14 @@ def show_cheese_popup(task_name, xp_gained, leveled_up, xp_tier):
         st.session_state["just_completed_task"] = None
         st.rerun()
 
+if st.session_state.get("cheese_converted_toast"):
+    st.session_state.pop("cheese_converted_toast", None)
+    st.markdown('<div class="cheese-toast"><div class="cheese-toast-text">🧀 500 Hay converted to 1 Fresh Cheese. Keep going.</div></div>', unsafe_allow_html=True)
+
+if st.session_state.get("hay_earned_toast"):
+    hay_amt = st.session_state.pop("hay_earned_toast")
+    st.markdown(f'<div class="hay-toast"><div class="hay-toast-text">🌾 +{hay_amt} Hay earned</div></div>', unsafe_allow_html=True)
+
 if st.session_state.get("just_completed_task"):
     task_data = st.session_state["just_completed_task"]
     if len(task_data) == 4:
@@ -1983,6 +2191,10 @@ cur_pasture = pasture_name(level)
 linkedin_total_text = f"I'm at {cur_pasture} (Level {level}) with {player['total_xp']:,} Cheese Churn Points on GOATflow! {player['tasks_completed']} Tracks completed. Part of the WorkGOAT Ecosystem."
 linkedin_total_url = "https://www.linkedin.com/sharing/share-offsite/?" + urllib.parse.urlencode({"url": "https://workgoat.vip", "title": linkedin_total_text, "summary": linkedin_total_text})
 
+hay_balance = player.get("hay", 0)
+cheese_total = player.get("fresh_cheese", 0)
+hay_pct = min(int((hay_balance / HAY_TO_CHEESE) * 100), 100)
+
 st.markdown(f'''
 <div class="stats-row">
     <div class="stat-box">
@@ -1990,7 +2202,7 @@ st.markdown(f'''
         <div class="stat-label">Active Tracks</div>
     </div>
     <div class="stat-box" title="Tracks that cannot wait. Address these first.">
-        <div class="stat-value" style="color:#FF6B6B;">{summit_count}</div>
+        <div class="stat-value" style="color:#ff4444;font-family:Syne,sans-serif;">{summit_count}</div>
         <div class="stat-label">Summit Calls</div>
     </div>
     <div class="stat-box">
@@ -1998,9 +2210,14 @@ st.markdown(f'''
         <div class="stat-label">Completed</div>
     </div>
     <div class="stat-box">
-        <div class="stat-value" style="color:{NEON_GREEN};">{player["total_xp"]:,}</div>
-        <div class="stat-label">Cheese Churn</div>
-        <a class="linkedin-share-btn" href="{linkedin_total_url}" target="_blank" rel="noopener noreferrer" style="margin-top:0.5rem;font-size:0.65rem;padding:0.25rem 0.8rem;">Share Score on LinkedIn</a>
+        <div class="stat-value" style="color:#f59e0b;font-family:Syne,sans-serif;">🌾 {hay_balance}</div>
+        <div class="stat-label">Hay</div>
+        <div class="stat-sub">{hay_balance}/{HAY_TO_CHEESE} to next 🧀</div>
+    </div>
+    <div class="stat-box">
+        <div class="stat-value" style="color:#22c55e;font-family:Syne,sans-serif;">🧀 {cheese_total}</div>
+        <div class="stat-label">Fresh Cheese</div>
+        <a class="linkedin-share-btn" href="{linkedin_total_url}" target="_blank" rel="noopener noreferrer" style="margin-top:0.4rem;font-size:0.6rem;padding:0.2rem 0.7rem;">Share</a>
     </div>
 </div>
 ''', unsafe_allow_html=True)
@@ -2153,7 +2370,12 @@ else:
         bleat_label = "⚡ Summit Call" if is_summit else "🌿 Routine Grazing"
 
         is_high_leverage = tier == "High-Leverage"
-        card_extra_class = " high-leverage-glow" if is_high_leverage else ""
+        if is_summit:
+            card_extra_class = " signal-card-summit"
+        elif is_high_leverage:
+            card_extra_class = " high-leverage-glow"
+        else:
+            card_extra_class = " signal-card-standard"
 
         glow_eye_icon = ""
         if is_high_leverage and celeb_priority_achieved_b64:
@@ -2194,19 +2416,27 @@ else:
                 st.session_state["just_completed_task"] = (sig['task_name'], xp, False, xp_tier)
                 st.rerun()
             else:
-                reward, xp, leveled_up = complete_signal(sig['id'], current_user_id)
+                reward, xp, leveled_up, hay_earned, hay_remaining, cheese_converted = complete_signal(sig['id'], current_user_id)
                 if reward:
                     st.session_state["just_completed_task"] = (sig['task_name'], xp, leveled_up, reward)
+                    st.session_state["hay_earned_toast"] = hay_earned
+                    if cheese_converted:
+                        st.session_state["cheese_converted_toast"] = True
                     st.rerun()
 
 st.markdown('<div class="spacer-bottom"></div>', unsafe_allow_html=True)
 
 xp_pct = min((xp_into / xp_needed) * 100, 100) if xp_needed > 0 else 0
 
+pg_hay_balance = player.get("hay", 0)
+pg_cheese = player.get("fresh_cheese", 0)
 st.markdown(f'''
 <div class="level-bar-container">
-    <div class="level-badge">{safe(cur_pasture)}</div>
-    <div class="metabolism-label">Pasture Gauge</div>
+    <div class="level-badge" style="font-family:Syne,sans-serif;">{safe(cur_pasture)}</div>
+    <div style="display:flex;flex-direction:column;gap:2px;">
+        <div class="metabolism-label">Pasture Gauge</div>
+        <div style="font-size:0.5rem;color:#f59e0b;white-space:nowrap;">🌾 {pg_hay_balance}/{HAY_TO_CHEESE} Hay to next 🧀</div>
+    </div>
     <div class="xp-bar-outer">
         <div class="xp-bar-inner" style="width:{xp_pct:.1f}%;"></div>
     </div>

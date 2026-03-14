@@ -1,0 +1,110 @@
+Redesign the GOATflow visual identity with the following specific 
+changes. Do not alter any functionality — this is a visual layer 
+update only.
+
+1. BACKGROUND TEXTURE
+Replace the flat #000000 or near-black background with #0a0a0f. 
+Overlay a topographic contour line pattern at 3-4% opacity in 
+a very dark purple (#1a1a2e or similar). The lines should suggest 
+elevation terrain — concentric organic curves, not geometric grids. 
+This pattern should tile seamlessly across the full background. 
+Apply to all pages including login, dashboard, and side panels.
+
+2. TYPOGRAPHY
+Import the following Google Fonts:
+- "Syne" (weights 700 and 800) for all headings, the GOATflow 
+  wordmark if not image-based, section labels, and stat numbers
+- "DM Sans" (weights 400 and 500) for all body text, 
+  Track descriptions, button labels, and form inputs
+
+Replace all existing font references with this pairing throughout 
+the application.
+
+3. TRACK CARD VISUAL HIERARCHY
+Update Track cards with a left-border priority indicator:
+- Summit Call tracks: 4px left border in #ff4444 (urgent red), 
+  card background slightly warmer dark (#1a0f0f)
+- Standard tracks: 4px left border in #7c3aed (purple), 
+  card background #0f0f1a
+- Completed tracks: 4px left border in #22c55e (green), 
+  card background #0a1a0f, text at 60% opacity
+
+Remove the existing uniform card border treatment and replace 
+with this priority-coded left border system. Keep card corner 
+radius at 8px.
+
+4. HORNS PANEL REDESIGN
+Inside the GOAT Horns side panel, display each saved Horn as 
+an individual card rather than free text. Each Horn card should:
+- Have a small goat horn icon (Unicode: 🐐 or a custom SVG 
+  if available) on the left
+- Display the Horn text in "DM Sans" 500 weight
+- Have a subtle left border in amber/gold (#f59e0b) — 
+  visually distinct from Track cards to signal these are 
+  a different category of information entirely
+- Include a small delete (×) button on the right
+- Have a faint amber glow on hover: box-shadow 
+  0 0 8px rgba(245, 158, 11, 0.3)
+
+The Horn input field should be a single line text input 
+(not a textarea) with placeholder: 
+"Add a Horn — e.g. Family always comes first."
+followed by an "Add Horn" button. Each submission creates 
+a new Horn card. Maximum 10 Horns per user.
+
+5. CHURN ENGINE PROCESSING ANIMATION
+When the user clicks "Drop Into Churn Engine", replace the 
+existing loading state with a custom processing animation:
+
+- Full overlay on the input area (not full screen)
+- Dark background matching the card color
+- Animated element: a topographic contour map that starts as 
+  noise/static and gradually resolves into clean concentric 
+  elevation lines over 2-3 seconds
+- Text beneath the animation cycles through three states 
+  with a 800ms fade between each:
+  "Reading the terrain..."
+  "Filtering the noise..."  
+  "Surfacing your Tracks..."
+- After processing completes, the overlay fades out and 
+  the Track list populates with a staggered entrance — 
+  each card slides up and fades in 80ms after the previous one, 
+  top to bottom
+
+6. PASTURE GAUGE
+Replace the current progress bar with an elevation-style 
+gauge. Instead of a horizontal fill bar, use a vertical 
+or angled terrain silhouette where the filled portion 
+represents elevation gained. Style it so the filled 
+section uses a gradient from deep purple at the base 
+to bright green at the peak. Label the current position 
+with the tier name (e.g. "The Pen") and the target 
+fence threshold (e.g. "100/5,000 CCR").
+
+7. BUTTON SYSTEM
+Standardize all CTA buttons:
+- Primary action buttons (Drop Into Churn Engine, 
+  Lock In My Horns, Complete): 
+  Background #7c3aed, white text, Syne 700, 
+  border-radius 6px, subtle glow on hover: 
+  box-shadow 0 0 16px rgba(124, 58, 237, 0.5)
+- Secondary buttons (Browse Files, Add Horn): 
+  Transparent background, 1px border #7c3aed, 
+  purple text, same border-radius, no glow
+- Destructive/dismiss actions: 
+  #1a1a1a background, #ff4444 text
+
+8. LOGIN / LANDING PAGE
+The login page should be a full-screen experience:
+- The topographic background (from item 1) fills the screen
+- GOATflow logo centered, large
+- Tagline beneath in Syne 700, white:
+  "Grab life by the horns. Leave the bull behind."
+- Descriptor line in DM Sans 400, muted gray (#9ca3af):
+  "Metabolize your to-do list."
+- Login form below — email and password fields with 
+  dark input styling (#1a1a2e background, 1px border 
+  #7c3aed, white text)
+- Single sign-in button using primary button style above
+- No sidebars, no clutter, no feature explanations — 
+  just the brand, the tagline, and the door in.

@@ -1,0 +1,72 @@
+9. HAY AND FRESH CHEESE REWARD SYSTEM
+
+Implement a two-tier reward currency system that operates 
+as follows:
+
+HAY — earned by completing Tracks:
+- Standard Track completion: +10 Hay
+- Summit Call completion: +50 Hay  
+- Any Track completed within 24 hours of being generated: 
+  +10 Hay speed bonus (stacks with base reward)
+
+HAY TO FRESH CHEESE CONVERSION:
+- Every 500 Hay automatically converts to 1 Fresh Cheese
+- Conversion triggers automatically when threshold is reached
+- On conversion, display a brief celebration animation:
+  a small pile of hay transforming into a glowing cheese 
+  wedge, 2 seconds, centered overlay on the dashboard
+- Play a subtle success sound on conversion if audio 
+  is enabled
+- Display a conversion notification card in the 
+  Track feed: "500 Hay converted to 1 Fresh Cheese. 
+  Keep going."
+
+DASHBOARD STAT CARDS — update the four existing stat 
+cards to the following five cards in this order:
+
+1. ACTIVE TRACKS (white number, existing style)
+2. SUMMIT CALLS (red number, urgent styling)  
+3. COMPLETED (white number)
+4. HAY (amber/gold number — #f59e0b — with a small 
+   hay bale emoji or icon: 🌾)
+5. FRESH CHEESE (green number — #22c55e — with a 
+   small cheese emoji or icon: 🧀)
+
+Display both the current Hay balance and a progress 
+indicator showing proximity to next Fresh Cheese 
+conversion. Format: "340 / 500 HAY" so the user 
+always knows how close they are.
+
+FRESH CHEESE TOTAL — display the user's total 
+accumulated Fresh Cheese prominently in the 
+user profile side panel under "My Stats":
+- Label: "Fresh Cheese Banked"
+- Value in green (#22c55e)
+- Beneath the value, display in small muted text:
+  "Ports to WorkGOAT when available — workgoat.vip"
+  Make "workgoat.vip" a clickable link.
+
+PASTURE GAUGE — update the gauge label to reflect 
+both Hay progress and Cheese Churn Rate (CCR):
+- Primary label: current tier and fence threshold 
+  (e.g. "The Pen → 100/5,000 CCR")
+- Secondary label beneath: 
+  "340/500 Hay to next Fresh Cheese"
+
+HAY DECAY — do not implement decay on Hay in V1. 
+Hay is a simple accumulation currency at this stage. 
+Decay mechanics can be introduced in a later version 
+once the WorkGOAT port is live and the full Cheese 
+decay system applies. Flag this in the codebase with 
+a comment: // HAY DECAY — reserved for WorkGOAT 
+integration phase
+
+WORKGOAT PORT BUTTON — in the user profile panel, 
+beneath the Fresh Cheese Banked stat, add a button 
+labeled "Port to WorkGOAT" styled as a secondary 
+button (transparent, purple border). For now this 
+button should display a tooltip on hover or click 
+that reads: "WorkGOAT is coming. Your Fresh Cheese 
+will be waiting." Do not make it functional yet — 
+just plant the flag visually so users understand 
+the connection from day one.
