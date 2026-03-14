@@ -106,6 +106,34 @@ GOAT_PUNS = [
     "They said it couldn't be done. You said 'baaaa.'",
 ]
 
+HAY_PUNS = [
+    "Hay Staaackin'!",
+    "Bale yeah, you did it!",
+    "Making it rain hay over here.",
+    "That's how you stack a bale!",
+    "Another track, another stack!",
+    "From the field to the barn — grind secured.",
+    "Hay don't stop — you're on a roll!",
+    "You just baled out of that task like a pro.",
+    "The pasture is your playground. Stack on.",
+    "No days off in the hay game.",
+    "Straw by straw, the barn fills up.",
+    "You're the reason hay prices are up.",
+]
+
+FRESH_CHEESE_PUNS = [
+    "You've been aged to perfection.",
+    "That's some gouda progress right there.",
+    "Brie-lliant — you're really maturing.",
+    "Sharp as cheddar, driven as a GOAT.",
+    "The whey you work is inspiring.",
+    "Aged. Refined. Unstoppable.",
+    "You curdled that chaos into results.",
+    "Fromage to your ambition — well done.",
+    "Rind and repeat — the GOAT never stops.",
+    "One more wheel turning in your direction.",
+]
+
 
 def load_image_b64(filename: str, cache_key: str) -> str:
     if cache_key not in st.session_state:
@@ -1476,7 +1504,7 @@ def complete_signal(signal_id: int, user_id: str):
             cheese_gained = new_hay // HAY_TO_CHEESE
             new_hay_remainder = new_hay % HAY_TO_CHEESE
             new_cheese = old_cheese + cheese_gained
-            cheese_converted = cheese_gained > 0
+            cheese_converted = cheese_gained
 
             cur.execute("""
                 UPDATE player
@@ -1802,6 +1830,7 @@ celeb_power_hour_b64 = get_celeb_b64("power_hour")
 celeb_daily_flow_b64 = get_celeb_b64("daily_flow")
 celeb_task_completed_b64 = get_celeb_b64("task_completed")
 cheese_earned_b64 = load_image_b64("cheese_earned.png", "cheese_earned_b64")
+hay_bale_b64 = load_image_b64("attached_assets/ChatGPT_Image_Mar_13,_2026,_09_34_11_PM_1773462872978.png", "hay_bale_b64")
 horns_icon_b64 = load_image_b64("attached_assets/ChatGPT_Image_Mar_13,_2026,_09_16_13_PM_1773461790675.png", "horns_icon_b64")
 
 LEVEL_IMAGE_FILES = {
@@ -2130,7 +2159,7 @@ with st.sidebar:
     if st.button("🚪 Logout", use_container_width=True, key="logout_btn"):
         for key in ["auth_user_id", "auth_user_name", "auth_display_name",
                      "incognito_signals", "incognito_mode", "just_completed_task",
-                     "just_dropped", "just_purged", "hay_earned_toast", "cheese_converted_toast"]:
+                     "just_dropped", "just_purged", "fresh_cheese_pending", "just_earned_fresh_cheese"]:
             st.session_state.pop(key, None)
         st.rerun()
 
@@ -2626,63 +2655,90 @@ if st.session_state.get("just_purged"):
 
 
 
-@st.dialog("🧀 Cheese Churn Points Earned!")
-def show_cheese_popup(task_name, xp_gained, leveled_up, xp_tier):
+@st.dialog("🌾 Hay Staaackin'!")
+def show_hay_popup(task_name, xp_gained, leveled_up, xp_tier, hay_earned):
     st.markdown(CONFETTI_JS, unsafe_allow_html=True)
 
+    hay_pun = random.choice(HAY_PUNS)
     goat_pun = random.choice(GOAT_PUNS)
     player_snap = get_player(current_user_id)
 
-    cheese_src = f"data:image/png;base64,{cheese_earned_b64}" if cheese_earned_b64 else ""
-    gusto_b64 = celeb_task_completed_b64 if celeb_task_completed_b64 else get_tier_celeb_b64(xp_tier)
-    gusto_src = f"data:image/png;base64,{gusto_b64}" if gusto_b64 else ""
-    cheese_img = f'<img src="{cheese_src}" alt="Cheese Earned" style="height:120px;border-radius:12px;display:block;margin:0 auto 0.3rem auto;">' if cheese_src else ''
-    popup_img = f'<img src="{gusto_src}" alt="Task Completed" style="height:120px;border-radius:12px;display:block;margin:0 auto 0.3rem auto;">' if gusto_src else ''
+    hay_src = f"data:image/png;base64,{hay_bale_b64}" if hay_bale_b64 else ""
+    hay_img = f'<img src="{hay_src}" alt="Hay Earned" style="height:130px;display:block;margin:0 auto 0.4rem auto;">' if hay_src else '🌾'
 
-    st.markdown(f'''
-    <div style="text-align:center;">
-        {cheese_img}
-        {popup_img}
-        <div style="color:{NEON_GREEN};font-size:1.6rem;font-weight:900;margin-bottom:0.3rem;">+{xp_gained:,} Cheese Churn Points!</div>
-        <div style="color:{SILVER};font-size:0.85rem;font-weight:500;margin-bottom:0.3rem;">{safe(task_name)}</div>
-        <div style="color:{NEON_VIOLET};font-size:0.95rem;font-weight:700;font-style:italic;margin-bottom:0.5rem;">{safe(goat_pun)}</div>
-    </div>
-    ''', unsafe_allow_html=True)
+    st.markdown(
+        f'<div style="text-align:center;">'
+        f'{hay_img}'
+        f'<div style="color:#f59e0b;font-size:1.35rem;font-weight:900;margin-bottom:0.15rem;font-family:Syne,sans-serif;">{safe(hay_pun)}</div>'
+        f'<div style="color:{NEON_GREEN};font-size:1.5rem;font-weight:900;margin-bottom:0.1rem;">+{hay_earned} Hay 🌾</div>'
+        f'<div style="color:{SILVER};font-size:0.72rem;margin-bottom:0.25rem;">+{xp_gained:,} CCR also earned</div>'
+        f'<div style="color:{SILVER};font-size:0.85rem;font-weight:500;margin-bottom:0.3rem;">{safe(task_name)}</div>'
+        f'<div style="color:{NEON_VIOLET};font-size:0.88rem;font-weight:700;font-style:italic;">{safe(goat_pun)}</div>'
+        f'</div>',
+        unsafe_allow_html=True
+    )
 
     if leveled_up:
         new_pasture = pasture_name(player_snap["level"])
         old_pasture = pasture_name(player_snap["level"] - 1)
         celeb_levelup_src = f"data:image/png;base64,{celeb_levelup_b64}" if celeb_levelup_b64 else ""
         fence_img = f'<img src="{celeb_levelup_src}" style="height:100px;border-radius:12px;display:block;margin:0 auto 0.5rem auto;">' if celeb_levelup_src else ''
-        st.markdown(f'''
-        <div style="text-align:center;margin-top:0.5rem;padding:0.8rem;background:rgba(139,92,246,0.15);border:1px solid {NEON_VIOLET};border-radius:10px;">
-            {fence_img}
-            <div style="font-size:1.2rem;font-weight:900;color:{NEON_VIOLET};">🚧 FENCE BROKEN! 🚧</div>
-            <div style="color:{SILVER};font-size:0.8rem;margin-top:0.2rem;">You escaped {safe(old_pasture)}!</div>
-            <div style="color:{NEON_GREEN};font-size:0.9rem;font-weight:700;margin-top:0.2rem;">Welcome to {safe(new_pasture)} (Level {player_snap["level"]})</div>
-        </div>
-        ''', unsafe_allow_html=True)
+        st.markdown(
+            f'<div style="text-align:center;margin-top:0.5rem;padding:0.8rem;background:rgba(139,92,246,0.15);border:1px solid {NEON_VIOLET};border-radius:10px;">'
+            f'{fence_img}'
+            f'<div style="font-size:1.2rem;font-weight:900;color:{NEON_VIOLET};">🚧 FENCE BROKEN! 🚧</div>'
+            f'<div style="color:{SILVER};font-size:0.8rem;margin-top:0.2rem;">You escaped {safe(old_pasture)}!</div>'
+            f'<div style="color:{NEON_GREEN};font-size:0.9rem;font-weight:700;margin-top:0.2rem;">Welcome to {safe(new_pasture)} (Level {player_snap["level"]})</div>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
 
-    if st.button("🧀 Confirm Cheese Points", key="confirm_cheese_btn", use_container_width=True):
+    if st.button("🌾 Stack the Hay", key="confirm_hay_btn", use_container_width=True):
+        cheese_pending = st.session_state.pop("fresh_cheese_pending", 0)
         st.session_state["just_completed_task"] = None
+        if cheese_pending:
+            st.session_state["just_earned_fresh_cheese"] = cheese_pending
         st.rerun()
 
-if st.session_state.get("cheese_converted_toast"):
-    st.session_state.pop("cheese_converted_toast", None)
-    st.markdown('<div class="cheese-toast"><div class="cheese-toast-text">🧀 500 Hay converted to 1 Fresh Cheese. Keep going.</div></div>', unsafe_allow_html=True)
 
-if st.session_state.get("hay_earned_toast"):
-    hay_amt = st.session_state.pop("hay_earned_toast")
-    st.markdown(f'<div class="hay-toast"><div class="hay-toast-text">🌾 +{hay_amt} Hay earned</div></div>', unsafe_allow_html=True)
+@st.dialog("🧀 Fresh Cheese Generated!")
+def show_fresh_cheese_popup(cheese_count):
+    cheese_pun = random.choice(FRESH_CHEESE_PUNS)
+    player_snap = get_player(current_user_id)
+
+    cheese_src = f"data:image/png;base64,{cheese_earned_b64}" if cheese_earned_b64 else ""
+    cheese_img = f'<img src="{cheese_src}" alt="Fresh Cheese" style="height:130px;border-radius:12px;display:block;margin:0 auto 0.4rem auto;">' if cheese_src else '🧀'
+
+    st.markdown(
+        f'<div style="text-align:center;">'
+        f'{cheese_img}'
+        f'<div style="color:#22c55e;font-size:1.35rem;font-weight:900;margin-bottom:0.15rem;font-family:Syne,sans-serif;">🧀 Fresh Cheese Generated!</div>'
+        f'<div style="color:{WHITE};font-size:1.2rem;font-weight:900;margin-bottom:0.2rem;">+{cheese_count} Fresh Cheese banked</div>'
+        f'<div style="color:{SILVER};font-size:0.75rem;margin-bottom:0.3rem;">Total banked: {player_snap.get("fresh_cheese", 0)} 🧀</div>'
+        f'<div style="color:{NEON_VIOLET};font-size:0.92rem;font-weight:700;font-style:italic;">{safe(cheese_pun)}</div>'
+        f'</div>',
+        unsafe_allow_html=True
+    )
+
+    if st.button("🧀 Got It, GOAT!", key="confirm_fresh_cheese_btn", use_container_width=True):
+        st.session_state.pop("just_earned_fresh_cheese", None)
+        st.rerun()
+
+if st.session_state.get("just_earned_fresh_cheese"):
+    show_fresh_cheese_popup(st.session_state["just_earned_fresh_cheese"])
 
 if st.session_state.get("just_completed_task"):
     task_data = st.session_state["just_completed_task"]
-    if len(task_data) == 4:
+    if len(task_data) == 5:
+        task_name, xp_gained, leveled_up, xp_tier, hay_earned = task_data
+    elif len(task_data) == 4:
         task_name, xp_gained, leveled_up, xp_tier = task_data
+        hay_earned = HAY_BASE.get(xp_tier, 10)
     else:
         task_name, xp_gained, leveled_up = task_data
         xp_tier = "Standard"
-    show_cheese_popup(task_name, xp_gained, leveled_up, xp_tier)
+        hay_earned = 10
+    show_hay_popup(task_name, xp_gained, leveled_up, xp_tier, hay_earned)
 
 signals = get_active_signals(current_user_id)
 if st.session_state.get("incognito_mode", False):
@@ -2915,21 +2971,21 @@ else:
         st.markdown(card_html, unsafe_allow_html=True)
 
         is_incognito_sig = isinstance(sig.get('id'), str) and str(sig['id']).startswith("incog_")
-        if st.button(f"✅ Complete", key=f"complete_{sig['id']}", use_container_width=True):
+        if st.button(f"✅ Complete?", key=f"complete_{sig['id']}", use_container_width=True):
             if is_incognito_sig:
                 xp_tier = sig.get("xp_reward", "Standard")
                 xp = XP_TIERS.get(xp_tier, 500)
+                hay_amt = HAY_BASE.get(xp_tier, 10)
                 incog_sigs = st.session_state.get("incognito_signals", [])
                 st.session_state["incognito_signals"] = [s for s in incog_sigs if s.get("id") != sig["id"]]
-                st.session_state["just_completed_task"] = (sig['task_name'], xp, False, xp_tier)
+                st.session_state["just_completed_task"] = (sig['task_name'], xp, False, xp_tier, hay_amt)
                 st.rerun()
             else:
-                reward, xp, leveled_up, hay_earned, hay_remaining, cheese_converted = complete_signal(sig['id'], current_user_id)
+                reward, xp, leveled_up, hay_earned, hay_remaining, cheese_count = complete_signal(sig['id'], current_user_id)
                 if reward:
-                    st.session_state["just_completed_task"] = (sig['task_name'], xp, leveled_up, reward)
-                    st.session_state["hay_earned_toast"] = hay_earned
-                    if cheese_converted:
-                        st.session_state["cheese_converted_toast"] = True
+                    st.session_state["just_completed_task"] = (sig['task_name'], xp, leveled_up, reward, hay_earned)
+                    if cheese_count:
+                        st.session_state["fresh_cheese_pending"] = cheese_count
                     st.rerun()
 
 st.markdown('<div class="spacer-bottom"></div>', unsafe_allow_html=True)
