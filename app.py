@@ -2851,7 +2851,7 @@ st.markdown(f'''
         cursor: not-allowed;
         opacity: 0.6;
         user-select: none;
-    ">🐐 Sync to Herd — Coming Soon</div>
+    ">🐐 Sync to WorkGOAT — Coming Soon</div>
 </div>
 ''', unsafe_allow_html=True)
 
