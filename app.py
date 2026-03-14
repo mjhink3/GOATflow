@@ -2180,16 +2180,19 @@ with st.sidebar:
     else:
         st.markdown(f'<div style="font-size:0.75rem;color:{SILVER};text-align:center;padding:0.5rem;font-style:italic;">No Horns set yet.</div>', unsafe_allow_html=True)
 
+    if "horn_input_counter" not in st.session_state:
+        st.session_state["horn_input_counter"] = 0
     new_horn_input = st.text_input(
         "Add a Horn",
         placeholder="e.g. Family always comes before work deadlines.",
-        key="new_horn_input",
+        key=f"new_horn_input_{st.session_state['horn_input_counter']}",
         label_visibility="collapsed",
     )
     if st.button("🐐 Lock In My Horns", use_container_width=True, key="add_horn_btn"):
         if new_horn_input.strip():
             new_horns = current_horns + [new_horn_input.strip()]
             save_horns(current_user_id, "\n".join(new_horns))
+            st.session_state["horn_input_counter"] += 1
             st.success("Horn locked in!")
             st.rerun()
         else:
@@ -2392,7 +2395,7 @@ _tour_iife = r"""
       scrollTo: true,
       buttons: [
         { text: '\u2190 Back', action: t.back, classes: 'shepherd-button-secondary' },
-        { text: "Let's go \u2192", action: t.complete }
+        { text: "Let\u2019s Goat \uD83D\uDC10", action: t.complete }
       ]
     });
     function _markDone() {
