@@ -1999,6 +1999,20 @@ def extract_pdf_text(file_bytes: bytes) -> str:
     return "\n".join(parts)
 
 
+def extract_docx_text(file_bytes: bytes) -> str:
+    import zipfile, re as _re
+    try:
+        with zipfile.ZipFile(io.BytesIO(file_bytes)) as z:
+            if 'word/document.xml' in z.namelist():
+                xml_content = z.read('word/document.xml').decode('utf-8', errors='replace')
+                texts = _re.findall(r'<w:t[^>]*>([^<]*)</w:t>', xml_content)
+                result = ' '.join(t for t in texts if t.strip())
+                return result if result.strip() else "[DOCX: no readable text content]"
+            return "[DOCX: unrecognized structure]"
+    except Exception as e:
+        return f"[DOCX could not be parsed: {e}]"
+
+
 def build_system_prompt(horns_text: str) -> str:
     prompt = SYSTEM_PROMPT_BASE
     if horns_text.strip():
@@ -2892,19 +2906,19 @@ with st.sidebar:
     </div>''', unsafe_allow_html=True)
 
     st.markdown("---")
+    saved_horns_text = get_horns(current_user_id)
+    current_horns = parse_horns(saved_horns_text)
+    _horn_count = len(current_horns)
     _horns_sidebar_img = f'<img src="data:image/png;base64,{horns_icon_b64}" alt="Horns" style="width:80px;height:80px;object-fit:contain;display:block;margin:0 auto 0.3rem auto;">' if horns_icon_b64 else ''
     st.markdown(
         f'<div style="text-align:center;">'
         f'{_horns_sidebar_img}'
-        f'<div style="font-size:1.1rem;font-weight:800;color:{WHITE};margin-bottom:0.1rem;">Horns</div>'
+        f'<div style="font-size:1.1rem;font-weight:800;color:{WHITE};margin-bottom:0.1rem;">GOAT Horns <span style="font-size:0.75rem;font-weight:400;color:#6b7280;font-family:\'DM Sans\',sans-serif;">({_horn_count}/10)</span></div>'
         f'<div style="font-size:0.78rem;font-weight:600;color:{NEON_VIOLET};margin-bottom:0.35rem;font-style:italic;">Grab life by the horns. Leave the bull behind.</div>'
         f'<div style="font-size:0.63rem;color:{SILVER};margin-bottom:0.8rem;line-height:1.5;">Your Horns are the rules GOATflow utilizes to sync your priorities. Monitor, and adjust as you use the app for the GOAT experience.</div>'
         f'</div>',
         unsafe_allow_html=True
     )
-
-    saved_horns_text = get_horns(current_user_id)
-    current_horns = parse_horns(saved_horns_text)
 
     if current_horns:
         for i, horn in enumerate(current_horns):
@@ -2921,19 +2935,31 @@ with st.sidebar:
 
     if "horn_input_counter" not in st.session_state:
         st.session_state["horn_input_counter"] = 0
+    _at_horn_max = _horn_count >= 10
+    if _at_horn_max:
+        st.markdown(
+            '<div style="color:#f59e0b;font-family:\'DM Sans\',sans-serif;font-size:12px;text-align:center;padding:6px 0;opacity:0.9;">'
+            'Maximum 10 Horns reached. Remove one to add another.'
+            '</div>',
+            unsafe_allow_html=True
+        )
     new_horn_input = st.text_input(
         "Add a Horn",
         placeholder="e.g. Family always comes before work deadlines.",
         key=f"new_horn_input_{st.session_state['horn_input_counter']}",
         label_visibility="collapsed",
+        disabled=_at_horn_max,
     )
-    if st.button("🐐 Lock In My Horns", use_container_width=True, key="add_horn_btn"):
+    if st.button("🐐 Lock In My Horns", use_container_width=True, key="add_horn_btn", disabled=_at_horn_max):
         if new_horn_input.strip():
-            new_horns = current_horns + [new_horn_input.strip()]
-            save_horns(current_user_id, "\n".join(new_horns))
-            st.session_state["horn_input_counter"] += 1
-            st.success("Horn locked in!")
-            st.rerun()
+            if len(current_horns) >= 10:
+                st.warning("Maximum 10 Horns reached. Remove one to add another.")
+            else:
+                new_horns = current_horns + [new_horn_input.strip()]
+                save_horns(current_user_id, "\n".join(new_horns))
+                st.session_state["horn_input_counter"] += 1
+                st.success("Horn locked in!")
+                st.rerun()
         else:
             st.warning("Type a Horn first.")
     if horns_icon_b64:
@@ -3726,6 +3752,17 @@ _fab_iife = r"""(function() {
     fab.style.animation = 'none'; fab.innerHTML = CHECK_SVG;
     preview.style.display = 'none';
     setTimeout(setIdle, 800);
+    // Bray captured pill
+    var oldPill = document.getElementById('gf-bray-pill');
+    if (oldPill) oldPill.remove();
+    var pill = document.createElement('div');
+    pill.id = 'gf-bray-pill';
+    pill.textContent = 'Bray captured. 🐐';
+    pill.style.cssText = 'position:fixed;right:16px;bottom:158px;font-family:"DM Sans",sans-serif;font-weight:500;font-size:12px;color:#4ade80;background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.3);border-radius:20px;padding:4px 12px;opacity:0;transition:opacity 0.2s ease;z-index:999998;pointer-events:none;white-space:nowrap;';
+    document.body.appendChild(pill);
+    setTimeout(function() { pill.style.opacity = '1'; }, 20);
+    setTimeout(function() { pill.style.transition = 'opacity 0.3s ease'; pill.style.opacity = '0'; }, 2220);
+    setTimeout(function() { if (pill.parentNode) pill.parentNode.removeChild(pill); }, 2540);
   }
 
   function showFallback() {
@@ -4247,14 +4284,151 @@ with col_text:
 with col_files:
     uploaded_files = st.file_uploader(
         "Drop files here",
-        type=["pdf", "png", "jpg", "jpeg", "webp", "gif", "txt", "csv"],
+        type=["pdf", "png", "jpg", "jpeg", "webp", "gif", "txt", "csv", "docx", "doc"],
         accept_multiple_files=True,
-        help="Photos, PDFs, screenshots, text files",
+        help="Photos, PDFs, DOCX, screenshots, text files",
         label_visibility="collapsed",
     )
 
 drop_btn = st.button("⚡ Drop Into Churn Engine", use_container_width=True, key="drop_btn",
                      help="GOATflow will metabolize your input and rank everything against your Horns.")
+
+# ── FIX 1: Time Available Modal — intercepts drop button click ─────────────
+_stc.html(r"""<script>
+(function(){
+var DONE_KEY='gf_time_modal_done';
+var TIME_KEY='goatflow_time_available';
+var TIME_OPTS=[
+  {label:'15 min', minutes:15},
+  {label:'30 min', minutes:30},
+  {label:'1 hour', minutes:60},
+  {label:'2 hours', minutes:120},
+  {label:'Open ended', minutes:null}
+];
+var selectedTime=null;
+var listenerAttached=false;
+
+function injectTimeText(choice){
+  if(!choice||choice==='Open ended') return;
+  var pd=window.parent.document;
+  var ta=pd.querySelector('[data-testid="stTextArea"] textarea');
+  if(!ta) return;
+  var ctx='\n\n[User has '+choice+' available. Prioritize to fit within that window. Summit Calls first regardless of time.]';
+  try{
+    var setter=Object.getOwnPropertyDescriptor(window.parent.HTMLTextAreaElement.prototype,'value').set;
+    setter.call(ta, ta.value+ctx);
+    ta.dispatchEvent(new Event('input',{bubbles:true}));
+  }catch(e){}
+}
+
+function showModal(dropBtn){
+  var pd=window.parent.document;
+  if(pd.getElementById('gf-time-modal')) return;
+  selectedTime=null;
+
+  var overlay=pd.createElement('div');
+  overlay.id='gf-time-modal';
+  overlay.style.cssText='position:fixed;inset:0;background:rgba(8,8,15,0.92);backdrop-filter:blur(8px);z-index:45;display:flex;align-items:center;justify-content:center;';
+
+  var card=pd.createElement('div');
+  card.style.cssText='background:#0e0e22;border:1px solid rgba(124,58,237,0.4);border-radius:12px;padding:24px 20px;max-width:320px;width:90%;text-align:center;';
+
+  var goat=pd.createElement('div');
+  goat.textContent='\uD83D\uDC10';
+  goat.style.cssText='font-size:24px;line-height:1;';
+
+  var heading=pd.createElement('div');
+  heading.textContent='How much time do you have right now?';
+  heading.style.cssText='font-family:Syne,Helvetica,sans-serif;font-weight:700;font-size:16px;color:#ffffff;margin-top:12px;';
+
+  var sub=pd.createElement('div');
+  sub.textContent='GOATflow will prioritize accordingly.';
+  sub.style.cssText='font-family:"DM Sans",sans-serif;font-weight:400;font-size:12px;color:#6b7280;margin-top:6px;';
+
+  var pillRow=pd.createElement('div');
+  pillRow.style.cssText='display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:16px;';
+
+  var letsgoBtnWrapper=pd.createElement('div');
+  letsgoBtnWrapper.style.cssText='margin-top:12px;display:none;';
+
+  var letsgoBtn=pd.createElement('button');
+  letsgoBtn.textContent='Let\'s Go \u2192';
+  letsgoBtn.style.cssText='background:#7c3aed;color:#ffffff;border:none;border-radius:8px;padding:12px;font-size:14px;font-weight:700;width:100%;cursor:pointer;font-family:"DM Sans",sans-serif;';
+  letsgoBtnWrapper.appendChild(letsgoBtn);
+
+  TIME_OPTS.forEach(function(opt){
+    var pill=pd.createElement('button');
+    pill.textContent=opt.label;
+    pill.dataset.label=opt.label;
+    pill.style.cssText='border-radius:20px;padding:8px 16px;font-size:13px;font-weight:500;background:transparent;border:1px solid #374151;color:#6b7280;cursor:pointer;font-family:"DM Sans",sans-serif;';
+    pill.addEventListener('click',function(){
+      selectedTime=opt;
+      pd.querySelectorAll('#gf-time-modal [data-label]').forEach(function(p){
+        p.style.background='transparent';p.style.borderColor='#374151';p.style.color='#6b7280';
+      });
+      pill.style.background='#7c3aed';pill.style.borderColor='#7c3aed';pill.style.color='#ffffff';
+      letsgoBtnWrapper.style.display='block';
+    });
+    pillRow.appendChild(pill);
+  });
+
+  letsgoBtn.addEventListener('click',function(){
+    if(!selectedTime) return;
+    sessionStorage.setItem(TIME_KEY, selectedTime.label);
+    sessionStorage.setItem(DONE_KEY,'1');
+    overlay.remove();
+    injectTimeText(selectedTime.label);
+    setTimeout(function(){ dropBtn.click(); },200);
+  });
+
+  var skipLink=pd.createElement('div');
+  skipLink.style.cssText='margin-top:10px;font-family:"DM Sans",sans-serif;font-size:12px;color:#4b5563;cursor:pointer;';
+  skipLink.innerHTML='<a href="#" style="color:#4b5563;text-decoration:none;">Skip</a>';
+  skipLink.addEventListener('click',function(e){
+    e.preventDefault();
+    sessionStorage.setItem(DONE_KEY,'1');
+    overlay.remove();
+    setTimeout(function(){ dropBtn.click(); },50);
+  });
+
+  card.appendChild(goat);
+  card.appendChild(heading);
+  card.appendChild(sub);
+  card.appendChild(pillRow);
+  card.appendChild(letsgoBtnWrapper);
+  card.appendChild(skipLink);
+  overlay.appendChild(card);
+  pd.body.appendChild(overlay);
+}
+
+function attachListener(){
+  var pd=window.parent.document;
+  var btn=null;
+  pd.querySelectorAll('button').forEach(function(b){
+    if(b.textContent&&b.textContent.indexOf('Drop Into Churn Engine')>-1) btn=b;
+  });
+  if(!btn) return false;
+  if(btn._gfTimeIntercepted) return true;
+  btn._gfTimeIntercepted=true;
+  btn.addEventListener('click',function(e){
+    if(sessionStorage.getItem(DONE_KEY)==='1'){
+      sessionStorage.removeItem(DONE_KEY);
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    showModal(btn);
+  },true);
+  return true;
+}
+
+function tryAttach(n){
+  if(attachListener()) return;
+  if(n>0) setTimeout(function(){tryAttach(n-1);},300);
+}
+setTimeout(function(){tryAttach(20);},300);
+})();
+</script>""", height=0)
 
 # ── Scroll indicator (mobile only — JS handled in FAB IIFE below) ────────────
 st.markdown("""
@@ -4312,6 +4486,9 @@ setInterval(function(){
                         if fname.lower().endswith(".pdf") or "pdf" in ftype:
                             text_content = extract_pdf_text(file_bytes)
                             files_data.append({"type": "text", "name": fname, "content": text_content if text_content.strip() else "[PDF unreadable]"})
+                        elif any(fname.lower().endswith(ext) for ext in [".docx", ".doc"]) or "wordprocessingml" in ftype or "msword" in ftype:
+                            text_content = extract_docx_text(file_bytes)
+                            files_data.append({"type": "text", "name": fname, "content": text_content if text_content.strip() else "[DOCX unreadable]"})
                         elif any(fname.lower().endswith(ext) for ext in [".png", ".jpg", ".jpeg", ".webp", ".gif"]) or "image" in ftype:
                             b64 = base64.b64encode(file_bytes).decode("utf-8")
                             mime = ftype if ftype else "image/png"
@@ -4535,6 +4712,54 @@ skipBtn.onclick=function(){{
 }};
 saveBtn.onclick=function(){{saveToTrail(inp.value.trim());}};
 inp.onkeydown=function(e){{if(e.key==='Enter'){{saveToTrail(inp.value.trim());}}if(e.key==='Escape'){{dismiss();}}}};
+}})();
+</script>""", height=0)
+
+# ── FIX 4: Priority Accuracy Feedback overlay ─────────────────────────────
+if st.session_state.get("priority_feedback_pending"):
+    _pf = st.session_state.pop("priority_feedback_pending")
+    _pf_id_js = str(_pf.get("trackId", "")).replace('"', '\\"')
+    _pf_title_js = str(_pf.get("trackTitle", "")).replace("\\", "\\\\").replace('"', '\\"').replace("'", "\\'")
+    _stc.html(f"""<script>
+(function(){{
+var trackId="{_pf_id_js}";
+var trackTitle="{_pf_title_js}";
+var FB_KEY='goatflow_priority_feedback';
+var doc=window.parent.document;
+if(doc.getElementById('gf-priority-feedback'))return;
+var style=doc.createElement('style');
+style.textContent='@keyframes gfFbSlide{{from{{opacity:0;transform:translateX(-50%) translateY(12px);}}to{{opacity:1;transform:translateX(-50%) translateY(0);}}}}';
+doc.head.appendChild(style);
+var overlay=doc.createElement('div');
+overlay.id='gf-priority-feedback';
+overlay.style.cssText='position:fixed;bottom:160px;left:50%;transform:translateX(-50%);width:90%;max-width:380px;background:rgba(8,8,15,0.97);border:1px solid rgba(124,58,237,0.2);border-radius:8px;padding:8px 12px;z-index:9998;display:flex;align-items:center;gap:10px;animation:gfFbSlide 0.2s ease;';
+var goatSpan=doc.createElement('span');goatSpan.textContent='\uD83D\uDC10';goatSpan.style.cssText='font-size:14px;flex-shrink:0;';
+var txt=doc.createElement('span');txt.textContent='Was this ranked correctly?';txt.style.cssText='font-family:"DM Sans",sans-serif;font-size:11px;color:#9ca3af;flex:1;';
+var btnRow=doc.createElement('div');btnRow.style.cssText='display:flex;gap:6px;flex-shrink:0;';
+var yesBtn=doc.createElement('button');yesBtn.innerHTML='\uD83D\uDC4D Yes';yesBtn.style.cssText='background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.3);color:#4ade80;border-radius:20px;padding:4px 10px;font-family:"DM Sans",sans-serif;font-size:11px;cursor:pointer;';
+var offBtn=doc.createElement('button');offBtn.innerHTML='\uD83D\uDC4E Off';offBtn.style.cssText='background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444;border-radius:20px;padding:4px 10px;font-family:"DM Sans",sans-serif;font-size:11px;cursor:pointer;';
+btnRow.appendChild(yesBtn);btnRow.appendChild(offBtn);
+overlay.appendChild(goatSpan);overlay.appendChild(txt);overlay.appendChild(btnRow);
+doc.body.appendChild(overlay);
+var timer=setTimeout(function(){{dismiss();}},8000);
+function dismiss(){{clearTimeout(timer);if(overlay.parentNode)overlay.parentNode.removeChild(overlay);}}
+function saveFeedback(ranked){{
+  var horns=[];try{{horns=JSON.parse(localStorage.getItem('goatflow_horns')||'[]');}}catch(e){{}}
+  var arr=[];try{{arr=JSON.parse(localStorage.getItem(FB_KEY)||'[]');}}catch(e){{}}
+  arr.push({{trackId:trackId,trackTitle:trackTitle,ranked:ranked,timestamp:Date.now(),activeHorns:horns}});
+  if(arr.length>200)arr=arr.slice(-200);
+  localStorage.setItem(FB_KEY,JSON.stringify(arr));
+  dismiss();
+}}
+yesBtn.addEventListener('click',function(){{saveFeedback('correct');}});
+offBtn.addEventListener('click',function(){{
+  yesBtn.remove();offBtn.remove();
+  var hiBtn=doc.createElement('button');hiBtn.textContent='Too high \u2191';hiBtn.style.cssText='background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444;border-radius:20px;padding:4px 10px;font-family:"DM Sans",sans-serif;font-size:11px;cursor:pointer;';
+  var loBtn=doc.createElement('button');loBtn.textContent='Too low \u2193';loBtn.style.cssText='background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444;border-radius:20px;padding:4px 10px;font-family:"DM Sans",sans-serif;font-size:11px;cursor:pointer;';
+  btnRow.appendChild(hiBtn);btnRow.appendChild(loBtn);
+  hiBtn.addEventListener('click',function(){{saveFeedback('too_high');}});
+  loBtn.addEventListener('click',function(){{saveFeedback('too_low');}});
+}});
 }})();
 </script>""", height=0)
 
@@ -5000,7 +5225,132 @@ else:
                         "category": sig.get("category", "other"),
                         "diff_mult": diff_mult,
                     }
+                    st.session_state["priority_feedback_pending"] = {
+                        "trackId": str(sig.get("id", "")),
+                        "trackTitle": sig["task_name"],
+                    }
                     st.rerun()
+
+# ── FIX 2, 3, 6: Track time estimate, Load Index, Staggered entrance ──────
+_stc.html("""<script>
+(function(){
+var pd=window.parent.document;
+var TIME_KEY='goatflow_time_available';
+var EST_PFX='gf_te_';
+var EST_OPTS=['5 min','15 min','30 min','1 hr','2+ hrs'];
+var EST_MINS={'5 min':5,'15 min':15,'30 min':30,'1 hr':60,'2+ hrs':120};
+
+// FIX 6 — staggered entrance CSS
+if(!pd.getElementById('gf-track-anim-css')){
+  var sty=pd.createElement('style');
+  sty.id='gf-track-anim-css';
+  sty.textContent='@keyframes trackSlideUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}.gf-ta{animation:trackSlideUp 300ms ease-out both;}';
+  pd.head.appendChild(sty);
+}
+
+function getEst(id){return localStorage.getItem(EST_PFX+id);}
+function setEst(id,v){localStorage.setItem(EST_PFX+id,v);}
+
+function showPicker(container,sigId){
+  var pills=pd.createElement('div');
+  pills.style.cssText='display:flex;flex-wrap:wrap;gap:6px;margin-top:4px;';
+  EST_OPTS.forEach(function(opt){
+    var p=pd.createElement('button');
+    p.textContent=opt;
+    p.style.cssText='border-radius:20px;padding:4px 10px;font-size:11px;background:transparent;border:1px solid #374151;color:#6b7280;cursor:pointer;font-family:"DM Sans",sans-serif;';
+    p.addEventListener('click',function(){
+      setEst(sigId,opt);
+      pills.remove();
+      var badge=pd.createElement('span');
+      badge.textContent='\u23F1 '+opt;
+      badge.style.cssText='font-size:10px;color:#6b7280;font-family:"DM Sans",sans-serif;cursor:pointer;';
+      badge.addEventListener('click',function(){badge.remove();showPicker(container,sigId);});
+      container.appendChild(badge);
+      updateLoadIndex();
+    });
+    pills.appendChild(p);
+  });
+  container.appendChild(pills);
+}
+
+function attachTimePicker(card,sigId,idx){
+  // FIX 6 — animation delay
+  if(!card.classList.contains('gf-ta')){
+    card.classList.add('gf-ta');
+    card.style.animationDelay=(idx*80)+'ms';
+  }
+  if(card.querySelector('.gf-tp')) return;
+  var row=pd.createElement('div');
+  row.className='gf-tp';
+  row.style.cssText='margin-top:6px;';
+  var existing=getEst(sigId);
+  if(existing){
+    var badge=pd.createElement('span');
+    badge.textContent='\u23F1 '+existing;
+    badge.style.cssText='font-size:10px;color:#6b7280;font-family:"DM Sans",sans-serif;cursor:pointer;';
+    badge.addEventListener('click',function(){badge.remove();showPicker(row,sigId);});
+    row.appendChild(badge);
+  } else {
+    var trig=pd.createElement('span');
+    trig.textContent='\u23F1 How long? \u2192';
+    trig.style.cssText='font-size:11px;color:#4b5563;cursor:pointer;font-family:"DM Sans",sans-serif;';
+    trig.addEventListener('click',function(){trig.remove();showPicker(row,sigId);});
+    row.appendChild(trig);
+  }
+  card.appendChild(row);
+}
+
+function updateLoadIndex(){
+  var cards=pd.querySelectorAll('.signal-card[data-signal-id]');
+  var timeChoice=sessionStorage.getItem(TIME_KEY);
+  var timeMins=null;
+  if(timeChoice==='15 min')timeMins=15;
+  else if(timeChoice==='30 min')timeMins=30;
+  else if(timeChoice==='1 hour')timeMins=60;
+  else if(timeChoice==='2 hours')timeMins=120;
+  var banner=pd.getElementById('gf-load-index');
+  if(!timeChoice||!timeMins){if(banner)banner.remove();return;}
+  var totalMins=0,estCnt=0;
+  cards.forEach(function(c){
+    var e=getEst(c.getAttribute('data-signal-id'));
+    if(e&&EST_MINS[e]){totalMins+=EST_MINS[e];estCnt++;}
+  });
+  if(estCnt<2){if(banner)banner.remove();return;}
+  var idx=totalMins/timeMins,idxStr=idx.toFixed(1);
+  var bg,brd,col,msg;
+  if(idx>1.5){
+    bg='rgba(239,68,68,0.08)';brd='1px solid rgba(239,68,68,0.2)';col='#ef4444';
+    msg='\u26A0\uFE0F Load Index '+idxStr+' \u2014 More work than time. Prioritizing ruthlessly.';
+  }else if(idx>=0.8){
+    bg='rgba(74,222,128,0.06)';brd='1px solid rgba(74,222,128,0.2)';col='#4ade80';
+    msg='\u2713 Load Index '+idxStr+' \u2014 Good balance. You\'ve got this.';
+  }else{
+    bg='rgba(245,158,11,0.06)';brd='1px solid rgba(245,158,11,0.2)';col='#f59e0b';
+    msg='Load Index '+idxStr+' \u2014 Light load. Real Tracks. Real Cheese. \uD83D\uDC10';
+  }
+  if(!banner){
+    banner=pd.createElement('div');
+    banner.id='gf-load-index';
+    var section=pd.querySelector('.section-label');
+    if(section&&section.parentNode){section.parentNode.insertBefore(banner,section);}
+    else{pd.body.appendChild(banner);}
+    var dt=setTimeout(function(){if(banner.parentNode)banner.remove();},5000);
+    cards.forEach(function(c){c.addEventListener('click',function(){clearTimeout(dt);if(banner.parentNode)banner.remove();},{once:true});});
+  }
+  banner.style.cssText='background:'+bg+';border:'+brd+';border-radius:8px;padding:8px 12px;margin-bottom:8px;font-family:"DM Sans",sans-serif;font-size:12px;color:'+col+';line-height:1.5;';
+  banner.textContent=msg;
+}
+
+function run(){
+  var cards=pd.querySelectorAll('.signal-card[data-signal-id]');
+  if(!cards.length)return;
+  cards.forEach(function(card,idx){var sid=card.getAttribute('data-signal-id');if(sid)attachTimePicker(card,sid,idx);});
+  updateLoadIndex();
+}
+function tryRun(n){if(pd.querySelectorAll('.signal-card[data-signal-id]').length>0){run();}else if(n>0){setTimeout(function(){tryRun(n-1);},200);}}
+setTimeout(function(){tryRun(15);},250);
+})();
+</script>""", height=0)
 
 _stc.html(f"""<script>
 (function(){{
