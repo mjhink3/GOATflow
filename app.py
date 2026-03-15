@@ -11,6 +11,9 @@ import hashlib
 import secrets
 import json as _json
 import urllib.parse
+import threading
+import http.server
+import time
 import psycopg2
 import psycopg2.extras
 from openai import OpenAI
@@ -23,6 +26,39 @@ st.set_page_config(
     layout="centered",
     initial_sidebar_state="collapsed",
 )
+
+# ── Keep-alive health server ────────────────────────────────────────────────
+# Runs in a background daemon thread so the process stays warm between requests.
+# Accessible at port 8080 for external uptime monitors.
+class _GFHealthHandler(http.server.BaseHTTPRequestHandler):
+    def do_GET(self):
+        if self.path == '/health' or self.path.startswith('/health?'):
+            body = _json.dumps({
+                'status': 'ok',
+                'timestamp': int(time.time() * 1000)
+            }).encode()
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.send_header('Cache-Control', 'public, max-age=86400')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            self.wfile.write(body)
+        else:
+            self.send_response(404)
+            self.end_headers()
+    def log_message(self, *args):
+        pass  # Suppress access logs
+
+@st.cache_resource
+def _start_health_server():
+    try:
+        srv = http.server.HTTPServer(('0.0.0.0', 8080), _GFHealthHandler)
+        t = threading.Thread(target=srv.serve_forever, daemon=True)
+        t.start()
+    except Exception:
+        pass
+
+_start_health_server()
 
 PURPLE = "#6100ff"
 NEON_VIOLET = "#8B5CF6"
@@ -1315,6 +1351,22 @@ TERRAIN_HTML = """
 
 st.markdown(CUSTOM_CSS, unsafe_allow_html=True)
 st.markdown(TERRAIN_HTML, unsafe_allow_html=True)
+
+# ── Client-side keep-alive ping ─────────────────────────────────────────────
+# Pings Streamlit's native health endpoint every 4 minutes while the app is
+# open, preventing the Replit container from spinning down during active use.
+_stc.html("""<script>
+(function() {
+  var pw = window.parent;
+  if (pw._gfKeepaliveActive) return;
+  pw._gfKeepaliveActive = true;
+  function ping() {
+    fetch('/_stcore/health').catch(function() {});
+  }
+  ping();
+  setInterval(ping, 4 * 60 * 1000);
+})();
+</script>""", height=0)
 
 
 def get_db():
