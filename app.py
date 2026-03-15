@@ -221,9 +221,9 @@ CUSTOM_CSS = f"""
 
     .gf-banner-wrap img {{
         width: 100%;
-        height: 180px;
+        height: 260px;
         object-fit: contain;
-        object-position: center center;
+        object-position: center bottom;
         display: block;
         border-radius: 0 0 10px 10px;
     }}
@@ -233,7 +233,7 @@ CUSTOM_CSS = f"""
         bottom: 0;
         left: 0;
         width: 100%;
-        height: 30px;
+        height: 12px;
         background: linear-gradient(to bottom, transparent, #08080f);
         pointer-events: none;
         border-radius: 0 0 10px 10px;
@@ -246,7 +246,7 @@ CUSTOM_CSS = f"""
     }}
 
     @media (max-width: 768px) {{
-        .gf-banner-wrap img {{ height: 120px !important; object-fit: contain !important; object-position: center center !important; border-radius: 0 0 8px 8px !important; }}
+        .gf-banner-wrap img {{ height: 160px !important; object-fit: contain !important; object-position: center bottom !important; border-radius: 0 0 8px 8px !important; }}
         .gf-banner-wrap {{ border-radius: 0 0 8px 8px !important; margin-bottom: 0 !important; }}
         .gf-banner-fade {{ height: 20px !important; }}
         .gf-trust-row {{ margin-top: 8px !important; }}
@@ -1068,7 +1068,7 @@ CUSTOM_CSS = f"""
 
     .landing-container {{
         text-align: center;
-        padding: 1rem 1rem 0.25rem 1rem;
+        padding: 1.5rem 1rem 0.25rem 1rem;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -1076,7 +1076,7 @@ CUSTOM_CSS = f"""
     }}
 
     .landing-container img {{
-        height: 110px;
+        height: 150px;
         margin-bottom: 0.4rem;
     }}
 
@@ -1253,7 +1253,7 @@ CUSTOM_CSS = f"""
         to   {{ opacity: 1; }}
     }}
     .landing-container img {{
-        animation: gfFadeSlideDown 600ms ease-out 0ms both;
+        animation: gfFadeSlideUp 600ms ease-out 0ms both;
     }}
     .landing-tagline {{
         animation: gfFadeSlideUp 500ms ease-out 400ms both;
