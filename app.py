@@ -191,8 +191,14 @@ CUSTOM_CSS = f"""
     section[data-testid="stMainBlockContainer"],
     .main .block-container,
     div.block-container {{
-        padding-top: 1rem !important;
-        padding-bottom: 1rem !important;
+        padding-top: 0 !important;
+        padding-bottom: 0.5rem !important;
+    }}
+
+    /* Compress Streamlit's default ~1rem inter-element gap */
+    section[data-testid="stMain"] [data-testid="stVerticalBlock"] {{
+        gap: 0.35rem !important;
+        row-gap: 0.35rem !important;
     }}
 
     header[data-testid="stHeader"] {{
@@ -205,8 +211,8 @@ CUSTOM_CSS = f"""
 
     .goat-header {{
         text-align: center;
-        padding: 0.2rem 0 0.2rem 0;
-        margin-bottom: 0.3rem;
+        padding: 0;
+        margin-bottom: 0;
         position: relative;
     }}
 
@@ -228,7 +234,7 @@ CUSTOM_CSS = f"""
     }}
 
     .logo-glow-wrap img {{
-        height: 140px;
+        height: 100px;
         display: block;
         border: none;
         border-radius: 0;
@@ -240,11 +246,12 @@ CUSTOM_CSS = f"""
     .goat-header-tagline {{
         font-family: 'Syne', sans-serif;
         font-weight: 700;
-        font-size: 18px;
+        font-size: 16px;
         color: #ffffff;
         letter-spacing: 0.03em;
         text-align: center;
-        margin-top: 4px;
+        margin-top: 2px;
+        margin-bottom: 0;
         text-shadow: 0 0 20px rgba(124, 58, 237, 0.4);
     }}
 
@@ -351,14 +358,15 @@ CUSTOM_CSS = f"""
         font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.12em;
-        margin-bottom: 0.4rem;
+        margin-bottom: 0.1rem;
+        margin-top: 0;
     }}
 
     div[data-testid="stFileUploader"] {{
         background: linear-gradient(135deg, rgba(97,0,255,0.08), rgba(97,0,255,0.02));
         border: 2px dashed {PURPLE};
         border-radius: 14px;
-        padding: 1rem;
+        padding: 0.5rem;
     }}
 
     [data-testid="stFileUploaderDropzone"] {{
@@ -777,7 +785,7 @@ CUSTOM_CSS = f"""
     .stats-row {{
         display: flex;
         gap: 0.8rem;
-        margin-bottom: 1rem;
+        margin-bottom: 0.3rem;
     }}
 
     .stat-box {{
@@ -3397,7 +3405,7 @@ st.markdown(f'''
 <div class="goat-header">
     {logo_img}
     <div class="goat-header-tagline">Grab life by the horns. Leave the bull behind.</div>
-    <div style="margin-top:0.5rem;">
+    <div style="margin-top:0.1rem;">
         <span class="trust-badge">🛡️
             <span class="trust-tooltip">GOATflow uses Stateless Processing. Your sensitive documents are analyzed and then immediately destroyed.</span>
         </span>
