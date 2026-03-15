@@ -2536,23 +2536,23 @@ _GOATIF_IIFE_TMPL = r"""
 """
 
 LEVEL_IMAGE_FILES = {
-    1: "attached_assets/WorkGOAT_The_Kid_level_1_1773461158482.png",
-    2: "attached_assets/WorkGOAT_The_Starter_level_2_1773461158486.png",
-    3: "attached_assets/WorkGOAT_The_Builder_level_3_1773461158475.png",
-    4: "attached_assets/WorkGOAT_The_Climber_level_4_1773461158478.png",
-    5: "attached_assets/WorkGOAT_The_Leader_level_5_1773461158484.png",
-    6: "attached_assets/WorkGOAT_The_Visionary_level_6_1773461158488.png",
-    7: "attached_assets/WorkGOAT_The_G.O.A.T._level_7_1773461158480.png",
+    1: "attached_assets/GOATflow_The_Kid_level_1_1773616494954.webp",
+    2: "attached_assets/GOATflow_The_Starter_level_2_1773616494956.webp",
+    3: "attached_assets/GOATflow_The_Builder_level_3_1773616494949.webp",
+    4: "attached_assets/WorkGOAT_The_Climber_level_4_1773616494957.webp",
+    5: "attached_assets/GOATflow_The_Leader_level_5_1773616494955.webp",
+    6: "attached_assets/GOATflow_The_Visionary_level_6_1773616494957.webp",
+    7: "attached_assets/GOATflow_The_G.O.A.T._level_7_1773616494953.webp",
 }
 level_images_b64 = {
-    lvl: load_image_b64(path, f"level_img_{lvl}")
+    lvl: load_image_b64(path, f"level_img_v2_{lvl}")
     for lvl, path in LEVEL_IMAGE_FILES.items()
 }
 
 def get_level_img_src(level: int) -> str:
     clamped = max(1, min(7, level))
     b64 = level_images_b64.get(clamped, "")
-    return f"data:image/png;base64,{b64}" if b64 else ""
+    return f"data:image/webp;base64,{b64}" if b64 else ""
 
 LEVEL_BITE_PX = {1: 0, 2: 9, 3: 16, 4: 23, 5: 30, 6: 37, 7: 45}
 
