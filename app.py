@@ -1711,6 +1711,42 @@ def get_clip_rate_data(user_id: str) -> dict:
         conn.close()
 
 
+def get_engagement_streak(user_id: str) -> int:
+    """Returns consecutive days of engagement (signal created or completed) up to today."""
+    from datetime import date, timedelta
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT DISTINCT DATE(created_at AT TIME ZONE 'UTC') AS activity_date
+                FROM signals WHERE user_id = %s
+                UNION
+                SELECT DISTINCT DATE(completed_at AT TIME ZONE 'UTC') AS activity_date
+                FROM signals WHERE user_id = %s AND completed = TRUE AND completed_at IS NOT NULL
+                ORDER BY activity_date DESC
+            """, (user_id, user_id))
+            rows = cur.fetchall()
+    except Exception:
+        return 0
+    finally:
+        conn.close()
+    if not rows:
+        return 0
+    dates = [r[0] for r in rows]
+    today = date.today()
+    if dates[0] < today - timedelta(days=1):
+        return 0
+    streak = 0
+    expected = dates[0]
+    for d in dates:
+        if d == expected:
+            streak += 1
+            expected = expected - timedelta(days=1)
+        else:
+            break
+    return streak
+
+
 def get_weekly_clip_rates(user_id: str) -> list:
     """Returns list of 4 weekly dicts {label, generated, completed, rate}, oldest→newest."""
     weeks = []
@@ -1995,6 +2031,8 @@ icon_summit_src = f"data:image/png;base64,{icon_summit_b64}" if icon_summit_b64 
 icon_gait_b64 = load_image_b64("static/icon_gait.png", "icon_gait_b64_v1")
 icon_gait_src = f"data:image/png;base64,{icon_gait_b64}" if icon_gait_b64 else ""
 icon_clip_rate_b64 = load_image_b64("static/icon_clip_rate.png", "icon_clip_rate_b64_v1")
+icon_level_b64 = load_image_b64("static/icon_level.png", "icon_level_b64_v1")
+icon_level_src = f"data:image/png;base64,{icon_level_b64}" if icon_level_b64 else ""
 icon_clip_rate_src = f"data:image/png;base64,{icon_clip_rate_b64}" if icon_clip_rate_b64 else ""
 
 # ── Goatifications IIFE template ── #
@@ -2668,11 +2706,11 @@ with st.sidebar:
             <span style="font-size:0.6rem;font-weight:700;color:{NEON_GREEN};">{player_data["total_xp"]:,}</span>
         </div>
         <div style="display:flex;justify-content:space-between;margin-bottom:0.2rem;">
-            <span style="font-size:0.6rem;color:{SILVER};display:flex;align-items:center;gap:3px;"><img src="{icon_cheese_src}" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;" class="goatflow-icon"> Cheese Churn Rate</span>
+            <span style="font-size:0.6rem;color:{SILVER};display:flex;align-items:center;gap:3px;"><img src="{icon_cheese_src}" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;" class="goatflow-icon"> Cheese Churn Rate (CCR)</span>
             <span style="font-size:0.6rem;font-weight:700;color:{NEON_VIOLET};">{player_data["tasks_completed"]} churned</span>
         </div>
         <div style="display:flex;justify-content:space-between;margin-bottom:0.2rem;">
-            <span style="font-size:0.6rem;color:{SILVER};display:flex;align-items:center;gap:3px;"><img src="{icon_summit_src}" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;" class="goatflow-icon"> Ascension Rank</span>
+            <span style="font-size:0.6rem;color:{SILVER};display:flex;align-items:center;gap:3px;"><img src="{icon_level_src}" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;" class="goatflow-icon"> Ascension Rank</span>
             <span style="font-size:0.6rem;font-weight:700;color:{WHITE};">{safe(user_rank)}</span>
         </div>
         <div style="display:flex;justify-content:space-between;margin-bottom:0.2rem;">
@@ -4001,7 +4039,7 @@ if st.session_state.get("_clear_bleat_text"):
 with col_text:
     extra_text = st.text_area(
         "Paste text",
-        height=130,
+        height=90,
         placeholder="Paste emails, post-it notes, memos, quick tasks...",
         label_visibility="collapsed",
         key="bleat_text_input",
@@ -4215,6 +4253,7 @@ player = get_player(current_user_id)
 
 active_count = len(signals)
 summit_count = sum(1 for s in signals if s.get("bleat_type") in ("Summit-Level Bleat", "Summit Call"))
+gait_streak = get_engagement_streak(current_user_id)
 level, xp_into, xp_needed = compute_level(player["total_xp"])
 cur_pasture = pasture_name(level)
 
@@ -4294,28 +4333,14 @@ st.markdown(f'''
         <div class="stat-label">CLIP RATE</div>
         {_clip_sublabel_html}
     </div>
+    <div class="stat-box" title="Consecutive days you've engaged with GOATflow. Keep the Gait alive.">
+        <div class="stat-value" style="color:#a78bfa;display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_gait_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon"> {gait_streak}</div>
+        <div class="stat-label">GAIT STREAK</div>
+        <div class="stat-sub">day{"" if gait_streak == 1 else "s"} in a row</div>
+    </div>
 </div>
 ''', unsafe_allow_html=True)
 
-st.markdown(f'''
-<div style="text-align:center;margin-bottom:1rem;">
-    <div style="
-        display: inline-block;
-        background: linear-gradient(135deg, #444, #333);
-        color: #777;
-        border: 1px solid #555;
-        border-radius: 10px;
-        padding: 0.5rem 1.5rem;
-        font-weight: 700;
-        font-family: 'Inter', sans-serif;
-        font-size: 0.8rem;
-        letter-spacing: 0.02em;
-        cursor: not-allowed;
-        opacity: 0.6;
-        user-select: none;
-    ">🐐 Sync to WorkGOAT — Coming Soon</div>
-</div>
-''', unsafe_allow_html=True)
 
 _horns_for_onboard = parse_horns(get_horns(current_user_id))
 if not _horns_for_onboard and not signals:
@@ -4459,7 +4484,10 @@ if st.session_state.get("show_trail"):
                 ''', unsafe_allow_html=True)
     show_trail_dialog()
 
-st.markdown('<div class="section-label">📡 Active Tracks</div>', unsafe_allow_html=True)
+st.markdown(f'''<div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
+    <span>📡 Active Tracks</span>
+    <span style="font-size:0.55rem;font-weight:700;color:#555;background:#1a1a24;border:1px solid #333;border-radius:6px;padding:2px 8px;letter-spacing:0.05em;cursor:default;white-space:nowrap;">🐐 Sync to WorkGOAT — Soon</span>
+</div>''', unsafe_allow_html=True)
 
 display_signals = signals
 
