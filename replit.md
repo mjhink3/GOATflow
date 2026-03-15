@@ -6,10 +6,11 @@ AI-powered operational intelligence SaaS dashboard with multi-user authenticatio
 Users sign in via username/password to access their private dashboard. Each user has isolated data (Tracks/Signals, Horns/Directives, XP, Hay, Fresh Cheese). Users drop files (PDFs, images, text) or record voice into the Track Sieve (via floating Voice FAB). GPT-4o-mini classifies inputs as "Routine Grazing" or "Summit Call", merges with existing tasks, and re-sorts by Operational Weight. Tasks persist in PostgreSQL per-user. Completing Tracks earns Cheese Churn Points and Hay.
 
 ### Mobile UX
-- Above-the-fold layout: logo shrinks to 80px on ≤768px screens; header, tagline, Track Sieve, input zone, and churn button all fit without scrolling on 375×667
+- Above-the-fold layout: banner header replaces circular logo+tagline; Track Sieve, input zone, and churn button all fit without scrolling
+- Banner header (`.gf-banner-wrap`): 90px desktop / 64px mobile; object-fit cover; object-position center 20% desktop / center 15% mobile; bottom fade overlay; GOATflow wordmark built into image
 - Floating Voice FAB: `#gf-voice-fab`, position:fixed bottom-right, injected into parent doc via ob_iframe IIFE (step 6), purple → red recording → amber processing → green complete states
 - Stat cards: 2-column CSS grid on mobile (`grid-template-columns: 1fr 1fr`)
-- Scroll indicator: `#gf-scroll-hint` bounces below churn button, auto-hides on first scroll or after 6s
+- Scroll indicator: `#gf-scroll-hint` — three dots (&bull;&bull;&bull;), 8px, #4b5563, letter-spacing 4px, below churn button; auto-hides on first scroll or after 6s; mobile only
 
 ## Architecture
 - **Framework**: Streamlit (Python), centered layout, single-page

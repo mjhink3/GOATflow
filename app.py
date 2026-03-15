@@ -209,68 +209,48 @@ CUSTOM_CSS = f"""
         background-color: {DARK_SURFACE};
     }}
 
-    .goat-header {{
-        text-align: center;
-        padding: 0;
+    /* ── Banner header ── */
+    .gf-banner-wrap {{
+        position: relative;
+        width: 100%;
+        overflow: hidden;
+        border-radius: 0 0 10px 10px;
         margin-bottom: 0;
-        position: relative;
     }}
 
-    @keyframes logo-float {{
-        0% {{ transform: translateY(0px); }}
-        50% {{ transform: translateY(-4px); }}
-        100% {{ transform: translateY(0px); }}
-    }}
-
-    .logo-glow-wrap {{
-        display: inline-block;
-        position: relative;
-        background: radial-gradient(ellipse at center, rgba(124,58,237,0.2) 0%, transparent 70%);
-        border: none;
-        border-radius: 0;
-        box-shadow: none;
-        background-color: transparent;
-        animation: logo-float 3.5s ease-in-out infinite;
-    }}
-
-    .logo-glow-wrap img {{
-        height: 100px;
+    .gf-banner-wrap img {{
+        width: 100%;
+        height: 90px;
+        object-fit: cover;
+        object-position: center 20%;
         display: block;
-        border: none;
-        border-radius: 0;
-        box-shadow: none;
-        background: none;
-        cursor: pointer;
+        border-radius: 0 0 10px 10px;
     }}
 
-    .goat-header-tagline {{
-        font-family: 'Syne', sans-serif;
-        font-weight: 700;
-        font-size: 16px;
-        color: #ffffff;
-        letter-spacing: 0.03em;
+    .gf-banner-fade {{
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 30px;
+        background: linear-gradient(to bottom, transparent, #08080f);
+        pointer-events: none;
+        border-radius: 0 0 10px 10px;
+    }}
+
+    .gf-trust-row {{
         text-align: center;
-        margin-top: 2px;
+        margin-top: 8px;
         margin-bottom: 0;
-        text-shadow: 0 0 20px rgba(124, 58, 237, 0.4);
-    }}
-
-    .goat-header-sub {{
-        font-family: 'DM Sans', sans-serif;
-        font-weight: 400;
-        font-size: 14px;
-        color: #9ca3af;
-        text-align: center;
-        margin-top: 4px;
     }}
 
     @media (max-width: 768px) {{
-        .logo-glow-wrap img {{ height: 80px !important; max-height: 80px !important; object-fit: contain; }}
-        .goat-header {{ padding: 0.15rem 0 0.15rem 0 !important; margin-bottom: 0.2rem !important; }}
-        .goat-header-tagline {{ font-size: 12px !important; margin-top: 4px !important; }}
-        .goat-header-sub {{ font-size: 11px !important; margin-top: 2px !important; }}
-        .privacy-shield-inline {{ font-size: 0.52rem !important; margin-top: 6px !important; display: inline-flex !important; }}
-        .trust-badge {{ font-size: 0.85rem !important; margin-top: 4px !important; }}
+        .gf-banner-wrap img {{ height: 64px !important; object-position: center 15% !important; border-radius: 0 0 8px 8px !important; }}
+        .gf-banner-wrap {{ border-radius: 0 0 8px 8px !important; margin-bottom: 0 !important; }}
+        .gf-banner-fade {{ height: 20px !important; }}
+        .gf-trust-row {{ margin-top: 8px !important; }}
+        .privacy-shield-inline {{ font-size: 0.52rem !important; margin-top: 0 !important; display: inline-flex !important; }}
+        .trust-badge {{ font-size: 0.85rem !important; margin-top: 0 !important; }}
         .churn-label {{ margin-bottom: 6px !important; margin-top: 8px !important; }}
         div[data-testid="stFileUploader"] {{ padding: 10px !important; }}
         [data-testid="stFileUploaderDropzone"] {{ min-height: 70px !important; padding: 6px 10px !important; }}
@@ -633,29 +613,18 @@ CUSTOM_CSS = f"""
 
     /* ── Scroll indicator ── */
     .scroll-indicator {{
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 4px;
-        margin: 0.4rem auto 0.5rem auto;
-        opacity: 0.55;
-        animation: gfScrollBounce 1.6s ease-in-out infinite;
-        cursor: default;
-        width: fit-content;
-    }}
-    .scroll-indicator span {{
-        font-size: 0.6rem;
-        color: #6b7280;
-        font-family: 'DM Sans', sans-serif;
-        letter-spacing: 0.08em;
-        text-transform: uppercase;
-    }}
-    .scroll-indicator svg {{
         display: block;
-    }}
-    @keyframes gfScrollBounce {{
-        0%, 100% {{ transform: translateY(0); opacity: 0.55; }}
-        50% {{ transform: translateY(5px); opacity: 0.9; }}
+        text-align: center;
+        margin-top: 6px;
+        margin-bottom: 4px;
+        color: #4b5563;
+        font-size: 8px;
+        letter-spacing: 4px;
+        opacity: 0.7;
+        cursor: default;
+        user-select: none;
+        width: 100%;
+        transition: opacity 0.4s;
     }}
     @media (min-width: 769px) {{
         .scroll-indicator {{ display: none; }}
@@ -1991,6 +1960,8 @@ cheese_earned_b64 = load_image_b64("cheese_earned.png", "cheese_earned_b64")
 hay_bale_b64 = load_image_b64("attached_assets/ChatGPT_Image_Mar_13,_2026,_09_34_11_PM_1773462872978.png", "hay_bale_b64")
 goat_hoof_b64 = load_image_b64("attached_assets/ChatGPT_Image_Mar_13,_2026,_09_57_48_PM_1773464288205.png", "goat_hoof_b64")
 horns_icon_b64 = load_image_b64("attached_assets/ChatGPT_Image_Mar_13,_2026,_09_16_13_PM_1773461790675.png", "horns_icon_b64")
+banner_b64 = load_image_b64("attached_assets/goatflow_main_screen_logo_1773550462533.png", "banner_b64_v1")
+banner_src = f"data:image/png;base64,{banner_b64}" if banner_b64 else ""
 
 LEVEL_IMAGE_FILES = {
     1: "attached_assets/WorkGOAT_The_Kid_level_1_1773461158482.png",
@@ -3490,16 +3461,23 @@ st.markdown("""
 </script>
 """, unsafe_allow_html=True)
 
+_banner_img_tag = (
+    f'<img src="{banner_src}" alt="GOATflow — Grab life by the horns">'
+    if banner_src else
+    f'<img src="{logo_src}" alt="GOATflow" style="height:90px;object-fit:cover;width:100%;">'
+    if logo_src else
+    '<div style="height:90px;background:#1a0a2e;display:flex;align-items:center;justify-content:center;color:#6100ff;font-size:1.5rem;font-weight:900;">🐐 GOATflow</div>'
+)
 st.markdown(f'''
-<div class="goat-header">
-    {logo_img}
-    <div class="goat-header-tagline">Grab life by the horns. Leave the bull behind.</div>
-    <div style="margin-top:0.1rem;">
-        <span class="trust-badge">🛡️
-            <span class="trust-tooltip">GOATflow uses Stateless Processing. Your sensitive documents are analyzed and then immediately destroyed.</span>
-        </span>
-        <span class="privacy-shield-inline">🛡️ Stateless Processing Active: Source files purged after analysis</span>
-    </div>
+<div class="gf-banner-wrap">
+    {_banner_img_tag}
+    <div class="gf-banner-fade"></div>
+</div>
+<div class="gf-trust-row">
+    <span class="trust-badge">🛡️
+        <span class="trust-tooltip">GOATflow uses Stateless Processing. Your sensitive documents are analyzed and then immediately destroyed.</span>
+    </span>
+    <span class="privacy-shield-inline">🛡️ Stateless Processing Active: Source files purged after analysis</span>
 </div>
 ''', unsafe_allow_html=True)
 
@@ -3616,12 +3594,7 @@ drop_btn = st.button("⚡ Drop Into Churn Engine", use_container_width=True, key
 
 # ── Scroll indicator (mobile only — JS handled in FAB IIFE below) ────────────
 st.markdown("""
-<div class="scroll-indicator" id="gf-scroll-hint">
-  <span>Scroll for stats</span>
-  <svg width="16" height="10" viewBox="0 0 16 10" fill="none">
-    <polyline points="1,1 8,8 15,1" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-  </svg>
-</div>
+<div class="scroll-indicator" id="gf-scroll-hint">&bull;&bull;&bull;</div>
 """, unsafe_allow_html=True)
 
 
