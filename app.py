@@ -1514,6 +1514,13 @@ def ensure_schema():
                 cur.execute("ALTER TABLE signals ADD COLUMN horn_applied_name TEXT DEFAULT ''")
 
             cur.execute("""
+                SELECT column_name FROM information_schema.columns
+                WHERE table_name = 'signals' AND column_name = 'category'
+            """)
+            if not cur.fetchone():
+                cur.execute("ALTER TABLE signals ADD COLUMN category TEXT NOT NULL DEFAULT 'other'")
+
+            cur.execute("""
                 CREATE TABLE IF NOT EXISTS operational_log (
                     id SERIAL PRIMARY KEY,
                     user_id TEXT NOT NULL,
@@ -1526,6 +1533,15 @@ def ensure_schema():
                     resolved_at TIMESTAMP DEFAULT NOW()
                 )
             """)
+
+            for _ocol, _otype, _odef in [
+                ("category", "TEXT", "''"),
+                ("logged_at", "TIMESTAMP", "NULL"),
+                ("hay_earned", "INTEGER", "0"),
+            ]:
+                cur.execute(f"SELECT column_name FROM information_schema.columns WHERE table_name = 'operational_log' AND column_name = '{_ocol}'")
+                if not cur.fetchone():
+                    cur.execute(f"ALTER TABLE operational_log ADD COLUMN {_ocol} {_otype} DEFAULT {_odef}")
 
             conn.commit()
     finally:
@@ -1630,39 +1646,82 @@ HAY_SPEED_BONUS = 10
 HAY_TO_CHEESE = 500
 
 
+def get_difficulty_multiplier(user_id: str, category: str, tasks_completed: int) -> float:
+    if tasks_completed < 20 or not category or category == "other":
+        return 1.0
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT AVG(EXTRACT(EPOCH FROM (resolved_at - logged_at)) / 86400.0)
+                FROM operational_log
+                WHERE user_id = %s AND resolution = 'completed' AND logged_at IS NOT NULL
+                  AND EXTRACT(EPOCH FROM (resolved_at - logged_at)) >= 0
+            """, (user_id,))
+            overall_row = cur.fetchone()
+            overall_avg = float(overall_row[0]) if overall_row and overall_row[0] else None
+            if not overall_avg or overall_avg < 0.01:
+                return 1.0
+            cur.execute("""
+                SELECT AVG(EXTRACT(EPOCH FROM (resolved_at - logged_at)) / 86400.0)
+                FROM operational_log
+                WHERE user_id = %s AND resolution = 'completed' AND logged_at IS NOT NULL
+                  AND category = %s AND EXTRACT(EPOCH FROM (resolved_at - logged_at)) >= 0
+            """, (user_id, category))
+            cat_row = cur.fetchone()
+            cat_avg = float(cat_row[0]) if cat_row and cat_row[0] else None
+            if cat_avg is None:
+                return 1.0
+            score = cat_avg / overall_avg
+            return round(max(0.5, min(5.0, score)), 2)
+    except Exception:
+        return 1.0
+    finally:
+        conn.close()
+
+
 def complete_signal(signal_id: int, user_id: str):
+    import datetime
     conn = get_db()
     try:
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute("""
-                SELECT xp_reward, task_name, why, operational_weight, horn_applied_name, bleat_type, created_at
+                SELECT xp_reward, task_name, why, operational_weight, horn_applied_name, bleat_type, created_at, category
                 FROM signals
                 WHERE id = %s AND completed = FALSE AND user_id = %s
             """, (signal_id, user_id))
             row = cur.fetchone()
             if not row:
                 conn.rollback()
-                return None, 0, False, 0, 0, False
+                return None, 0, False, 0, 0, False, False, 1.0, None
             xp = XP_TIERS.get(row["xp_reward"], 500)
-            cur.execute("SELECT total_xp, hay, fresh_cheese FROM player WHERE user_id = %s", (user_id,))
+            cur.execute("SELECT total_xp, hay, fresh_cheese, tasks_completed FROM player WHERE user_id = %s", (user_id,))
             player_row = cur.fetchone()
             old_xp = player_row["total_xp"] if player_row else 0
             old_hay = player_row["hay"] if player_row else 0
             old_cheese = player_row["fresh_cheese"] if player_row else 0
+            tasks_completed_so_far = player_row["tasks_completed"] if player_row else 0
             old_level, _, _ = compute_level(old_xp)
             new_xp = old_xp + xp
             new_level, _, _ = compute_level(new_xp)
 
             is_summit = row["bleat_type"] in ("Summit-Level Bleat", "Summit Call")
-            hay_earned = HAY_SUMMIT_BONUS if is_summit else HAY_BASE.get(row["xp_reward"], 10)
-            import datetime
-            if row["created_at"]:
-                age = datetime.datetime.utcnow() - row["created_at"].replace(tzinfo=None)
+            base_hay = HAY_SUMMIT_BONUS if is_summit else HAY_BASE.get(row["xp_reward"], 10)
+
+            speed_bonus_earned = False
+            logged_at = row["created_at"]
+            if logged_at:
+                age = datetime.datetime.utcnow() - logged_at.replace(tzinfo=None)
                 if age.total_seconds() < 86400:
-                    hay_earned += HAY_SPEED_BONUS
+                    speed_bonus_earned = True
+
+            category = row.get("category") or "other"
+            difficulty_multiplier = get_difficulty_multiplier(user_id, category, tasks_completed_so_far)
+            hay_earned = round(base_hay * difficulty_multiplier)
+            if speed_bonus_earned:
+                hay_earned += HAY_SPEED_BONUS
 
             new_hay = old_hay + hay_earned
-            # HAY DECAY — reserved for WorkGOAT integration phase
             cheese_gained = new_hay // HAY_TO_CHEESE
             new_hay_remainder = new_hay % HAY_TO_CHEESE
             new_cheese = old_cheese + cheese_gained
@@ -1679,16 +1738,20 @@ def complete_signal(signal_id: int, user_id: str):
             """, (new_xp, new_level, new_hay_remainder, new_cheese, user_id))
             cur.execute("DELETE FROM signals WHERE id = %s AND user_id = %s", (signal_id, user_id))
             cur.execute("""
-                INSERT INTO operational_log (user_id, task_name, task_why, resolution, horn_applied_name, priority_score, xp_tier)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO operational_log (user_id, task_name, task_why, resolution, horn_applied_name, priority_score, xp_tier, category, logged_at, hay_earned)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                RETURNING id
             """, (user_id, row["task_name"], row["why"] or "", "completed",
-                  row["horn_applied_name"] or "", row["operational_weight"], row["xp_reward"]))
+                  row["horn_applied_name"] or "", row["operational_weight"], row["xp_reward"],
+                  category, logged_at, hay_earned))
+            log_row = cur.fetchone()
+            log_id = log_row["id"] if log_row else None
             conn.commit()
             leveled_up = new_level > old_level
-            return row["xp_reward"], xp, leveled_up, hay_earned, new_hay_remainder, cheese_converted
+            return row["xp_reward"], xp, leveled_up, hay_earned, new_hay_remainder, cheese_converted, speed_bonus_earned, difficulty_multiplier, log_id
     except Exception:
         conn.rollback()
-        return None, 0, False, 0, 0, False
+        return None, 0, False, 0, 0, False, False, 1.0, None
     finally:
         conn.close()
 
@@ -1850,6 +1913,7 @@ def save_signals(user_id: str, signals_data: list[dict]):
                 directive_applied = s.get("directive_applied", False)
                 bleat_type = s.get("bleat_type", "Routine Grazing")
                 horn_applied_name = s.get("horn_applied_name", "")
+                category = s.get("category", "other") or "other"
                 cur.execute(
                     "SELECT id FROM signals WHERE task_name = %s AND completed = FALSE AND user_id = %s",
                     (s["task_name"], user_id)
@@ -1857,13 +1921,13 @@ def save_signals(user_id: str, signals_data: list[dict]):
                 existing = cur.fetchone()
                 if existing:
                     cur.execute("""
-                        UPDATE signals SET why = %s, xp_reward = %s, operational_weight = %s, directive_applied = %s, bleat_type = %s, horn_applied_name = %s WHERE id = %s
-                    """, (s["why"], s["xp_reward"], s["operational_weight"], directive_applied, bleat_type, horn_applied_name, existing[0]))
+                        UPDATE signals SET why = %s, xp_reward = %s, operational_weight = %s, directive_applied = %s, bleat_type = %s, horn_applied_name = %s, category = %s WHERE id = %s
+                    """, (s["why"], s["xp_reward"], s["operational_weight"], directive_applied, bleat_type, horn_applied_name, category, existing[0]))
                 else:
                     cur.execute("""
-                        INSERT INTO signals (task_name, why, xp_reward, operational_weight, directive_applied, bleat_type, horn_applied_name, user_id)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                    """, (s["task_name"], s["why"], s["xp_reward"], s["operational_weight"], directive_applied, bleat_type, horn_applied_name, user_id))
+                        INSERT INTO signals (task_name, why, xp_reward, operational_weight, directive_applied, bleat_type, horn_applied_name, category, user_id)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    """, (s["task_name"], s["why"], s["xp_reward"], s["operational_weight"], directive_applied, bleat_type, horn_applied_name, category, user_id))
             conn.commit()
     finally:
         conn.close()
@@ -1877,6 +1941,7 @@ class Signal(BaseModel):
     directive_applied: bool = Field(default=False, description="True if this task's priority was influenced by a user-defined GOAT Horn")
     bleat_type: str = Field(default="Routine Grazing", description="Either 'Routine Grazing' (low impact, daily maintenance) or 'Summit Call' (high impact, crisis, urgent)")
     horn_applied_name: str = Field(default="", description="The exact text of the GOAT Horn that governed this task's priority ranking. Empty string if no horn applied.")
+    category: str = Field(default="other", description="Task category — exactly one of: communication, administrative, creative, financial, personal, health, technical, planning, operational, other")
 
 
 class ChurnOutput(BaseModel):
@@ -1920,7 +1985,8 @@ Rules:
 - bleat_type must be exactly one of: Routine Grazing, Summit Call
 - Summit Calls should generally have operational_weight >= 7
 - For directive_applied: set to true ONLY if a GOAT Horn directly influenced this task's priority or ranking. If no horns exist, always set to false.
-- For horn_applied_name: set to the exact text of the Horn that governed this task's ranking. Empty string if no horn applied."""
+- For horn_applied_name: set to the exact text of the Horn that governed this task's ranking. Empty string if no horn applied.
+- For category: assign exactly one of: communication, administrative, creative, financial, personal, health, technical, planning, operational, other. This is a hidden internal tag not shown to the user. Use your best judgment based on the task content."""
 
 
 def extract_pdf_text(file_bytes: bytes) -> str:
@@ -4216,9 +4282,22 @@ if drop_btn:
     <div class="churn-text-cycle" id="churnText">Reading the terrain...</div>
 </div>
 <script>
-var msgs=["Reading the terrain...","Filtering the noise...","Surfacing your Tracks..."];
+var msgs=[
+  {text:"Reading the terrain...",color:"",bold:false},
+  {text:"Filtering the noise...",color:"",bold:false},
+  {text:"Surfacing your Tracks...",color:"",bold:false},
+  {text:"Cutting the bull.",color:"#4ade80",bold:true}
+];
 var i=0;
-setInterval(function(){i=(i+1)%msgs.length;var el=document.getElementById("churnText");if(el)el.textContent=msgs[i];},800);
+setInterval(function(){
+  i=(i+1)%msgs.length;
+  var el=document.getElementById("churnText");
+  if(el){
+    el.textContent=msgs[i].text;
+    el.style.color=msgs[i].color||"";
+    el.style.fontWeight=msgs[i].bold?"700":"";
+  }
+},800);
 </script>
 ''', unsafe_allow_html=True)
         with st.spinner(""):
@@ -4291,7 +4370,7 @@ if st.session_state.get("just_purged"):
 
 
 @st.dialog("🌾")
-def show_hay_popup(task_name, xp_gained, leveled_up, xp_tier, hay_earned):
+def show_hay_popup(task_name, xp_gained, leveled_up, xp_tier, hay_earned, difficulty_multiplier=1.0):
     st.markdown(CONFETTI_JS, unsafe_allow_html=True)
 
     hay_pun = random.choice(HAY_PUNS)
@@ -4301,11 +4380,16 @@ def show_hay_popup(task_name, xp_gained, leveled_up, xp_tier, hay_earned):
     hay_src = f"data:image/png;base64,{hay_bale_b64}" if hay_bale_b64 else ""
     hay_img = f'<img src="{hay_src}" alt="Hay Earned" style="height:130px;display:block;margin:0 auto 0.4rem auto;">' if hay_src else '🌾'
 
+    _mult_label = ""
+    if difficulty_multiplier and difficulty_multiplier != 1.0:
+        _mult_label = f'<div style="color:#f59e0b;font-size:0.75rem;font-weight:700;font-family:\'DM Sans\',sans-serif;margin-bottom:0.05rem;">{difficulty_multiplier:.1f}\u00d7 difficulty multiplier</div>'
+
     st.markdown(
         f'<div style="text-align:center;">'
         f'{hay_img}'
         f'<div style="color:#f59e0b;font-size:1.35rem;font-weight:900;margin-bottom:0.15rem;font-family:Syne,sans-serif;">{safe(hay_pun)}</div>'
-        f'<div style="color:{NEON_GREEN};font-size:1.5rem;font-weight:900;margin-bottom:0.1rem;display:flex;align-items:center;justify-content:center;gap:6px;">+{hay_earned} Hay <img src="{icon_hay_stack_src}" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;" class="goatflow-icon-inline"></div>'
+        f'<div style="color:{NEON_GREEN};font-size:1.5rem;font-weight:900;margin-bottom:0.05rem;display:flex;align-items:center;justify-content:center;gap:6px;">\U0001F33E +{hay_earned} Hay <img src="{icon_hay_stack_src}" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;" class="goatflow-icon-inline"></div>'
+        f'{_mult_label}'
         f'<div style="color:{SILVER};font-size:0.72rem;margin-bottom:0.25rem;">+{xp_gained:,} CCR also earned</div>'
         f'<div style="color:{SILVER};font-size:0.85rem;font-weight:500;margin-bottom:0.3rem;">{safe(task_name)}</div>'
         f'<div style="color:{NEON_VIOLET};font-size:0.88rem;font-weight:700;font-style:italic;">{safe(goat_pun)}</div>'
@@ -4365,18 +4449,94 @@ if st.session_state.get("just_earned_fresh_cheese"):
 
 if st.session_state.get("just_completed_task"):
     task_data = st.session_state["just_completed_task"]
-    if len(task_data) == 5:
+    if len(task_data) == 6:
+        task_name, xp_gained, leveled_up, xp_tier, hay_earned, _diff_mult = task_data
+    elif len(task_data) == 5:
         task_name, xp_gained, leveled_up, xp_tier, hay_earned = task_data
+        _diff_mult = 1.0
     elif len(task_data) == 4:
         task_name, xp_gained, leveled_up, xp_tier = task_data
         hay_earned = HAY_BASE.get(xp_tier, 10)
+        _diff_mult = 1.0
     else:
         task_name, xp_gained, leveled_up = task_data
         xp_tier = "Standard"
         hay_earned = 10
-    show_hay_popup(task_name, xp_gained, leveled_up, xp_tier, hay_earned)
+        _diff_mult = 1.0
+    show_hay_popup(task_name, xp_gained, leveled_up, xp_tier, hay_earned, _diff_mult)
     if st.session_state.pop("just_earned_speed_bonus", False):
         _stc.html('<script>setTimeout(function(){if(window.parent.document.hasFocus())return;var f=window.parent.gfFire;if(f)f({title:"GOATflow \U0001F33E",body:"Speed bonus. +10 Hay. That is how it is done.",hapticPattern:[60,40,60],prefKey:"speedBonus"});},800);</script>', height=0)
+
+if st.session_state.get("adaptive_prompt_pending"):
+    _apt = st.session_state.pop("adaptive_prompt_pending")
+    _apt_days = int(_apt.get("days_to_complete", 0))
+    _apt_summit = bool(_apt.get("is_summit", False))
+    _apt_log_id = str(_apt.get("log_id", "") or "")
+    _apt_cat = str(_apt.get("category", "other") or "other")
+    _apt_diff = float(_apt.get("diff_mult", 1.0) or 1.0)
+    if _apt_summit:
+        _apt_q = "Handled it. What made it happen?"
+    elif _apt_days <= 1:
+        _apt_q = "What made this one flow? Worth noting for next time. \U0001F410"
+    elif _apt_days <= 5:
+        _apt_q = "What finally got this one moving?"
+    elif _apt_days <= 14:
+        _apt_q = "This one sat for a while. What was the hold-up?"
+    else:
+        _apt_q = "This took some time. What would have helped move it faster?"
+    _apt_q_js = _apt_q.replace("\\", "\\\\").replace('"', '\\"').replace("'", "\\'")
+    _stc.html(f"""<script>
+(function(){{
+var question="{_apt_q_js}";
+var logId="{_apt_log_id}";
+var category="{_apt_cat}";
+var diffMult={_apt_diff};
+var daysToComplete={_apt_days};
+var doc=window.parent.document;
+if(doc.getElementById('gf-adaptive-prompt'))return;
+var style=doc.createElement('style');
+style.textContent='@keyframes gfSlideUp{{from{{opacity:0;transform:translateX(-50%) translateY(16px);}}to{{opacity:1;transform:translateX(-50%) translateY(0);}}}}';
+doc.head.appendChild(style);
+var overlay=doc.createElement('div');
+overlay.id='gf-adaptive-prompt';
+overlay.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);width:90%;max-width:400px;background:rgba(8,8,15,0.97);border:1px solid rgba(124,58,237,0.2);border-radius:8px;padding:10px 14px;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.6);animation:gfSlideUp 0.2s ease;';
+var qRow=doc.createElement('div');qRow.style.cssText='display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;';
+var emo=doc.createElement('span');emo.textContent='\uD83D\uDC10';emo.style.cssText='font-size:16px;flex-shrink:0;line-height:1.3;';
+var qTxt=doc.createElement('span');qTxt.style.cssText='font-size:12px;color:#9ca3af;font-family:"DM Sans",sans-serif;line-height:1.5;';qTxt.textContent=question;
+qRow.appendChild(emo);qRow.appendChild(qTxt);
+var inp=doc.createElement('input');inp.type='text';inp.placeholder='Optional \u2014 tap to add...';
+inp.style.cssText='width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.06);border-radius:6px;padding:8px;font-family:"DM Sans",sans-serif;font-size:12px;color:#e5e7eb;box-sizing:border-box;outline:none;margin-bottom:8px;';
+var btnRow=doc.createElement('div');btnRow.style.cssText='display:flex;justify-content:flex-end;gap:12px;';
+var skipBtn=doc.createElement('button');skipBtn.textContent='Skip';skipBtn.style.cssText='background:none;border:none;color:#4b5563;font-family:"DM Sans",sans-serif;font-size:11px;cursor:pointer;padding:4px 0;';
+var saveBtn=doc.createElement('button');saveBtn.textContent='Save to Trail';saveBtn.style.cssText='background:none;border:none;color:#a78bfa;font-family:"DM Sans",sans-serif;font-size:11px;font-weight:500;cursor:pointer;padding:4px 0;';
+btnRow.appendChild(skipBtn);btnRow.appendChild(saveBtn);
+overlay.appendChild(qRow);overlay.appendChild(inp);overlay.appendChild(btnRow);
+doc.body.appendChild(overlay);
+var timer=setTimeout(function(){{dismiss();}},10000);
+function dismiss(){{clearTimeout(timer);if(overlay.parentNode)overlay.parentNode.removeChild(overlay);}}
+function saveToTrail(note){{
+  if(note&&logId){{
+    var notes={{}};try{{notes=JSON.parse(localStorage.getItem('goatflow_trail_notes')||'{{}}');}}catch(e){{}}
+    notes[logId]={{trackId:logId,question:question,note:note,daysToComplete:daysToComplete,timestamp:Date.now()}};
+    localStorage.setItem('goatflow_trail_notes',JSON.stringify(notes));
+  }}
+  var hist=[];try{{hist=JSON.parse(localStorage.getItem('goatflow_completion_history')||'[]');}}catch(e){{}}
+  hist.push({{category:category,daysToComplete:daysToComplete,diffMult:diffMult,ts:Date.now()}});
+  if(hist.length>500)hist=hist.slice(-500);
+  localStorage.setItem('goatflow_completion_history',JSON.stringify(hist));
+  dismiss();
+}}
+skipBtn.onclick=function(){{
+  var hist=[];try{{hist=JSON.parse(localStorage.getItem('goatflow_completion_history')||'[]');}}catch(e){{}}
+  hist.push({{category:category,daysToComplete:daysToComplete,diffMult:diffMult,ts:Date.now()}});
+  if(hist.length>500)hist=hist.slice(-500);
+  localStorage.setItem('goatflow_completion_history',JSON.stringify(hist));
+  dismiss();
+}};
+saveBtn.onclick=function(){{saveToTrail(inp.value.trim());}};
+inp.onkeydown=function(e){{if(e.key==='Enter'){{saveToTrail(inp.value.trim());}}if(e.key==='Escape'){{dismiss();}}}};
+}})();
+</script>""", height=0)
 
 signals = get_active_signals(current_user_id)
 if st.session_state.get("incognito_mode", False):
@@ -4593,28 +4753,143 @@ if st.session_state.get("show_trail"):
         if not trail_entries:
             st.markdown(f'<div style="text-align:center;color:{SILVER};padding:2rem;font-style:italic;">No entries yet. Complete your first Track to start your Trail.</div>', unsafe_allow_html=True)
         else:
+            import datetime as _tdt
             for entry in trail_entries:
                 res = entry.get("resolution", "completed")
                 res_color = {"completed": NEON_GREEN, "dismissed": "#888", "reordered": "#FFB347"}.get(res, SILVER)
-                res_icon = {"completed": "✅", "dismissed": "🗑️", "reordered": "🔀"}.get(res, "•")
-                horn_label = f'<span style="color:#B388FF;font-size:0.7rem;font-style:italic;">🐐 {safe(entry["horn_applied_name"])}</span>' if entry.get("horn_applied_name") else ""
-                ts = entry.get("resolved_at", "")
-                ts_str = str(ts)[:16] if ts else ""
+                horn_label = f'<span style="color:#B388FF;font-size:0.65rem;font-style:italic;">🐐 {safe(entry["horn_applied_name"])}</span>' if entry.get("horn_applied_name") else ""
+
+                logged_dt = entry.get("logged_at")
+                completed_dt = entry.get("resolved_at")
+                hay_amt = entry.get("hay_earned", 0)
+
+                logged_str = ""
+                completed_str = ""
+                days_str = ""
+                if logged_dt:
+                    _ld = logged_dt.replace(tzinfo=None) if hasattr(logged_dt, "replace") else logged_dt
+                    logged_str = f"Logged: {_ld.strftime('%B')} {_ld.day}"
+                if completed_dt:
+                    _cd = completed_dt.replace(tzinfo=None) if hasattr(completed_dt, "replace") else completed_dt
+                    completed_str = f"Completed: {_cd.strftime('%B')} {_cd.day}"
+                    if logged_dt:
+                        _ld2 = logged_dt.replace(tzinfo=None) if hasattr(logged_dt, "replace") else logged_dt
+                        _days = max(0, (_cd - _ld2).days)
+                        days_str = "Same day" if _days == 0 else (f"{_days} day" if _days == 1 else f"{_days} days")
+
+                _meta_parts = []
+                if logged_str:
+                    _meta_parts.append(f'<span style="font-size:11px;color:#6b7280;font-family:\'DM Sans\',sans-serif;">{logged_str}</span>')
+                if completed_str:
+                    _meta_parts.append(f'<span style="font-size:11px;color:#4ade80;font-family:\'DM Sans\',sans-serif;">{completed_str}</span>')
+                if days_str:
+                    _meta_parts.append(f'<span style="font-size:11px;color:#9ca3af;font-family:\'DM Sans\',sans-serif;">{days_str}</span>')
+                if hay_amt and hay_amt > 0:
+                    _meta_parts.append(f'<span style="font-size:11px;color:#f59e0b;font-family:\'DM Sans\',sans-serif;">\U0001F33E +{hay_amt} Hay</span>')
+                _meta_html = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:3px;margin-bottom:4px;">' + "".join(_meta_parts) + '</div>' if _meta_parts else ""
+
+                _entry_id = entry.get("id", "")
                 st.markdown(f'''
-                <div style="border-left:3px solid {res_color};padding:0.5rem 0.8rem;margin-bottom:0.5rem;background:{CARD_BG};border-radius:0 8px 8px 0;">
-                    <div style="display:flex;justify-content:space-between;align-items:center;">
-                        <span style="font-size:0.85rem;font-weight:700;color:{WHITE};">{res_icon} {safe(entry["task_name"])}</span>
-                        <span style="font-size:0.65rem;color:{SILVER};">{ts_str}</span>
-                    </div>
-                    <div style="font-size:0.75rem;color:{SILVER};margin-top:0.2rem;">{safe(entry.get("task_why",""))}</div>
-                    <div style="margin-top:0.3rem;display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
-                        <span style="font-size:0.65rem;color:{res_color};font-weight:700;">{res.upper()}</span>
-                        <span style="font-size:0.65rem;color:{SILVER};">Priority: {entry.get("priority_score",0):.0f}</span>
-                        <span style="font-size:0.65rem;color:{SILVER};">CCR: {entry.get("xp_tier","")}</span>
+                <div class="trail-entry" data-log-id="{_entry_id}" style="border-left:3px solid {res_color};padding:8px 12px;margin-bottom:8px;background:{CARD_BG};border-radius:0 8px 8px 0;">
+                    <div style="font-size:14px;font-weight:600;font-family:\'DM Sans\',sans-serif;color:{WHITE};">{safe(entry["task_name"])}</div>
+                    {_meta_html}
+                    <div style="font-size:0.7rem;color:{SILVER};margin-bottom:4px;">{safe(entry.get("task_why",""))}</div>
+                    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:4px;">
+                        <span style="font-size:0.6rem;color:{res_color};font-weight:700;">{res.upper()}</span>
                         {horn_label}
                     </div>
+                    <div class="trail-note-area" data-log-id="{_entry_id}"></div>
                 </div>
                 ''', unsafe_allow_html=True)
+
+        st.markdown(f'<div style="margin-top:1.2rem;border-top:1px solid {BORDER};padding-top:0.8rem;"><div style="font-family:Syne,sans-serif;font-size:0.7rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.6rem;">Achievements</div></div>', unsafe_allow_html=True)
+        _achievement_defs = [
+            ("the_hard_way", "The Hard Way", "Complete a task in your hardest category faster than your personal average.", 100),
+            ("pattern_broken", "Pattern Broken", "5 consecutive completions in your hardest category without exceeding 2\u00d7 your average.", 250),
+            ("know_thyself", "Know Thyself", "Build consistent completion patterns across 10+ tracks.", 200),
+            ("zero_bull", "Zero Bull", "Maintain a balanced track load across 7 sessions where time was declared.", 300),
+        ]
+        _ach_html_parts = []
+        for _ach_id, _ach_label, _ach_hint, _ach_hay in _achievement_defs:
+            _ach_html_parts.append(f'''<div class="trail-achievement-row" data-achievement-id="{_ach_id}" style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);">
+                <div style="font-size:1rem;opacity:0.35;">🔒</div>
+                <div style="flex:1;">
+                    <div class="ach-label" style="font-family:Syne,sans-serif;font-size:13px;font-weight:700;color:#6b7280;">{_ach_label}</div>
+                    <div class="ach-hint" style="font-family:\'DM Sans\',sans-serif;font-size:11px;color:#4b5563;margin-top:1px;">{_ach_hint}</div>
+                </div>
+                <div class="ach-hay" style="font-family:\'DM Sans\',sans-serif;font-size:11px;color:#f59e0b;white-space:nowrap;opacity:0.4;">\U0001F33E +{_ach_hay}</div>
+            </div>''')
+        st.markdown('<div>' + "".join(_ach_html_parts) + '</div>', unsafe_allow_html=True)
+
+        _stc.html("""<script>
+(function(){
+var NOTES_KEY='goatflow_trail_notes';
+var ACH_KEY='goatflow_achievements';
+function getNotes(){try{return JSON.parse(localStorage.getItem(NOTES_KEY)||'{}');}catch(e){return {};}}
+function saveNote(logId,note){var n=getNotes();n[logId]={note:note,savedAt:Date.now()};localStorage.setItem(NOTES_KEY,JSON.stringify(n));}
+function renderNoteArea(area,logId){
+  var notes=getNotes();var ex=notes[logId];
+  area.innerHTML='';
+  if(!ex||!ex.note){
+    var row=document.createElement('div');row.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-top:5px;';
+    var txt=document.createElement('span');txt.style.cssText='font-size:11px;color:#374151;font-style:italic;font-family:"DM Sans",sans-serif;';txt.textContent='No trail note added';
+    var btn=document.createElement('button');btn.textContent='+';btn.style.cssText='background:none;border:1px solid #374151;color:#9ca3af;font-size:11px;width:18px;height:18px;border-radius:3px;cursor:pointer;padding:0;flex-shrink:0;line-height:1;';
+    row.appendChild(txt);row.appendChild(btn);area.appendChild(row);
+    btn.onclick=function(){showInput(area,logId,'');};
+  } else {
+    var nr=document.createElement('div');nr.style.cssText='display:flex;align-items:flex-start;gap:8px;margin-top:5px;';
+    var nt=document.createElement('div');nt.style.cssText='font-size:12px;color:#9ca3af;font-style:italic;font-family:"DM Sans",sans-serif;max-height:56px;overflow:hidden;line-height:1.5;flex:1;';nt.textContent=ex.note;
+    var eb=document.createElement('button');eb.innerHTML='&#9998;';eb.style.cssText='background:none;border:none;color:#9ca3af;font-size:11px;cursor:pointer;padding:0;flex-shrink:0;';
+    nr.appendChild(nt);nr.appendChild(eb);area.appendChild(nr);
+    eb.onclick=function(){showInput(area,logId,ex.note);};
+  }
+}
+function showInput(area,logId,val){
+  area.innerHTML='';
+  var w=document.createElement('div');w.style.marginTop='6px';
+  var ta=document.createElement('textarea');ta.value=val;ta.maxLength=200;ta.placeholder='What do you want to remember about this one?';
+  ta.style.cssText='width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px;font-family:"DM Sans",sans-serif;font-size:13px;color:#9ca3af;resize:none;height:70px;box-sizing:border-box;outline:none;';
+  var footer=document.createElement('div');footer.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-top:3px;';
+  var cc=document.createElement('span');cc.style.cssText='font-size:10px;color:#4b5563;font-family:"DM Sans",sans-serif;';cc.textContent=val.length+'/200';
+  var sb=document.createElement('button');sb.textContent='Save Note';sb.style.cssText='background:none;border:none;color:#7c3aed;font-family:"DM Sans",sans-serif;font-size:12px;font-weight:500;cursor:pointer;padding:0;display:'+(val.length>0?'block':'none')+';';
+  footer.appendChild(cc);footer.appendChild(sb);w.appendChild(ta);w.appendChild(footer);area.appendChild(w);ta.focus();ta.selectionStart=ta.value.length;
+  ta.oninput=function(){cc.textContent=ta.value.length+'/200';sb.style.display=ta.value.length>0?'block':'none';};
+  sb.onclick=function(){var n=ta.value.trim();if(n){saveNote(logId,n);renderNoteArea(area,logId);}};
+}
+function updateAchievements(){
+  var achieved=[];try{achieved=JSON.parse(localStorage.getItem(ACH_KEY)||'[]');}catch(e){}
+  var doc=window.parent.document;
+  doc.querySelectorAll('.trail-achievement-row[data-achievement-id]').forEach(function(row){
+    var id=row.getAttribute('data-achievement-id');
+    var match=achieved.find(function(a){return a.id===id;});
+    if(match){
+      row.style.opacity='1';
+      var ico=row.querySelector('div');if(ico)ico.textContent='🏆';
+      var lbl=row.querySelector('.ach-label');if(lbl){lbl.style.color='#F5F5F5';}
+      var hint=row.querySelector('.ach-hint');
+      if(hint){
+        var d=new Date(match.earnedAt);var ds=d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+        hint.textContent='Earned '+ds+' — '+match.desc;hint.style.color='#4b5563';
+      }
+      var hayEl=row.querySelector('.ach-hay');if(hayEl)hayEl.style.opacity='1';
+    }
+  });
+}
+function init(){
+  var doc=window.parent.document;
+  doc.querySelectorAll('.trail-note-area[data-log-id]').forEach(function(area){
+    var logId=area.getAttribute('data-log-id');if(logId)renderNoteArea(area,logId);
+  });
+  updateAchievements();
+}
+function tryInit(n){
+  var doc=window.parent.document;
+  if(doc.querySelectorAll('.trail-note-area[data-log-id]').length>0){init();}
+  else if(n>0){setTimeout(function(){tryInit(n-1);},250);}
+}
+setTimeout(function(){tryInit(15);},150);
+})();
+</script>""", height=0)
     show_trail_dialog()
 
 st.markdown(f'''<div class="section-label" style="display:flex;align-items:center;justify-content:space-between;">
@@ -4625,10 +4900,15 @@ st.markdown(f'''<div class="section-label" style="display:flex;align-items:cente
 display_signals = signals
 
 if not display_signals:
-    st.markdown('''
-    <div class="empty-state">
-        <div class="empty-state-icon">🐐</div>
-        <div class="empty-state-text">No active Tracks. Drop intel into the Track Sieve above.</div>
+    _es_logo = f'<img src="{banner_src}" alt="GOATflow" style="height:60px;display:block;margin:0 auto;">' if banner_src else '<span style="font-size:2.5rem;">🐐</span>'
+    st.markdown(f'''
+    <div class="empty-state" style="padding:2rem 1rem;">
+        {_es_logo}
+        <div style="font-family:Syne,sans-serif;font-size:18px;font-weight:700;color:#F5F5F5;text-align:center;margin-top:12px;">The pasture is clear.</div>
+        <div style="font-family:\'DM Sans\',sans-serif;font-size:14px;color:#9ca3af;text-align:center;max-width:280px;line-height:1.6;margin:8px auto 0 auto;">Drop anything into the Track Sieve — a voice note, a photo, an email, a document. GOATflow finds the signal, cuts the noise, and tells you exactly what needs to happen first.</div>
+        <div style="font-family:\'DM Sans\',sans-serif;font-size:13px;font-weight:600;color:#a78bfa;text-align:center;margin-top:12px;">Nothing that matters gets lost.</div>
+        <div style="font-family:\'DM Sans\',sans-serif;font-size:12px;color:#4b5563;text-align:center;margin-top:4px;">Nothing that doesn&apos;t matter gets in the way.</div>
+        <div style="font-family:\'DM Sans\',sans-serif;font-size:11px;color:#374151;text-align:center;margin-top:16px;">The game starts when you drop your first Track.</div>
     </div>
     ''', unsafe_allow_html=True)
 else:
@@ -4699,16 +4979,142 @@ else:
                 st.session_state["just_completed_task"] = (sig['task_name'], xp, False, xp_tier, hay_amt)
                 st.rerun()
             else:
-                reward, xp, leveled_up, hay_earned, hay_remaining, cheese_count = complete_signal(sig['id'], current_user_id)
+                reward, xp, leveled_up, hay_earned, hay_remaining, cheese_count, speed_bonus, diff_mult, comp_log_id = complete_signal(sig['id'], current_user_id)
                 if reward:
-                    st.session_state["just_completed_task"] = (sig['task_name'], xp, leveled_up, reward, hay_earned)
+                    st.session_state["just_completed_task"] = (sig['task_name'], xp, leveled_up, reward, hay_earned, diff_mult)
                     if cheese_count:
                         st.session_state["fresh_cheese_pending"] = cheese_count
-                    _is_summit_sig = sig.get('bleat_type') in ("Summit-Level Bleat", "Summit Call")
-                    _base_hay = HAY_SUMMIT_BONUS if _is_summit_sig else HAY_BASE.get(sig.get('xp_reward', 'Standard'), 10)
-                    if hay_earned > _base_hay:
+                    if speed_bonus:
                         st.session_state["just_earned_speed_bonus"] = True
+                    import datetime as _dt
+                    _sig_created = sig.get("created_at")
+                    _days_elapsed = 0
+                    if _sig_created:
+                        _created_clean = _sig_created.replace(tzinfo=None) if hasattr(_sig_created, "replace") else _sig_created
+                        _days_elapsed = max(0, (_dt.datetime.utcnow() - _created_clean).days)
+                    st.session_state["adaptive_prompt_pending"] = {
+                        "task_name": sig["task_name"],
+                        "log_id": comp_log_id,
+                        "days_to_complete": _days_elapsed,
+                        "is_summit": sig.get("bleat_type") in ("Summit-Level Bleat", "Summit Call"),
+                        "category": sig.get("category", "other"),
+                        "diff_mult": diff_mult,
+                    }
                     st.rerun()
+
+_stc.html(f"""<script>
+(function(){{
+var ACH_KEY='goatflow_achievements';
+var HIST_KEY='goatflow_completion_history';
+var SESS_KEY='goatflow_session_history';
+var PAT_KEY='goatflow_patterns';
+var activeCount={active_count};
+function getJ(k){{try{{return JSON.parse(localStorage.getItem(k)||'[]');}}catch(e){{return [];}}}}
+function getJObj(k){{try{{return JSON.parse(localStorage.getItem(k)||'{{}}');}}catch(e){{return {{}};}}}}
+function saveJ(k,v){{localStorage.setItem(k,JSON.stringify(v));}}
+function hasAch(id){{return getJ(ACH_KEY).some(function(a){{return a.id===id;}});}}
+function fireAch(id,label,desc,hay){{
+  if(hasAch(id))return;
+  var a=getJ(ACH_KEY);a.push({{id:id,label:label,desc:desc,hay:hay,earnedAt:Date.now()}});saveJ(ACH_KEY,a);
+  setTimeout(function(){{
+    var f=window.parent.gfFire;
+    if(f)f({{title:'Achievement Unlocked: '+label,body:desc,hapticPattern:[100,60,100,60,100],prefKey:'ach_'+id}});
+  }},1200);
+}}
+function recordSession(){{
+  var s=getJ(SESS_KEY);s.push({{activeCount:activeCount,ts:Date.now()}});
+  if(s.length>50)s=s.slice(-50);saveJ(SESS_KEY,s);
+}}
+function checkZeroBull(){{
+  if(hasAch('zero_bull'))return;
+  var s=getJ(SESS_KEY);if(s.length<7)return;
+  var last7=s.slice(-7);
+  if(last7.every(function(x){{return x.activeCount>=4&&x.activeCount<=15;}})){{
+    fireAch('zero_bull','Zero Bull','No over-commitment. No under-delivery. Pure signal. Zero bull. \uD83D\uDC10',300);
+  }}
+}}
+function checkKnowThyself(){{
+  if(hasAch('know_thyself'))return;
+  var hist=getJ(HIST_KEY);if(hist.length<10)return;
+  var catMap={{}};
+  hist.forEach(function(h){{if(h.category&&h.category!=='other'){{if(!catMap[h.category])catMap[h.category]=[];catMap[h.category].push(h.daysToComplete);}}}}); 
+  var cats=Object.keys(catMap);if(cats.length<2)return;
+  var overallSum=0,overallCount=0;
+  hist.forEach(function(h){{overallSum+=h.daysToComplete;overallCount++;}});
+  var overallAvg=overallCount>0?overallSum/overallCount:1;
+  var allConsistent=cats.every(function(cat){{
+    var vals=catMap[cat];var avg=vals.reduce(function(a,b){{return a+b;}},0)/vals.length;
+    var ratio=avg/overallAvg;return ratio>=0.6&&ratio<=1.6;
+  }});
+  if(allConsistent){{
+    fireAch('know_thyself','Know Thyself','You know how long things take. Most people never figure that out. \uD83D\uDC10',200);
+  }}
+}}
+function checkTheHardWay(){{
+  if(hasAch('the_hard_way'))return;
+  var hist=getJ(HIST_KEY);if(hist.length<5)return;
+  var catMap={{}};
+  hist.forEach(function(h){{if(h.category&&h.category!=='other'){{if(!catMap[h.category])catMap[h.category]={{sum:0,count:0}};catMap[h.category].sum+=h.daysToComplete;catMap[h.category].count++;}}}}); 
+  var hardestCat=null,hardestScore=0;
+  Object.keys(catMap).forEach(function(c){{var avg=catMap[c].sum/catMap[c].count;if(avg>hardestScore){{hardestScore=avg;hardestCat=c;}}}});
+  if(!hardestCat)return;
+  var last=hist[hist.length-1];
+  if(last.category===hardestCat&&last.daysToComplete<hardestScore&&hardestScore>1){{
+    fireAch('the_hard_way','The Hard Way','You beat your own pattern on this one. That is not nothing. \uD83D\uDC10',100);
+  }}
+}}
+function checkPatternBroken(){{
+  if(hasAch('pattern_broken'))return;
+  var hist=getJ(HIST_KEY);if(hist.length<5)return;
+  var catMap={{}};
+  hist.forEach(function(h){{if(h.category&&h.category!=='other'){{if(!catMap[h.category])catMap[h.category]={{sum:0,count:0}};catMap[h.category].sum+=h.daysToComplete;catMap[h.category].count++;}}}}); 
+  var hardestCat=null,hardestScore=0;
+  Object.keys(catMap).forEach(function(c){{var avg=catMap[c].sum/catMap[c].count;if(avg>hardestScore){{hardestScore=avg;hardestCat=c;}}}});
+  if(!hardestCat||hardestScore<1)return;
+  var catHist=hist.filter(function(h){{return h.category===hardestCat;}});if(catHist.length<5)return;
+  var last5=catHist.slice(-5);
+  if(last5.every(function(h){{return h.daysToComplete<=hardestScore*2;}})){{
+    fireAch('pattern_broken','Pattern Broken','You just rewrote one of your patterns. The data says so. \uD83D\uDC10',250);
+  }}
+}}
+function runPatternAnalysis(){{
+  var hist=getJ(HIST_KEY);
+  var pat=getJObj(PAT_KEY);
+  var lastCount=pat.completionsAtLastAnalysis||0;
+  if(hist.length-lastCount<10)return;
+  var catMap={{}};var overallSum=0,overallCount=0;
+  hist.forEach(function(h){{
+    overallSum+=h.daysToComplete;overallCount++;
+    if(h.category&&h.category!=='other'){{if(!catMap[h.category])catMap[h.category]=[];catMap[h.category].push(h.daysToComplete);}}
+  }});
+  var overallAvg=overallCount>0?overallSum/overallCount:1;
+  var avoidance=[];
+  Object.keys(catMap).forEach(function(cat){{
+    var vals=catMap[cat];var avg=vals.reduce(function(a,b){{return a+b;}},0)/vals.length;
+    if(avg>=overallAvg*2)avoidance.push(cat);
+  }});
+  pat.avoidanceCategories=avoidance;pat.lastAnalyzed=Date.now();pat.completionsAtLastAnalysis=hist.length;
+  saveJ(PAT_KEY,pat);
+  if(avoidance.length>0&&hist.length>0){{
+    var firstTs=hist[0].ts||Date.now();
+    var daysSinceFirst=(Date.now()-firstTs)/(1000*60*60*24);
+    var lastInsight=pat.lastMonthlyInsight||0;
+    var daysSinceInsight=(Date.now()-lastInsight)/(1000*60*60*24);
+    if(daysSinceFirst>=30&&daysSinceInsight>=29){{
+      pat.lastMonthlyInsight=Date.now();saveJ(PAT_KEY,pat);
+      var insight='You tend to delay '+avoidance[0]+' tasks. They consistently take more than twice as long as everything else. Next month: when a '+avoidance[0]+' task lands, start it the same day.';
+      setTimeout(function(){{var f=window.parent.gfFire;if(f)f({{title:'GOATflow \uD83D\uDC10 \u2014 Monthly Trail Report',body:insight,hapticPattern:[100,50,100,50,100],prefKey:'monthlyInsight'}});}},3000);
+    }}
+  }}
+}}
+recordSession();
+checkZeroBull();
+checkKnowThyself();
+checkTheHardWay();
+checkPatternBroken();
+runPatternAnalysis();
+}})();
+</script>""", height=0)
 
 st.markdown('<div class="spacer-bottom"></div>', unsafe_allow_html=True)
 
