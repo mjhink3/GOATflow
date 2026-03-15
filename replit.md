@@ -40,6 +40,24 @@ Users sign in via username/password to access their private dashboard. Each user
 - **operational_log**: id, user_id, task_name, task_why, resolution, horn_applied_name, priority_score, xp_tier, created_at
 - Migration: `ensure_schema()` adds all new columns via ALTER TABLE IF NOT EXISTS checks
 
+## Goatifications System
+GOATflow's branded in-app and push notification system. Every notification is called a "Goatification" — never a "notification" in user-facing text.
+- **IIFE Template**: `_GOATIF_IIFE_TMPL` (raw Python string in `app.py`, injected after voice FAB via `_stc.html()`)
+- **Icon**: `static/goatification_icon.png` — animated megaphone/horn graphic; loaded as base64 `goatif_icon_src`; substituted into IIFE via `__GOATIF_ICON__` placeholder
+- **In-app Toast**: Slides down from top of parent document (#gf-toast); animates in 300ms, auto-dismisses after 4s; queued system ensures no overlap
+- **Permission Flow**: Branded overlay (`.gf-perm-overlay`) with hornPulse animation; fires once after onboarding via `gfMaybeAskPermission()`; result stored in `localStorage.goatflow_notif_asked`
+- **Sidebar Section**: `#gf-goatif-sidebar` — injected into parent sidebar DOM via JS MutationObserver+retry pattern; positioned before "Your Trail" button; collapsible (default: collapsed); state in `sessionStorage.gf_sb_collapsed`
+- **6 Toggles**: Fresh Cheese Earned (ON), Summit Call Overdue (ON), Speed Bonus (ON), Clip Rate Nudges (OFF, "Max 1/48hrs" pill), Morning Summit Reminder (OFF + time picker 6am–11am), Streak Milestones (ON)
+- **Prefs**: `localStorage.goatflow_notif_prefs` — read/saved on every toggle; master ON/OFF gates all triggers
+- **Triggers wired**:
+  - Fresh Cheese: `_stc.html()` injected alongside `show_fresh_cheese_popup()` 
+  - Speed Bonus: detected when `hay_earned > base_hay` at completion; stored as `just_earned_speed_bonus` session state; injected in `just_completed_task` handler; only fires when tab is not focused
+  - Summit Overdue: `setInterval` every 30 min; reads `data-signal-id`, `data-bleat-type`, `data-created-at` from signal card DOM
+  - Daily Reminder: `setTimeout` calculated to next reminder time; re-schedules daily
+- **Signal cards**: Have `data-signal-id`, `data-bleat-type`, `data-created-at`, `data-task-name` HTML attributes for JS trigger detection
+- **Rate limit**: Max 2 per 10-minute window; streak milestones bypass the limit
+- **Quiet hours**: 10pm–7am; push notifications suppressed; in-app toasts always allowed
+
 ## Key Files
 - `app.py` — Full application
 - `goatflow_logo.png` — Main WorkGOAT logo (320px header, home button)

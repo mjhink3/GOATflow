@@ -1962,6 +1962,368 @@ goat_hoof_b64 = load_image_b64("attached_assets/ChatGPT_Image_Mar_13,_2026,_09_5
 horns_icon_b64 = load_image_b64("attached_assets/ChatGPT_Image_Mar_13,_2026,_09_16_13_PM_1773461790675.png", "horns_icon_b64")
 banner_b64 = load_image_b64("attached_assets/goatflow_main_screen_logo_1773550462533.png", "banner_b64_v1")
 banner_src = f"data:image/png;base64,{banner_b64}" if banner_b64 else ""
+goatif_icon_b64 = load_image_b64("static/goatification_icon.png", "goatif_icon_b64_v1")
+goatif_icon_src = f"data:image/png;base64,{goatif_icon_b64}" if goatif_icon_b64 else ""
+
+# ── Goatifications IIFE template ── #
+_GOATIF_IIFE_TMPL = r"""
+(function() {
+  var pw = window.parent;
+  if (!pw) return;
+  if (pw._gfGoatifInit) return;
+  pw._gfGoatifInit = true;
+  var pd = pw.document;
+  var ICON = '__GOATIF_ICON__';
+  var PREF_KEY = 'goatflow_notif_prefs';
+  var DEF_PREFS = {master:true,freshCheese:true,summitOverdue:true,speedBonus:true,clipRate:false,dailyReminder:false,reminderTime:'8am',streakMilestones:true};
+
+  // ── Styles into parent ──
+  if (!pd.getElementById('gf-goatif-styles')) {
+    var st = pd.createElement('style');
+    st.id = 'gf-goatif-styles';
+    st.textContent = [
+      '@keyframes gfToastIn{0%{transform:translateY(-60px);opacity:0}100%{transform:translateY(0);opacity:1}}',
+      '@keyframes hornPulse{0%{transform:rotate(-5deg) scale(1)}50%{transform:rotate(5deg) scale(1.05)}100%{transform:rotate(-5deg) scale(1)}}',
+      '#gf-toast{position:fixed;top:0;left:0;right:0;z-index:9999;background:rgba(10,10,20,0.96);border:1px solid rgba(124,58,237,0.4);border-radius:0 0 10px 10px;padding:10px 14px;display:flex;align-items:center;gap:10px;animation:gfToastIn 300ms ease-out;font-family:DM Sans,sans-serif;}',
+      '#gf-perm-overlay{position:fixed;inset:0;z-index:9050;background:rgba(8,8,15,0.92);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;}',
+      '#gf-goatif-sidebar .gf-tog{width:36px;height:20px;border-radius:10px;cursor:pointer;position:relative;transition:background 250ms;flex-shrink:0;}',
+      '#gf-goatif-sidebar .gf-ball{width:16px;height:16px;background:white;border-radius:50%;position:absolute;top:2px;transition:left 250ms;}',
+      '#gf-goatif-sidebar .gf-row{min-height:44px;padding:6px 0;border-bottom:1px solid rgba(255,255,255,0.04);transition:opacity 250ms;}'
+    ].join('');
+    pd.head.appendChild(st);
+  }
+
+  // ── Utils ──
+  var hapticOk = 'vibrate' in pw.navigator;
+  var notifOk = 'Notification' in pw;
+  function getPrefs() { try { return Object.assign({},DEF_PREFS,JSON.parse(localStorage.getItem(PREF_KEY)||'{}')); } catch(e) { return Object.assign({},DEF_PREFS); } }
+  function savePrefs(p) { try { localStorage.setItem(PREF_KEY,JSON.stringify(p)); } catch(e) {} }
+  function getPerm() { return notifOk ? Notification.permission : 'unsupported'; }
+  function isQuiet() { var h=new Date().getHours(); return h>=22||h<7; }
+  function haptic(pat) { if (hapticOk && pat) { try { pw.navigator.vibrate(pat); } catch(e) {} } }
+
+  // ── Rate limiting: max 2 per 10-minute window ──
+  var _bucket = [];
+  // ── Toast queue ──
+  var _tq = [], _tBusy = false;
+
+  function showToast(title, body) {
+    _tq.push({title:title,body:body});
+    if (!_tBusy) _nextToast();
+  }
+  function _nextToast() {
+    if (!_tq.length) { _tBusy=false; return; }
+    _tBusy = true;
+    var item = _tq.shift();
+    var old = pd.getElementById('gf-toast');
+    if (old) old.remove();
+    var d = pd.createElement('div');
+    d.id = 'gf-toast';
+    d.innerHTML = '<img src="'+ICON+'" style="width:24px;height:24px;object-fit:contain;flex-shrink:0;">'
+      +'<div style="flex:1;"><div style="font-weight:700;font-size:13px;color:white;">'+item.title+'</div>'
+      +'<div style="font-weight:400;font-size:12px;color:#9ca3af;">'+item.body+'</div></div>'
+      +'<button style="background:none;border:none;color:#4b5563;font-size:16px;cursor:pointer;padding:0;flex-shrink:0;" onclick="(function(){var t=document.getElementById(\'gf-toast\');if(t){t.style.opacity=0;setTimeout(function(){t&&t.remove();},300);}})();">\u00d7</button>';
+    pd.body.appendChild(d);
+    setTimeout(function() {
+      var t=pd.getElementById('gf-toast');
+      if (t && t===d) {
+        t.style.transition='opacity 300ms';
+        t.style.opacity='0';
+        setTimeout(function() { if(t.parentNode) t.remove(); _tBusy=false; _nextToast(); },320);
+      }
+    }, 4000);
+  }
+
+  // ── fireGoatification ──
+  pw.gfFire = function(opts) {
+    var prefs = getPrefs();
+    if (!prefs.master) return;
+    if (opts.prefKey && !prefs[opts.prefKey]) return;
+    var now = Date.now();
+    _bucket = _bucket.filter(function(t){return now-t<600000;});
+    if (_bucket.length >= 2 && opts.prefKey !== 'streakMilestones') {
+      var delay = 600000 - (now - _bucket[0]);
+      setTimeout(function(){pw.gfFire(opts);}, delay);
+      return;
+    }
+    _bucket.push(now);
+    haptic(opts.hapticPattern);
+    showToast(opts.title, opts.body);
+    if (!opts.inAppOnly && !isQuiet() && getPerm()==='granted' && !pd.hasFocus()) {
+      try { new pw.Notification(opts.title,{body:opts.body,icon:ICON,badge:ICON,tag:opts.prefKey||'gf'}); } catch(e) {}
+    }
+  };
+
+  // ── Permission request flow ──
+  var _permBusy = false;
+  pw.gfAskPermission = function() {
+    if (!notifOk || _permBusy) return;
+    if (localStorage.getItem('goatflow_notif_asked')) return;
+    _permBusy = true;
+    var ov = pd.createElement('div');
+    ov.id = 'gf-perm-overlay';
+    ov.innerHTML = '<div style="background:#0e0e22;border:1px solid rgba(124,58,237,0.4);border-radius:16px;padding:28px 24px;max-width:320px;width:calc(100% - 48px);text-align:center;">'
+      +'<img src="'+ICON+'" style="width:80px;height:80px;object-fit:contain;animation:hornPulse 3s ease-in-out infinite;display:block;margin:0 auto;">'
+      +'<div style="font-family:Syne,sans-serif;font-weight:700;font-size:20px;color:white;margin-top:16px;">Enable Goatifications?</div>'
+      +'<div style="font-family:DM Sans,sans-serif;font-weight:400;font-size:14px;color:#9ca3af;margin-top:12px;line-height:1.6;">Get tapped when you earn Fresh Cheese, when Summit Calls need attention, and when the goat has thoughts about your Clip Rate. The goat taps once. Never twice about the same thing.</div>'
+      +'<button id="gf-perm-yes" style="background:#7c3aed;color:white;font-family:Syne,sans-serif;font-weight:700;font-size:15px;border:none;border-radius:8px;padding:14px;width:100%;margin-top:24px;cursor:pointer;">Let\'s Go \ud83d\udc10</button>'
+      +'<a id="gf-perm-no" style="display:block;font-family:DM Sans,sans-serif;font-weight:400;font-size:13px;color:#4b5563;margin-top:12px;cursor:pointer;">Maybe Later</a>'
+      +'</div>';
+    pd.body.appendChild(ov);
+    pd.getElementById('gf-perm-yes').addEventListener('click', function() {
+      Notification.requestPermission().then(function() {
+        ov.remove(); _permBusy=false;
+        localStorage.setItem('goatflow_notif_asked','true');
+        _rebuildSidebarPerm();
+      });
+    });
+    pd.getElementById('gf-perm-no').addEventListener('click', function() {
+      ov.remove(); _permBusy=false;
+      localStorage.setItem('goatflow_notif_snoozed', Date.now().toString());
+    });
+  };
+
+  pw.gfMaybeAskPermission = function() {
+    if (!notifOk) return;
+    if (localStorage.getItem('goatflow_notif_asked')) return;
+    var snoozed = localStorage.getItem('goatflow_notif_snoozed');
+    if (snoozed && (Date.now()-parseInt(snoozed)) < 259200000) return;
+    setTimeout(pw.gfAskPermission, 2000);
+  };
+
+  // ── Trigger 2: Summit Call Overdue (check every 30 min) ──
+  function checkOverdue() {
+    if (isQuiet()) return;
+    var fired; try { fired=JSON.parse(sessionStorage.getItem('goatflow_overdue_fired')||'[]'); } catch(e){fired=[];}
+    var cards = pd.querySelectorAll('[data-signal-id]');
+    cards.forEach(function(card) {
+      var sid = card.getAttribute('data-signal-id');
+      var bleatType = card.getAttribute('data-bleat-type');
+      var createdAt = card.getAttribute('data-created-at');
+      if (!sid || !createdAt || fired.indexOf(sid)!==-1) return;
+      if (!(bleatType && (bleatType.indexOf('Summit')!==-1))) return;
+      if (Date.now()-new Date(createdAt).getTime() >= 14400000) {
+        fired.push(sid);
+        try { sessionStorage.setItem('goatflow_overdue_fired',JSON.stringify(fired)); } catch(e){}
+        var title = card.getAttribute('data-task-name') || 'A Summit Call';
+        pw.gfFire({title:'GOATflow \u26a1',body:title+' needed handling 4 hours ago. The goat noticed.',hapticPattern:[250],prefKey:'summitOverdue'});
+      }
+    });
+  }
+  setInterval(checkOverdue, 1800000);
+
+  // ── Trigger 5: Daily Summit Reminder ──
+  var _reminderTimer = null;
+  function scheduleDailyReminder() {
+    if (_reminderTimer) { clearTimeout(_reminderTimer); _reminderTimer=null; }
+    var prefs = getPrefs();
+    if (!prefs.dailyReminder) return;
+    var tmap = {'6am':6,'7am':7,'8am':8,'9am':9,'10am':10,'11am':11};
+    var h = tmap[prefs.reminderTime] || 8;
+    var now = new Date(), target = new Date(now);
+    target.setHours(h,0,0,0);
+    if (now >= target) target.setDate(target.getDate()+1);
+    _reminderTimer = setTimeout(function() {
+      var summits = pd.querySelectorAll('[data-bleat-type*="Summit"]');
+      if (summits.length > 0) {
+        pw.gfFire({title:'GOATflow \u26a1',body:'Summit Calls are waiting. The goat is not waiting.',hapticPattern:[200],prefKey:'dailyReminder'});
+      }
+      scheduleDailyReminder();
+    }, target-now);
+  }
+  scheduleDailyReminder();
+
+  // ── Sidebar section ──
+  function _permBannerHTML(perm) {
+    if (perm==='granted') {
+      return '<div style="background:rgba(74,222,128,0.06);border:1px solid rgba(74,222,128,0.2);border-radius:8px;padding:8px 12px;margin-bottom:12px;">'
+        +'<span style="font-family:DM Sans,sans-serif;font-size:12px;color:#4ade80;">\u2713 Goatifications active</span></div>';
+    } else if (perm==='denied') {
+      return '<div id="gf-perm-denied-banner" style="cursor:pointer;background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.2);border-radius:8px;padding:10px 12px;margin-bottom:12px;">'
+        +'<div style="font-family:DM Sans,sans-serif;font-size:12px;color:#ef4444;">Notifications blocked in browser settings.</div>'
+        +'<div class="gf-denied-detail" style="display:none;font-family:DM Sans,sans-serif;font-size:11px;color:#6b7280;margin-top:6px;">Go to your browser settings \u2192 Site Settings \u2192 Notifications \u2192 Allow for this site.</div>'
+        +'</div>';
+    }
+    return '<div id="gf-perm-request-banner" style="cursor:pointer;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);border-radius:8px;padding:10px 12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;">'
+      +'<span style="font-family:DM Sans,sans-serif;font-size:12px;color:#f59e0b;">Tap to enable Goatifications</span>'
+      +'<span style="color:#f59e0b;">\u203a</span></div>';
+  }
+
+  function _timePicker(sel) {
+    var times=['6am','7am','8am','9am','10am','11am'], h='';
+    times.forEach(function(t) {
+      var a=t===sel;
+      h+='<button class="gf-time-pill" data-time="'+t+'" style="font-family:DM Sans,sans-serif;font-weight:500;font-size:11px;border-radius:20px;padding:4px 10px;height:26px;cursor:pointer;border:1px solid '+(a?'#7c3aed':'#374151')+';background:'+(a?'#7c3aed':'transparent')+';color:'+(a?'white':'#6b7280')+';">'+t+'</button>';
+    });
+    return '<div class="gf-time-picker" style="margin-top:8px;"><div style="font-family:DM Sans,sans-serif;font-size:11px;color:#6b7280;">Remind me at</div><div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;">'+h+'</div></div>';
+  }
+
+  function _togRow(key, icon, label, sub, defOn, extraRight, prefs, showTime) {
+    var on = prefs[key]!==undefined ? prefs[key] : defOn;
+    var masterOn = prefs.master!==false;
+    var op = masterOn?'1':'0.35', pe = masterOn?'auto':'none';
+    var bg = on?'#7c3aed':'#374151', lp = on?'18px':'2px';
+    return '<div class="gf-row" data-key="'+key+'" style="opacity:'+op+';pointer-events:'+pe+';">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;">'
+      +'<div style="display:flex;align-items:center;gap:8px;"><span style="font-size:14px;line-height:1;">'+icon+'</span>'
+      +'<span style="font-family:DM Sans,sans-serif;font-weight:500;font-size:13px;color:white;">'+label+'</span></div>'
+      +'<div style="display:flex;align-items:center;gap:6px;">'+(extraRight||'')
+      +'<div class="gf-tog" data-key="'+key+'" data-on="'+on+'" style="background:'+bg+';">'
+      +'<div class="gf-ball" style="left:'+lp+';"></div></div></div></div>'
+      +'<div style="font-family:DM Sans,sans-serif;font-size:11px;color:#4b5563;margin-left:24px;margin-top:2px;">'+sub+'</div>'
+      +(key==='dailyReminder' ? '<div class="gf-daily-time" style="display:'+(showTime?'block':'none')+';">'+ _timePicker(prefs.reminderTime||'8am')+'</div>' : '')
+      +'</div>';
+  }
+
+  function _buildSidebarHTML(prefs, perm, collapsed) {
+    var masterOn = prefs.master!==false;
+    var pill = '<span style="font-family:DM Sans,sans-serif;font-size:10px;color:#4b5563;background:rgba(255,255,255,0.05);border-radius:20px;padding:2px 7px;white-space:nowrap;">Max 1/48hrs</span>';
+    var rows = _togRow('freshCheese','<img src="'+ICON+'" style="width:14px;height:14px;object-fit:contain;">','Fresh Cheese Earned','When 500 Hay converts',true,'',prefs,false)
+      + _togRow('summitOverdue','\u26a1','Summit Call Overdue','When a Summit Call hits 4+ hours',true,'',prefs,false)
+      + _togRow('speedBonus','\ud83c\udf3e','Speed Bonus','24-hour completion bonus earned',true,'',prefs,false)
+      + _togRow('clipRate','\u2702\ufe0f','Clip Rate Nudges','When efficiency needs attention',false,pill,prefs,false)
+      + _togRow('dailyReminder','\ud83d\udccb','Morning Summit Reminder','Nudge if Summit Calls are waiting',false,'',prefs,prefs.dailyReminder)
+      + _togRow('streakMilestones','\ud83d\udd25','Streak Milestones','At 3, 7, 14, and 30 days',true,'',prefs,false);
+
+    return '<div id="gf-sb-header" style="display:flex;justify-content:space-between;align-items:center;min-height:44px;cursor:pointer;padding:4px 0;">'
+      +'<div style="display:flex;align-items:center;gap:8px;">'
+      +'<img src="'+ICON+'" style="width:18px;height:18px;object-fit:contain;">'
+      +'<span style="font-family:Syne,sans-serif;font-weight:700;font-size:14px;color:white;">Goatifications</span></div>'
+      +'<div style="display:flex;align-items:center;gap:8px;">'
+      +'<span id="gf-master-lbl" style="font-family:DM Sans,sans-serif;font-weight:'+(masterOn?500:400)+';font-size:11px;color:'+(masterOn?'#4ade80':'#4b5563')+'">'+(masterOn?'Active':'Off')+'</span>'
+      +'<div class="gf-tog" id="gf-master-tog" data-on="'+masterOn+'" style="background:'+(masterOn?'#7c3aed':'#374151')+';"><div class="gf-ball" style="left:'+(masterOn?'18px':'2px')+';"></div></div>'
+      +'<span id="gf-chevron" style="color:#4b5563;font-size:16px;display:inline-block;transition:transform 250ms;transform:rotate('+(collapsed?'0':'90')+'deg);">\u203a</span>'
+      +'</div></div>'
+      +'<div id="gf-sb-content" style="display:'+(collapsed?'none':'block')+';padding-bottom:4px;">'
+      +'<div style="font-family:DM Sans,sans-serif;font-size:12px;color:#4b5563;font-style:italic;margin:6px 0 12px;">The goat taps your shoulder when it matters. Never when it doesn\'t.</div>'
+      + _permBannerHTML(perm)
+      + rows
+      +'<div style="border-top:1px solid rgba(255,255,255,0.04);margin:10px 0;text-align:center;padding-top:8px;"><span style="font-family:DM Sans,sans-serif;font-size:11px;color:#374151;">\ud83d\udcf3 Haptics active on Android. iOS haptics coming in the App Store version.</span></div>'
+      +'</div>';
+  }
+
+  function _bindSidebar(sec) {
+    var prefs = getPrefs();
+    // Collapse/expand
+    var hdr = pd.getElementById('gf-sb-header');
+    var content = pd.getElementById('gf-sb-content');
+    var chevron = pd.getElementById('gf-chevron');
+    if (hdr && content) {
+      hdr.addEventListener('click', function(e) {
+        if (e.target.closest('#gf-master-tog') || e.target.id==='gf-master-lbl') return;
+        var show = content.style.display==='none';
+        content.style.display = show?'block':'none';
+        if (chevron) chevron.style.transform = show?'rotate(90deg)':'rotate(0deg)';
+        sessionStorage.setItem('gf_sb_collapsed', show?'false':'true');
+      });
+    }
+    // Master toggle
+    var masterTog = pd.getElementById('gf-master-tog');
+    var masterLbl = pd.getElementById('gf-master-lbl');
+    if (masterTog) {
+      masterTog.addEventListener('click', function(e) {
+        e.stopPropagation();
+        var p = getPrefs(); p.master = !p.master; savePrefs(p);
+        var on = p.master;
+        masterTog.style.background = on?'#7c3aed':'#374151';
+        masterTog.querySelector('.gf-ball').style.left = on?'18px':'2px';
+        if (masterLbl) { masterLbl.textContent=on?'Active':'Off'; masterLbl.style.color=on?'#4ade80':'#4b5563'; }
+        sec.querySelectorAll('.gf-row').forEach(function(row,i) {
+          setTimeout(function(){row.style.opacity=on?'1':'0.35';row.style.pointerEvents=on?'auto':'none';},i*25);
+        });
+      });
+    }
+    // Individual toggles
+    sec.querySelectorAll('.gf-tog[data-key]').forEach(function(tog) {
+      tog.addEventListener('click', function() {
+        var key = tog.getAttribute('data-key');
+        var isOn = tog.getAttribute('data-on')==='true';
+        var p = getPrefs(); p[key] = !isOn; savePrefs(p);
+        tog.setAttribute('data-on', !isOn);
+        tog.style.background = !isOn?'#7c3aed':'#374151';
+        tog.querySelector('.gf-ball').style.left = !isOn?'18px':'2px';
+        var hmap = {freshCheese:[100,60,100],summitOverdue:[250],speedBonus:[60,40,60],clipRate:[150],dailyReminder:[200],streakMilestones:[100,60,100,60,100]};
+        haptic(hmap[key]);
+        if (key==='dailyReminder') {
+          var td = tog.closest('.gf-row').querySelector('.gf-daily-time');
+          if (td) td.style.display = !isOn?'block':'none';
+          if (!isOn) scheduleDailyReminder(); else { if (_reminderTimer) clearTimeout(_reminderTimer); }
+        }
+      });
+    });
+    // Time picker
+    sec.querySelectorAll('.gf-time-pill').forEach(function(pill) {
+      pill.addEventListener('click', function() {
+        var t = pill.getAttribute('data-time');
+        var p = getPrefs(); p.reminderTime=t; savePrefs(p);
+        sec.querySelectorAll('.gf-time-pill').forEach(function(pp) {
+          var a=pp.getAttribute('data-time')===t;
+          pp.style.background=a?'#7c3aed':'transparent';pp.style.borderColor=a?'#7c3aed':'#374151';pp.style.color=a?'white':'#6b7280';
+        });
+        scheduleDailyReminder();
+      });
+    });
+    // Permission banners
+    var reqBanner = pd.getElementById('gf-perm-request-banner');
+    if (reqBanner) reqBanner.addEventListener('click', function(){pw.gfAskPermission();});
+    var denBanner = pd.getElementById('gf-perm-denied-banner');
+    if (denBanner) denBanner.addEventListener('click', function(){this.querySelector('.gf-denied-detail').style.display='block';});
+  }
+
+  function _rebuildSidebarPerm() {
+    var sec = pd.getElementById('gf-goatif-sidebar');
+    if (!sec) return;
+    var collapsed = sessionStorage.getItem('gf_sb_collapsed')==='true';
+    sec.innerHTML = _buildSidebarHTML(getPrefs(), getPerm(), collapsed);
+    _bindSidebar(sec);
+  }
+
+  function buildGoatifSidebar() {
+    if (pd.getElementById('gf-goatif-sidebar')) return;
+    // Find "Your Trail" button
+    var buttons = pd.querySelectorAll('[data-testid="stSidebar"] button');
+    var trailBtn = null;
+    buttons.forEach(function(b){ if(b.textContent.replace(/\s+/g,' ').trim().indexOf('Your Trail')!==-1) trailBtn=b; });
+    if (!trailBtn) return;
+    // Walk up to a stVerticalBlock or similar container
+    var el = trailBtn;
+    for (var i=0;i<14;i++) {
+      if (!el.parentElement) break;
+      var p = el.parentElement;
+      if (p.getAttribute && (p.getAttribute('data-testid')==='stVerticalBlock' || p.getAttribute('data-testid')==='stVerticalBlockBorderWrapper')) {
+        el = p; break;
+      }
+      el = p;
+    }
+    if (!el.parentElement) return;
+    var sec = pd.createElement('div');
+    sec.id = 'gf-goatif-sidebar';
+    sec.style.cssText = 'border-top:1px solid rgba(255,255,255,0.06);padding:16px 0 4px;margin-top:4px;';
+    var collapsed = sessionStorage.getItem('gf_sb_collapsed') !== 'false';
+    sec.innerHTML = _buildSidebarHTML(getPrefs(), getPerm(), collapsed);
+    el.parentElement.insertBefore(sec, el);
+    _bindSidebar(sec);
+  }
+
+  function tryInjectSidebar() {
+    if (!pd.getElementById('gf-goatif-sidebar')) buildGoatifSidebar();
+  }
+
+  setTimeout(tryInjectSidebar, 800);
+  setTimeout(tryInjectSidebar, 1600);
+  setTimeout(tryInjectSidebar, 3000);
+
+  var _sbObs = new MutationObserver(function() {
+    if (!pd.getElementById('gf-goatif-sidebar')) setTimeout(tryInjectSidebar, 400);
+  });
+  function attachSbObs() {
+    var sb = pd.querySelector('[data-testid="stSidebar"]');
+    if (sb) _sbObs.observe(sb, {childList:true,subtree:true});
+    else setTimeout(attachSbObs, 1500);
+  }
+  attachSbObs();
+})();
+"""
 
 LEVEL_IMAGE_FILES = {
     1: "attached_assets/WorkGOAT_The_Kid_level_1_1773461158482.png",
@@ -3250,6 +3612,14 @@ _ob_iframe_html = f"""<!DOCTYPE html><html><body style="margin:0;padding:0;backg
 
 _stc.html(_ob_iframe_html, height=0, scrolling=False)
 
+# ── Goatifications engine injection ──
+_goatif_js = _GOATIF_IIFE_TMPL.replace('__GOATIF_ICON__', goatif_icon_src)
+_stc.html(f'<script>{_goatif_js}</script>', height=0)
+
+# ── Permission prompt (after onboarding completes) ──
+if player_data.get("onboarding_done"):
+    _stc.html('<script>setTimeout(function(){var f=window.parent.gfMaybeAskPermission;if(f)f();},3000);</script>', height=0)
+
 
 st.markdown(f"""
 <div id="gf-welcome-overlay" style="
@@ -3763,6 +4133,7 @@ def show_fresh_cheese_popup(cheese_count):
 
 if st.session_state.get("just_earned_fresh_cheese"):
     show_fresh_cheese_popup(st.session_state["just_earned_fresh_cheese"])
+    _stc.html('<script>setTimeout(function(){var f=window.parent.gfFire;if(f)f({title:"GOATflow \U0001F9C0",body:"500 Hay converted. Fresh Cheese banked. You are actually doing this.",hapticPattern:[100,60,100],prefKey:"freshCheese"});},600);</script>', height=0)
 
 if st.session_state.get("just_completed_task"):
     task_data = st.session_state["just_completed_task"]
@@ -3776,6 +4147,8 @@ if st.session_state.get("just_completed_task"):
         xp_tier = "Standard"
         hay_earned = 10
     show_hay_popup(task_name, xp_gained, leveled_up, xp_tier, hay_earned)
+    if st.session_state.pop("just_earned_speed_bonus", False):
+        _stc.html('<script>setTimeout(function(){if(window.parent.document.hasFocus())return;var f=window.parent.gfFire;if(f)f({title:"GOATflow \U0001F33E",body:"Speed bonus. +10 Hay. That is how it is done.",hapticPattern:[60,40,60],prefKey:"speedBonus"});},800);</script>', height=0)
 
 signals = get_active_signals(current_user_id)
 if st.session_state.get("incognito_mode", False):
@@ -4078,8 +4451,11 @@ else:
         if horn_name:
             horn_tag_html = f'<span class="horn-tag">🐐 Ranked by: {safe(horn_name)}</span>'
 
+        _sig_cat = sig.get('created_at')
+        _sig_cat_str = _sig_cat.isoformat() if _sig_cat else ''
+        _sig_tn_esc = safe(sig["task_name"]).replace('"', '&quot;')
         card_html = (
-            f'<div class="signal-card{card_extra_class}">'
+            f'<div class="signal-card{card_extra_class}" data-signal-id="{sig.get("id","")}" data-bleat-type="{sig.get("bleat_type","")}" data-created-at="{_sig_cat_str}" data-task-name="{_sig_tn_esc}">'
             f'<div class="signal-weight">{weight:.0f}</div>'
             f'<div class="signal-task">{safe(sig["task_name"])}{glow_eye_icon}{goat_badge}{horn_badge}</div>'
             f'<div class="signal-why">{safe(sig["why"])}</div>'
@@ -4108,6 +4484,10 @@ else:
                     st.session_state["just_completed_task"] = (sig['task_name'], xp, leveled_up, reward, hay_earned)
                     if cheese_count:
                         st.session_state["fresh_cheese_pending"] = cheese_count
+                    _is_summit_sig = sig.get('bleat_type') in ("Summit-Level Bleat", "Summit Call")
+                    _base_hay = HAY_SUMMIT_BONUS if _is_summit_sig else HAY_BASE.get(sig.get('xp_reward', 'Standard'), 10)
+                    if hay_earned > _base_hay:
+                        st.session_state["just_earned_speed_bonus"] = True
                     st.rerun()
 
 st.markdown('<div class="spacer-bottom"></div>', unsafe_allow_html=True)
