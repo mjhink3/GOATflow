@@ -1704,6 +1704,55 @@ def get_operational_log(user_id: str, filter_type: str = "all") -> list[dict]:
         conn.close()
 
 
+def get_clip_rate_data(user_id: str) -> dict:
+    """Returns {generated_7d, completed_7d} for rolling 7-day Clip Rate."""
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT COUNT(*) FROM signals WHERE user_id = %s AND created_at >= NOW() - INTERVAL '7 days'",
+                (user_id,)
+            )
+            generated = int(cur.fetchone()[0])
+            cur.execute(
+                "SELECT COUNT(*) FROM signals WHERE user_id = %s AND completed = TRUE AND completed_at >= NOW() - INTERVAL '7 days'",
+                (user_id,)
+            )
+            completed = int(cur.fetchone()[0])
+            return {"generated": generated, "completed": completed}
+    except Exception:
+        return {"generated": 0, "completed": 0}
+    finally:
+        conn.close()
+
+
+def get_weekly_clip_rates(user_id: str) -> list:
+    """Returns list of 4 weekly dicts {label, generated, completed, rate}, oldest→newest."""
+    weeks = []
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            for w in range(3, -1, -1):
+                cur.execute(
+                    "SELECT COUNT(*) FROM signals WHERE user_id = %s AND created_at >= NOW() - INTERVAL %s AND created_at < NOW() - INTERVAL %s",
+                    (user_id, f"{(w+1)*7} days", f"{w*7} days")
+                )
+                generated = int(cur.fetchone()[0])
+                cur.execute(
+                    "SELECT COUNT(*) FROM signals WHERE user_id = %s AND completed = TRUE AND completed_at >= NOW() - INTERVAL %s AND completed_at < NOW() - INTERVAL %s",
+                    (user_id, f"{(w+1)*7} days", f"{w*7} days")
+                )
+                completed = int(cur.fetchone()[0])
+                rate = round((completed / generated) * 100) if generated > 0 else 0
+                label = "This Wk" if w == 0 else f"Wk -{w}"
+                weeks.append({"label": label, "generated": generated, "completed": completed, "rate": rate})
+    except Exception:
+        weeks = [{"label": "This Wk" if w == 0 else f"Wk -{w}", "generated": 0, "completed": 0, "rate": 0} for w in range(3, -1, -1)]
+    finally:
+        conn.close()
+    return weeks
+
+
 def save_signals(user_id: str, signals_data: list[dict]):
     conn = get_db()
     try:
@@ -2170,6 +2219,41 @@ user_level = player_data["level"]
 user_rank = ascension_rank(user_level)
 use_crown = user_level >= 5
 
+# Pre-compute clip rate for sidebar (avoids needing main-body computation to run first)
+_sb_cr_data = get_clip_rate_data(current_user_id)
+_sb_total_completed = player_data.get("tasks_completed", 0)
+if _sb_total_completed < 5:
+    _sb_clip_value = None
+    _sb_clip_display = "—"
+    _sb_clip_color = "#9ca3af"
+else:
+    _sb_cr_g = _sb_cr_data["generated"]
+    _sb_cr_c = _sb_cr_data["completed"]
+    _sb_clip_value = round((_sb_cr_c / _sb_cr_g) * 100) if _sb_cr_g > 0 else 0
+    _sb_clip_display = f"{_sb_clip_value}%"
+    _sb_clip_color = "#4ade80" if _sb_clip_value >= 75 else ("#f59e0b" if _sb_clip_value >= 50 else "#ef4444")
+
+_sb_weekly = get_weekly_clip_rates(current_user_id)
+
+def _build_weekly_bar_html(weekly_list: list) -> str:
+    html = '<div style="margin-top:0.5rem;border-top:1px solid #1f2937;padding-top:0.4rem;"><div style="font-size:0.52rem;color:#9ca3af;margin-bottom:0.3rem;font-family:\'DM Sans\',sans-serif;">Clip Rate \u2014 Last 4 Weeks</div>'
+    for wk in weekly_list:
+        r = wk.get("rate", 0)
+        wc = "#4ade80" if r >= 75 else ("#f59e0b" if r >= 50 else "#ef4444")
+        filled = max(0, min(10, round(r / 10)))
+        bar_str = "\u2588" * filled + "\u2591" * (10 - filled)
+        html += (
+            f'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">'
+            f'<span style="font-size:0.52rem;color:#9ca3af;min-width:44px;">{wk["label"]}</span>'
+            f'<span style="font-size:0.6rem;letter-spacing:0.5px;font-family:monospace;color:{wc};">{bar_str}</span>'
+            f'<span style="font-size:0.52rem;color:{wc};min-width:28px;text-align:right;">{r}%</span>'
+            f'</div>'
+        )
+    html += '</div>'
+    return html
+
+_sb_weekly_bars_html = _build_weekly_bar_html(_sb_weekly)
+
 with st.sidebar:
     sidebar_logo = f'<img src="{logo_src}" alt="GOATflow" style="height:150px;object-fit:contain;">' if logo_src else '<div style="font-size:1.2rem;font-weight:900;color:#6100ff;">🐐 GOATflow</div>'
     st.markdown(f'''
@@ -2233,7 +2317,12 @@ with st.sidebar:
             <span style="font-size:0.6rem;color:{SILVER};">Fresh Cheese Banked</span>
             <span style="font-size:0.6rem;font-weight:700;color:#22c55e;">🧀 {sb_cheese}</span>
         </div>
-        <div style="font-size:0.52rem;color:#6b7280;text-align:right;margin-bottom:0.4rem;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:0.3rem;">
+            <span style="font-size:0.6rem;color:{SILVER};">✂️ Clip Rate (7d)</span>
+            <span style="font-size:0.6rem;font-weight:700;color:{_sb_clip_color};">{_sb_clip_display}</span>
+        </div>
+        {_sb_weekly_bars_html}
+        <div style="font-size:0.52rem;color:#6b7280;text-align:right;margin-bottom:0.4rem;margin-top:0.3rem;">
             Ports to WorkGOAT when available — <a href="https://workgoat.vip" target="_blank" style="color:#7c3aed;text-decoration:none;">workgoat.vip</a>
         </div>
         <div style="text-align:center;">
@@ -3726,6 +3815,42 @@ summit_count = sum(1 for s in signals if s.get("bleat_type") in ("Summit-Level B
 level, xp_into, xp_needed = compute_level(player["total_xp"])
 cur_pasture = pasture_name(level)
 
+# ── Clip Rate + Horns count ─────────────────────────────────────────────────
+_cr_data = get_clip_rate_data(current_user_id)
+_cr_generated = _cr_data["generated"]
+_cr_completed = _cr_data["completed"]
+_total_completed = player["tasks_completed"]
+if _total_completed < 5:
+    clip_rate_value = None
+else:
+    clip_rate_value = round((_cr_completed / _cr_generated) * 100) if _cr_generated > 0 else 0
+
+if clip_rate_value is None:
+    clip_rate_display = "—"
+    clip_rate_sublabel = "Complete 5 Tracks to unlock"
+    clip_rate_color = "#9ca3af"
+    clip_rate_border_style = ""
+elif clip_rate_value >= 75:
+    clip_rate_display = f"{clip_rate_value}%"
+    clip_rate_sublabel = ""
+    clip_rate_color = "#4ade80"
+    clip_rate_border_style = "border-color:#3DAA6A;"
+elif clip_rate_value >= 50:
+    clip_rate_display = f"{clip_rate_value}%"
+    clip_rate_sublabel = ""
+    clip_rate_color = "#f59e0b"
+    clip_rate_border_style = "border-color:#f59e0b;"
+else:
+    clip_rate_display = f"{clip_rate_value}%"
+    clip_rate_sublabel = ""
+    clip_rate_color = "#ef4444"
+    clip_rate_border_style = "border-color:#ef4444;"
+
+_sidebar_clip_text = clip_rate_display
+
+horns_count = len(parse_horns(get_horns(current_user_id)))
+_horns_img_stat = f'<img src="data:image/png;base64,{horns_icon_b64}" alt="Horns" style="height:28px;vertical-align:middle;margin-right:4px;">' if horns_icon_b64 else "🐐"
+
 linkedin_total_text = f"I'm at {cur_pasture} (Level {level}) with {player['total_xp']:,} Cheese Churn Points on GOATflow! {player['tasks_completed']} Tracks completed. Part of the WorkGOAT Ecosystem."
 linkedin_total_url = "https://www.linkedin.com/sharing/share-offsite/?" + urllib.parse.urlencode({"url": "https://workgoat.vip", "title": linkedin_total_text, "summary": linkedin_total_text})
 
@@ -3733,6 +3858,7 @@ hay_balance = player.get("hay", 0)
 cheese_total = player.get("fresh_cheese", 0)
 hay_pct = min(int((hay_balance / HAY_TO_CHEESE) * 100), 100)
 
+_clip_sublabel_html = f'<div class="stat-sub">{clip_rate_sublabel}</div>' if clip_rate_sublabel else ''
 st.markdown(f'''
 <div class="stats-row">
     <div class="stat-box">
@@ -3755,6 +3881,15 @@ st.markdown(f'''
     <div class="stat-box">
         <div class="stat-value" style="color:#22c55e;font-family:Syne,sans-serif;">🧀 {cheese_total}</div>
         <div class="stat-label">Fresh Cheese</div>
+    </div>
+    <div class="stat-box" style="flex-shrink:0;">
+        <div class="stat-value">{_horns_img_stat} {horns_count}</div>
+        <div class="stat-label">Active Horns</div>
+    </div>
+    <div class="stat-box" style="{clip_rate_border_style}" title="Tracks completed vs. Tracks generated over the last 7 days. Refine your Horns to improve your Clip Rate.">
+        <div class="stat-value" style="color:{clip_rate_color};">✂️ {clip_rate_display}</div>
+        <div class="stat-label">CLIP RATE</div>
+        {_clip_sublabel_html}
     </div>
 </div>
 ''', unsafe_allow_html=True)
@@ -3787,6 +3922,37 @@ if not _horns_for_onboard and not signals:
         <div class="horns-onboarding-desc">Your Horns tell GOATflow what never moves — no matter what else comes in. Open the sidebar and add your first Horn to get started.</div>
     </div>
     ''', unsafe_allow_html=True)
+
+if clip_rate_value is not None and _total_completed >= 5 and clip_rate_value < 60:
+    _cr_val_js = clip_rate_value
+    _stc.html(f"""<script>
+(function(){{
+    var KEY='gf_clip_nudge_v1';
+    if(sessionStorage.getItem(KEY)) return;
+    var pd=window.parent.document;
+    if(pd.getElementById('gf-clip-nudge')) return;
+    var nudge=pd.createElement('div');
+    nudge.id='gf-clip-nudge';
+    nudge.style.cssText='background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:10px 14px;margin-bottom:10px;position:relative;font-family:DM Sans,sans-serif;font-size:13px;color:#f59e0b;line-height:1.6;';
+    nudge.innerHTML='Your Clip Rate is at {_cr_val_js}% this week. If Tracks feel off-priority, add a Horn to dial it in. The AI gets sharper every time you do. <a href="#" id="gf-refine-horn-link" style="color:#f59e0b;font-weight:700;text-decoration:none;">Refine a Horn \u2192</a><button id="gf-nudge-dismiss-btn" style="position:absolute;top:5px;right:8px;background:none;border:none;color:#f59e0b;cursor:pointer;font-size:16px;line-height:1;padding:0;">\u00d7</button>';
+    function insert(){{
+        var statsRow=pd.querySelector('.stats-row');
+        if(!statsRow){{ setTimeout(insert,300); return; }}
+        statsRow.parentNode.insertBefore(nudge,statsRow.nextSibling);
+        pd.getElementById('gf-nudge-dismiss-btn').addEventListener('click',function(){{
+            sessionStorage.setItem(KEY,'1');
+            nudge.remove();
+        }});
+        pd.getElementById('gf-refine-horn-link').addEventListener('click',function(e){{
+            e.preventDefault();
+            var chevron=pd.querySelector('[data-testid="stSidebar"] [aria-expanded="false"]');
+            if(chevron) chevron.click();
+        }});
+    }}
+    setTimeout(insert,600);
+    setTimeout(insert,1200);
+}})();
+</script>""", height=0)
 
 horn_conflicts = []
 if signals:
@@ -3852,6 +4018,15 @@ if st.session_state.get("show_trail"):
             if st.button("Reordered", key="trail_reordered", use_container_width=True):
                 st.session_state["trail_filter"] = "reordered"
                 st.rerun()
+        _trail_weekly_inner = _sb_weekly_bars_html
+        _trail_weekly_inner = _trail_weekly_inner.replace("margin-top:0.5rem;border-top:1px solid #1f2937;padding-top:0.4rem;", "")
+        _trail_weekly_inner = _trail_weekly_inner.replace('<div style="font-size:0.52rem;color:#9ca3af;margin-bottom:0.3rem;font-family:\'DM Sans\',sans-serif;">Clip Rate \u2014 Last 4 Weeks</div>', "")
+        st.markdown(f'''
+        <div style="background:{CARD_BG};border-radius:8px;border:1px solid {BORDER};padding:0.7rem 0.9rem;margin-bottom:0.7rem;">
+            <div style="font-size:0.65rem;font-weight:700;color:#9ca3af;font-family:'DM Sans',sans-serif;margin-bottom:0.4rem;text-transform:uppercase;letter-spacing:0.08em;">&#9986; Clip Rate \u2014 Last 4 Weeks</div>
+            {_trail_weekly_inner}
+        </div>
+        ''', unsafe_allow_html=True)
         trail_filter = st.session_state.get("trail_filter", "all")
         trail_entries = get_operational_log(current_user_id, trail_filter)
         if not trail_entries:

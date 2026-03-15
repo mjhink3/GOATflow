@@ -86,13 +86,19 @@ Users sign in via username/password to access their private dashboard. Each user
 - **Conversion**: 500 Hay → 1 Fresh Cheese automatically; `hay` column stores remainder after conversion
 - **HAY DECAY** — reserved for WorkGOAT integration phase (commented in code)
 - Conversion triggers: fresh_cheese count increments, cheese-toast notification displays in feed
-- Dashboard stat cards (5): Active Tracks, Summit Calls, Completed, Hay (🌾 amber), Fresh Cheese (🧀 green)
+- Dashboard stat cards (7): Active Tracks, Summit Calls, Completed, Hay (🌾 amber), Fresh Cheese (🧀 green), Active Horns (with Horns image + count), CLIP RATE (✂️, color-coded green/amber/red)
 - Hay card shows "340/500 to next 🧀" sub-label
+- Clip Rate = (Tracks completed / Tracks generated) × 100 over rolling 7-day window; "—" for users with < 5 total completed
+- Clip Rate card border: green (#3DAA6A) ≥75%, amber (#f59e0b) 50-74%, red (#ef4444) <50%
+- Nudge panel (amber, JS-injected): appears when Clip Rate < 60% with ≥5 completed Tracks; dismissed per-session via sessionStorage; "Refine a Horn →" opens sidebar
 - Pasture Gauge bar shows "🌾 X/500 Hay to next 🧀" below the tier label
 
 ## Sidebar My Stats
 - Total Grit (XP), Cheese Churn Rate, Ascension Rank, Next Fence
 - **Fresh Cheese Banked** (green #22c55e) with muted link to workgoat.vip
+- **✂️ Clip Rate (7d)**: color-coded (green/amber/red) matching dashboard card thresholds
+- **Clip Rate — Last 4 Weeks** bar chart: █/░ block chars, per-week color coded, shown inside My Stats card
+- Trail dialog: weekly 4-week Clip Rate bar chart shown at top before filter buttons
 - **Port to WorkGOAT** button (secondary style) — tooltip: "WorkGOAT is coming. Your Fresh Cheese will be waiting."
 
 ## Ascension Profile & Progress (Sidebar)
