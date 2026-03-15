@@ -4501,7 +4501,7 @@ var overlay=doc.createElement('div');
 overlay.id='gf-adaptive-prompt';
 overlay.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);width:90%;max-width:400px;background:rgba(8,8,15,0.97);border:1px solid rgba(124,58,237,0.2);border-radius:8px;padding:10px 14px;z-index:9999;box-shadow:0 4px 20px rgba(0,0,0,0.6);animation:gfSlideUp 0.2s ease;';
 var qRow=doc.createElement('div');qRow.style.cssText='display:flex;align-items:flex-start;gap:8px;margin-bottom:8px;';
-var emo=doc.createElement('span');emo.textContent='\uD83D\uDC10';emo.style.cssText='font-size:16px;flex-shrink:0;line-height:1.3;';
+var emo=doc.createElement('span');emo.textContent='\U0001F410';emo.style.cssText='font-size:16px;flex-shrink:0;line-height:1.3;';
 var qTxt=doc.createElement('span');qTxt.style.cssText='font-size:12px;color:#9ca3af;font-family:"DM Sans",sans-serif;line-height:1.5;';qTxt.textContent=question;
 qRow.appendChild(emo);qRow.appendChild(qTxt);
 var inp=doc.createElement('input');inp.type='text';inp.placeholder='Optional \u2014 tap to add...';
@@ -5030,7 +5030,7 @@ function checkZeroBull(){{
   var s=getJ(SESS_KEY);if(s.length<7)return;
   var last7=s.slice(-7);
   if(last7.every(function(x){{return x.activeCount>=4&&x.activeCount<=15;}})){{
-    fireAch('zero_bull','Zero Bull','No over-commitment. No under-delivery. Pure signal. Zero bull. \uD83D\uDC10',300);
+    fireAch('zero_bull','Zero Bull','No over-commitment. No under-delivery. Pure signal. Zero bull. \U0001F410',300);
   }}
 }}
 function checkKnowThyself(){{
@@ -5047,7 +5047,7 @@ function checkKnowThyself(){{
     var ratio=avg/overallAvg;return ratio>=0.6&&ratio<=1.6;
   }});
   if(allConsistent){{
-    fireAch('know_thyself','Know Thyself','You know how long things take. Most people never figure that out. \uD83D\uDC10',200);
+    fireAch('know_thyself','Know Thyself','You know how long things take. Most people never figure that out. \U0001F410',200);
   }}
 }}
 function checkTheHardWay(){{
@@ -5060,7 +5060,7 @@ function checkTheHardWay(){{
   if(!hardestCat)return;
   var last=hist[hist.length-1];
   if(last.category===hardestCat&&last.daysToComplete<hardestScore&&hardestScore>1){{
-    fireAch('the_hard_way','The Hard Way','You beat your own pattern on this one. That is not nothing. \uD83D\uDC10',100);
+    fireAch('the_hard_way','The Hard Way','You beat your own pattern on this one. That is not nothing. \U0001F410',100);
   }}
 }}
 function checkPatternBroken(){{
@@ -5074,7 +5074,7 @@ function checkPatternBroken(){{
   var catHist=hist.filter(function(h){{return h.category===hardestCat;}});if(catHist.length<5)return;
   var last5=catHist.slice(-5);
   if(last5.every(function(h){{return h.daysToComplete<=hardestScore*2;}})){{
-    fireAch('pattern_broken','Pattern Broken','You just rewrote one of your patterns. The data says so. \uD83D\uDC10',250);
+    fireAch('pattern_broken','Pattern Broken','You just rewrote one of your patterns. The data says so. \U0001F410',250);
   }}
 }}
 function runPatternAnalysis(){{
@@ -5103,7 +5103,7 @@ function runPatternAnalysis(){{
     if(daysSinceFirst>=30&&daysSinceInsight>=29){{
       pat.lastMonthlyInsight=Date.now();saveJ(PAT_KEY,pat);
       var insight='You tend to delay '+avoidance[0]+' tasks. They consistently take more than twice as long as everything else. Next month: when a '+avoidance[0]+' task lands, start it the same day.';
-      setTimeout(function(){{var f=window.parent.gfFire;if(f)f({{title:'GOATflow \uD83D\uDC10 \u2014 Monthly Trail Report',body:insight,hapticPattern:[100,50,100,50,100],prefKey:'monthlyInsight'}});}},3000);
+      setTimeout(function(){{var f=window.parent.gfFire;if(f)f({{title:'GOATflow \U0001F410 \u2014 Monthly Trail Report',body:insight,hapticPattern:[100,50,100,50,100],prefKey:'monthlyInsight'}});}},3000);
     }}
   }}
 }}
