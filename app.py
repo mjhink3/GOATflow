@@ -217,7 +217,6 @@ CUSTOM_CSS = f"""
         border-radius: 0 0 10px 10px;
         margin-bottom: 0;
         background: #08080f;
-        padding-top: 52px;
     }}
 
     .gf-banner-wrap img {{
@@ -248,7 +247,7 @@ CUSTOM_CSS = f"""
 
     @media (max-width: 768px) {{
         .gf-banner-wrap img {{ height: 240px !important; object-fit: contain !important; object-position: center bottom !important; border-radius: 0 0 8px 8px !important; }}
-        .gf-banner-wrap {{ border-radius: 0 0 8px 8px !important; margin-bottom: 0 !important; padding-top: 44px !important; }}
+        .gf-banner-wrap {{ border-radius: 0 0 8px 8px !important; margin-bottom: 0 !important; }}
         .gf-banner-fade {{ height: 20px !important; }}
         .gf-trust-row {{ margin-top: 2px !important; }}
         .privacy-shield-inline {{ font-size: 0.52rem !important; margin-top: 0 !important; display: inline-flex !important; }}
@@ -620,6 +619,10 @@ CUSTOM_CSS = f"""
         vertical-align: middle;
         flex-shrink: 0;
     }}
+    /* Hide broken image ovals when icon b64 fails to load */
+    .stat-box img[src=""], .stat-box img:not([src]),
+    .stat-box img.goatflow-icon {{ background: transparent; border: none; }}
+    .stat-box img[src=""] {{ display: none !important; }}
     img.goatflow-icon-inline {{
         display: inline-block;
         vertical-align: middle;
@@ -2920,27 +2923,42 @@ _stc.html("""
     pd.head.appendChild(s);
   }
 
-  // 2. Close sidebar if it's open
+  // 2. Close sidebar — always starts closed on login/render
+  var _gfSidebarLocked = false;
   function isSidebarOpen() {
     var sb = pd.querySelector('[data-testid="stSidebar"]');
     if (!sb) return false;
-    return sb.getBoundingClientRect().left > -50;
+    return sb.getBoundingClientRect().left > -200;
   }
   function closeSidebar() {
     if (!isSidebarOpen()) return;
     var btn = pd.querySelector(
       'button[aria-label="Close sidebar"], ' +
       '[data-testid="stSidebarNavToggleButton"] button, ' +
-      '[data-testid="collapsedControl"] button, ' +
-      'button[aria-label="open sidebar"]'
+      '[data-testid="collapsedControl"] button'
     );
     if (btn) btn.click();
   }
-
+  // Reset per-render so logout→login re-locks sidebar
+  pw._gfSidebarUserOpened = false;
+  if (pw._gfSbObserver) { pw._gfSbObserver.disconnect(); pw._gfSbObserver = null; }
+  pw._gfSbObserver = new MutationObserver(function() {
+    if (!pw._gfSidebarUserOpened && isSidebarOpen()) { closeSidebar(); }
+  });
+  pw._gfSbObserver.observe(pd.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class','style'] });
+  pd.addEventListener('click', function(e) {
+    var t = e.target;
+    if (t && (t.getAttribute('aria-label') === 'open sidebar' || t.getAttribute('aria-label') === 'Close sidebar' || t.closest('[data-testid="stSidebarNavToggleButton"]') || t.closest('[data-testid="collapsedControl"]'))) {
+      pw._gfSidebarUserOpened = true;
+      if (pw._gfSbObserver) { pw._gfSbObserver.disconnect(); pw._gfSbObserver = null; }
+    }
+  }, { capture: true });
+  setTimeout(function() { if (pw._gfSbObserver) { pw._gfSbObserver.disconnect(); pw._gfSbObserver = null; } }, 5000);
   injectStyles();
-  setTimeout(closeSidebar, 200);
-  setTimeout(closeSidebar, 600);
-  setTimeout(closeSidebar, 1200);
+  setTimeout(closeSidebar, 100);
+  setTimeout(closeSidebar, 400);
+  setTimeout(closeSidebar, 900);
+  setTimeout(closeSidebar, 2000);
   // Re-inject styles after Streamlit re-renders
   setTimeout(injectStyles, 800);
   setTimeout(injectStyles, 2000);
@@ -3723,8 +3741,25 @@ _ob_iframe_html = f"""<!DOCTYPE html><html><body style="margin:0;padding:0;backg
     pd.head.appendChild(bundleEl);
   }}
 
-  // 3. Set gfObForce flag in parent
+  // 3. Set gfObForce flag + debug logging + reset slideshow lock when onboarding needed
   pw.gfObForce = {_gf_ob_force};
+  if (pw.gfObForce) {{
+    // Reset the started-lock so new users always get the full sequence
+    pw._gfSlideshowStarted = false;
+    console.log('GOATflow onboarding check:', {{ onboardingNeeded: true, gfObForce: pw.gfObForce }});
+  }} else {{
+    console.log('GOATflow onboarding check:', {{ onboardingNeeded: false, gfObForce: pw.gfObForce }});
+  }}
+
+  // Developer reset utility — run goatflow_resetOnboarding() in browser console
+  pw.goatflow_resetOnboarding = function() {{
+    localStorage.removeItem('goatflow_onboarding_complete');
+    localStorage.removeItem('goatflow_welcomed');
+    pw._gfSlideshowStarted = false;
+    pw.gfObForce = true;
+    console.log('GOATflow onboarding reset — reload to trigger sequence');
+    pw.location.reload();
+  }};
 
   // 4. Inject tour IIFE (defines pw.gfStartTour — no auto-start, slideshow handles that)
   var tourEl = pd.createElement('script');
@@ -4350,24 +4385,24 @@ _clip_sublabel_html = f'<div class="stat-sub">{clip_rate_sublabel}</div>' if cli
 st.markdown(f'''
 <div class="stats-row">
     <div class="stat-box">
-        <div class="stat-value" style="display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_tracks_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon"> {active_count}</div>
+        <div class="stat-value" style="display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_tracks_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon" onerror="this.style.display='none'"> {active_count}</div>
         <div class="stat-label">Active Tracks</div>
     </div>
     <div class="stat-box" title="Tracks that cannot wait. Address these first.">
-        <div class="stat-value" style="color:#ff4444;font-family:Syne,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_summit_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon"> {summit_count}</div>
+        <div class="stat-value" style="color:#ff4444;font-family:Syne,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_summit_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon" onerror="this.style.display='none'"> {summit_count}</div>
         <div class="stat-label">Summit Calls</div>
     </div>
     <div class="stat-box">
-        <div class="stat-value" style="display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_completed_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon"> {player["tasks_completed"]}</div>
+        <div class="stat-value" style="display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_completed_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon" onerror="this.style.display='none'"> {player["tasks_completed"]}</div>
         <div class="stat-label">Completed</div>
     </div>
     <div class="stat-box">
-        <div class="stat-value" style="color:#f59e0b;font-family:Syne,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_hay_stack_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon"> {hay_balance}</div>
+        <div class="stat-value" style="color:#f59e0b;font-family:Syne,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_hay_stack_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon" onerror="this.style.display='none'"> {hay_balance}</div>
         <div class="stat-label">Hay</div>
-        <div class="stat-sub">{hay_balance}/{HAY_TO_CHEESE} to next <img src="{icon_cheese_src}" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;" class="goatflow-icon-inline"></div>
+        <div class="stat-sub">{hay_balance}/{HAY_TO_CHEESE} to next <img src="{icon_cheese_src}" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;" class="goatflow-icon-inline" onerror="this.style.display='none'"></div>
     </div>
     <div class="stat-box">
-        <div class="stat-value" style="color:#22c55e;font-family:Syne,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_cheese_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon"> {cheese_total}</div>
+        <div class="stat-value" style="color:#22c55e;font-family:Syne,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_cheese_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon" onerror="this.style.display='none'"> {cheese_total}</div>
         <div class="stat-label">Fresh Cheese</div>
     </div>
     <div class="stat-box">
@@ -4375,12 +4410,12 @@ st.markdown(f'''
         <div class="stat-label">Active Horns</div>
     </div>
     <div class="stat-box" style="{clip_rate_border_style}" title="Tracks completed vs. Tracks generated over the last 7 days. Refine your Horns to improve your Clip Rate.">
-        <div class="stat-value" style="color:{clip_rate_color};display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_clip_rate_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon"> {clip_rate_display}</div>
+        <div class="stat-value" style="color:{clip_rate_color};display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_clip_rate_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon" onerror="this.style.display='none'"> {clip_rate_display}</div>
         <div class="stat-label">CLIP RATE</div>
         {_clip_sublabel_html}
     </div>
     <div class="stat-box" title="Consecutive days you've engaged with GOATflow. Keep the Gait alive.">
-        <div class="stat-value" style="color:#a78bfa;display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_gait_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon"> {gait_streak}</div>
+        <div class="stat-value" style="color:#a78bfa;display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_gait_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon" onerror="this.style.display='none'"> {gait_streak}</div>
         <div class="stat-label">GAIT</div>
         <div class="stat-sub">{gait_streak} day{"" if gait_streak == 1 else "s"} in a row</div>
     </div>
