@@ -1964,6 +1964,10 @@ banner_b64 = load_image_b64("attached_assets/goatflow_main_screen_logo_177355046
 banner_src = f"data:image/png;base64,{banner_b64}" if banner_b64 else ""
 goatif_icon_b64 = load_image_b64("static/goatification_icon.png", "goatif_icon_b64_v1")
 goatif_icon_src = f"data:image/png;base64,{goatif_icon_b64}" if goatif_icon_b64 else ""
+icon_hay_b64 = load_image_b64("static/icon_hay.png", "icon_hay_b64_v1")
+icon_hay_src = f"data:image/png;base64,{icon_hay_b64}" if icon_hay_b64 else ""
+icon_cheese_b64 = load_image_b64("static/icon_fresh_cheese.png", "icon_cheese_b64_v1")
+icon_cheese_src = f"data:image/png;base64,{icon_cheese_b64}" if icon_cheese_b64 else ""
 
 # ── Goatifications IIFE template ── #
 _GOATIF_IIFE_TMPL = r"""
@@ -1974,6 +1978,8 @@ _GOATIF_IIFE_TMPL = r"""
   pw._gfGoatifInit = true;
   var pd = pw.document;
   var ICON = '__GOATIF_ICON__';
+  var HAY_ICON = '__HAY_ICON__';
+  var CHEESE_ICON = '__CHEESE_ICON__';
   var PREF_KEY = 'goatflow_notif_prefs';
   var DEF_PREFS = {master:true,freshCheese:true,summitOverdue:true,speedBonus:true,clipRate:false,dailyReminder:false,reminderTime:'8am',streakMilestones:true};
 
@@ -2178,9 +2184,9 @@ _GOATIF_IIFE_TMPL = r"""
   function _buildSidebarHTML(prefs, perm, collapsed) {
     var masterOn = prefs.master!==false;
     var pill = '<span style="font-family:DM Sans,sans-serif;font-size:10px;color:#4b5563;background:rgba(255,255,255,0.05);border-radius:20px;padding:2px 7px;white-space:nowrap;">Max 1/48hrs</span>';
-    var rows = _togRow('freshCheese','<img src="'+ICON+'" style="width:14px;height:14px;object-fit:contain;">','Fresh Cheese Earned','When 500 Hay converts',true,'',prefs,false)
+    var rows = _togRow('freshCheese','<img src="'+CHEESE_ICON+'" style="width:14px;height:14px;object-fit:contain;">','Fresh Cheese Earned','When 500 Hay converts',true,'',prefs,false)
       + _togRow('summitOverdue','\u26a1','Summit Call Overdue','When a Summit Call hits 4+ hours',true,'',prefs,false)
-      + _togRow('speedBonus','\ud83c\udf3e','Speed Bonus','24-hour completion bonus earned',true,'',prefs,false)
+      + _togRow('speedBonus','<img src="'+HAY_ICON+'" style="width:14px;height:14px;object-fit:contain;">','Speed Bonus','24-hour completion bonus earned',true,'',prefs,false)
       + _togRow('clipRate','\u2702\ufe0f','Clip Rate Nudges','When efficiency needs attention',false,pill,prefs,false)
       + _togRow('dailyReminder','\ud83d\udccb','Morning Summit Reminder','Nudge if Summit Calls are waiting',false,'',prefs,prefs.dailyReminder)
       + _togRow('streakMilestones','\ud83d\udd25','Streak Milestones','At 3, 7, 14, and 30 days',true,'',prefs,false);
@@ -2643,12 +2649,12 @@ with st.sidebar:
         </div>
         <div style="border-top:1px solid {BORDER};margin:0.4rem 0;"></div>
         <div style="display:flex;justify-content:space-between;margin-bottom:0.15rem;">
-            <span style="font-size:0.6rem;color:{SILVER};">🌾 Hay Balance</span>
+            <span style="font-size:0.6rem;color:{SILVER};display:flex;align-items:center;gap:3px;"><img src="{icon_hay_src}" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;"> Hay Balance</span>
             <span style="font-size:0.6rem;font-weight:700;color:#f59e0b;">{sb_hay}/{HAY_TO_CHEESE}</span>
         </div>
         <div style="display:flex;justify-content:space-between;margin-bottom:0.3rem;">
             <span style="font-size:0.6rem;color:{SILVER};">Fresh Cheese Banked</span>
-            <span style="font-size:0.6rem;font-weight:700;color:#22c55e;">🧀 {sb_cheese}</span>
+            <span style="font-size:0.6rem;font-weight:700;color:#22c55e;display:flex;align-items:center;gap:3px;"><img src="{icon_cheese_src}" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;"> {sb_cheese}</span>
         </div>
         <div style="display:flex;justify-content:space-between;margin-bottom:0.3rem;">
             <span style="font-size:0.6rem;color:{SILVER};">✂️ Clip Rate (7d)</span>
@@ -3563,7 +3569,14 @@ _fab_iife = r"""(function() {
 
 })();"""
 
-_tour_iife_json      = _json.dumps(_tour_iife)
+_tour_iife_resolved = (_tour_iife
+    .replace(r'\uD83C\uDF3E Earn Hay', 'Earn Hay')
+    .replace(r'Hay \uD83C\uDF3E.', 'Hay <img src="__HAY_ICON__" style="width:32px;height:32px;object-fit:contain;vertical-align:middle;">.')
+    .replace(r'Fresh Cheese \uD83E\uDDC0', 'Fresh Cheese <img src="__CHEESE_ICON__" style="width:32px;height:32px;object-fit:contain;vertical-align:middle;">')
+    .replace(r'Real Cheese. \uD83E\uDDC0', 'Real Cheese. <img src="__CHEESE_ICON__" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;">')
+    .replace('__HAY_ICON__', icon_hay_src)
+    .replace('__CHEESE_ICON__', icon_cheese_src))
+_tour_iife_json      = _json.dumps(_tour_iife_resolved)
 _slideshow_iife_json = _json.dumps(_slideshow_iife)
 _fab_iife_json       = _json.dumps(_fab_iife)
 
@@ -3613,7 +3626,10 @@ _ob_iframe_html = f"""<!DOCTYPE html><html><body style="margin:0;padding:0;backg
 _stc.html(_ob_iframe_html, height=0, scrolling=False)
 
 # ── Goatifications engine injection ──
-_goatif_js = _GOATIF_IIFE_TMPL.replace('__GOATIF_ICON__', goatif_icon_src)
+_goatif_js = (_GOATIF_IIFE_TMPL
+    .replace('__GOATIF_ICON__', goatif_icon_src)
+    .replace('__HAY_ICON__', icon_hay_src)
+    .replace('__CHEESE_ICON__', icon_cheese_src))
 _stc.html(f'<script>{_goatif_js}</script>', height=0)
 
 # ── Permission prompt (after onboarding completes) ──
@@ -4077,7 +4093,7 @@ def show_hay_popup(task_name, xp_gained, leveled_up, xp_tier, hay_earned):
         f'<div style="text-align:center;">'
         f'{hay_img}'
         f'<div style="color:#f59e0b;font-size:1.35rem;font-weight:900;margin-bottom:0.15rem;font-family:Syne,sans-serif;">{safe(hay_pun)}</div>'
-        f'<div style="color:{NEON_GREEN};font-size:1.5rem;font-weight:900;margin-bottom:0.1rem;">+{hay_earned} Hay 🌾</div>'
+        f'<div style="color:{NEON_GREEN};font-size:1.5rem;font-weight:900;margin-bottom:0.1rem;display:flex;align-items:center;justify-content:center;gap:6px;">+{hay_earned} Hay <img src="{icon_hay_src}" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;"></div>'
         f'<div style="color:{SILVER};font-size:0.72rem;margin-bottom:0.25rem;">+{xp_gained:,} CCR also earned</div>'
         f'<div style="color:{SILVER};font-size:0.85rem;font-weight:500;margin-bottom:0.3rem;">{safe(task_name)}</div>'
         f'<div style="color:{NEON_VIOLET};font-size:0.88rem;font-weight:700;font-style:italic;">{safe(goat_pun)}</div>'
@@ -4119,9 +4135,9 @@ def show_fresh_cheese_popup(cheese_count):
     st.markdown(
         f'<div style="text-align:center;">'
         f'{cheese_img}'
-        f'<div style="color:#22c55e;font-size:1.35rem;font-weight:900;margin-bottom:0.15rem;font-family:Syne,sans-serif;">🧀 Fresh Cheese Generated!</div>'
+        f'<div style="color:#22c55e;font-size:1.35rem;font-weight:900;margin-bottom:0.15rem;font-family:Syne,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_cheese_src}" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;"> Fresh Cheese Generated!</div>'
         f'<div style="color:{WHITE};font-size:1.2rem;font-weight:900;margin-bottom:0.2rem;">+{cheese_count} Fresh Cheese banked</div>'
-        f'<div style="color:{SILVER};font-size:0.75rem;margin-bottom:0.3rem;">Total banked: {player_snap.get("fresh_cheese", 0)} 🧀</div>'
+        f'<div style="color:{SILVER};font-size:0.75rem;margin-bottom:0.3rem;">Total banked: {player_snap.get("fresh_cheese", 0)} <img src="{icon_cheese_src}" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;"></div>'
         f'<div style="color:{NEON_VIOLET};font-size:0.92rem;font-weight:700;font-style:italic;">{safe(cheese_pun)}</div>'
         f'</div>',
         unsafe_allow_html=True
@@ -4220,12 +4236,12 @@ st.markdown(f'''
         <div class="stat-label">Completed</div>
     </div>
     <div class="stat-box">
-        <div class="stat-value" style="color:#f59e0b;font-family:Syne,sans-serif;">🌾 {hay_balance}</div>
+        <div class="stat-value" style="color:#f59e0b;font-family:Syne,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_hay_src}" style="width:24px;height:24px;object-fit:contain;"> {hay_balance}</div>
         <div class="stat-label">Hay</div>
-        <div class="stat-sub">{hay_balance}/{HAY_TO_CHEESE} to next 🧀</div>
+        <div class="stat-sub">{hay_balance}/{HAY_TO_CHEESE} to next <img src="{icon_cheese_src}" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;"></div>
     </div>
     <div class="stat-box">
-        <div class="stat-value" style="color:#22c55e;font-family:Syne,sans-serif;">🧀 {cheese_total}</div>
+        <div class="stat-value" style="color:#22c55e;font-family:Syne,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_cheese_src}" style="width:24px;height:24px;object-fit:contain;"> {cheese_total}</div>
         <div class="stat-label">Fresh Cheese</div>
     </div>
     <div class="stat-box" style="flex-shrink:0;">
@@ -4501,7 +4517,7 @@ st.markdown(f'''
     <div class="level-badge" style="font-family:Syne,sans-serif;">{safe(cur_pasture)}</div>
     <div style="display:flex;flex-direction:column;gap:2px;">
         <div class="metabolism-label">Pasture Gauge</div>
-        <div style="font-size:0.5rem;color:#f59e0b;white-space:nowrap;">🌾 {pg_hay_balance}/{HAY_TO_CHEESE} Hay to next 🧀</div>
+        <div style="font-size:0.5rem;color:#f59e0b;white-space:nowrap;display:flex;align-items:center;gap:3px;"><img src="{icon_hay_src}" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;"> {pg_hay_balance}/{HAY_TO_CHEESE} Hay to next <img src="{icon_cheese_src}" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;"></div>
     </div>
     <div class="xp-bar-outer">
         <div class="xp-bar-inner" style="width:{xp_pct:.1f}%;"></div>
