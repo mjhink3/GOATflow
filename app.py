@@ -216,13 +216,14 @@ CUSTOM_CSS = f"""
         overflow: hidden;
         border-radius: 0 0 10px 10px;
         margin-bottom: 0;
+        background: #08080f;
     }}
 
     .gf-banner-wrap img {{
         width: 100%;
-        height: 90px;
-        object-fit: cover;
-        object-position: center 20%;
+        height: 180px;
+        object-fit: contain;
+        object-position: center center;
         display: block;
         border-radius: 0 0 10px 10px;
     }}
@@ -245,7 +246,7 @@ CUSTOM_CSS = f"""
     }}
 
     @media (max-width: 768px) {{
-        .gf-banner-wrap img {{ height: 64px !important; object-position: center 15% !important; border-radius: 0 0 8px 8px !important; }}
+        .gf-banner-wrap img {{ height: 120px !important; object-fit: contain !important; object-position: center center !important; border-radius: 0 0 8px 8px !important; }}
         .gf-banner-wrap {{ border-radius: 0 0 8px 8px !important; margin-bottom: 0 !important; }}
         .gf-banner-fade {{ height: 20px !important; }}
         .gf-trust-row {{ margin-top: 8px !important; }}
@@ -1067,7 +1068,7 @@ CUSTOM_CSS = f"""
 
     .landing-container {{
         text-align: center;
-        padding: 0.25rem 1rem 0.25rem 1rem;
+        padding: 1rem 1rem 0.25rem 1rem;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -1075,8 +1076,8 @@ CUSTOM_CSS = f"""
     }}
 
     .landing-container img {{
-        height: 160px;
-        margin-bottom: 0.5rem;
+        height: 110px;
+        margin-bottom: 0.4rem;
     }}
 
     .landing-tagline {{
@@ -2740,8 +2741,11 @@ with st.sidebar:
     </div>
     ''', unsafe_allow_html=True)
 
-    if st.button("Port to WorkGOAT", key="port_workgoat_btn", use_container_width=True, help="WorkGOAT is coming. Your Fresh Cheese will be waiting."):
-        st.info("WorkGOAT is coming. Your Fresh Cheese will be waiting.")
+    st.markdown('''<div style="width:100%;box-sizing:border-box;margin-bottom:0.5rem;">
+        <div style="background:rgba(31,41,55,0.45);border:1px solid #2d3748;border-radius:8px;padding:0.45rem 1rem;text-align:center;font-size:0.8rem;font-weight:600;color:#4b5563;font-family:\'DM Sans\',sans-serif;cursor:not-allowed;user-select:none;letter-spacing:0.02em;">
+            Port to WorkGOAT &mdash; Coming Soon
+        </div>
+    </div>''', unsafe_allow_html=True)
 
     st.markdown("---")
     _horns_sidebar_img = f'<img src="data:image/png;base64,{horns_icon_b64}" alt="Horns" style="width:80px;height:80px;object-fit:contain;display:block;margin:0 auto 0.3rem auto;">' if horns_icon_b64 else ''
@@ -2788,6 +2792,25 @@ with st.sidebar:
             st.rerun()
         else:
             st.warning("Type a Horn first.")
+    if horns_icon_b64:
+        _horns_btn_src = horns_icon_b64
+        _stc.html(f"""<script>
+(function(){{
+    var SRC='data:image/png;base64,{_horns_btn_src}';
+    function _patchHornBtn(){{
+        var pd=window.parent.document;
+        pd.querySelectorAll('button').forEach(function(btn){{
+            if(btn.textContent&&btn.textContent.includes('Lock In My Horns')){{
+                var p=btn.querySelector('p');
+                if(p&&!p.querySelector('img.gf-horn-btn-icon')){{
+                    p.innerHTML=p.innerHTML.replace(/🐐\\s*/,'<img class="gf-horn-btn-icon" src="'+SRC+'" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;margin-right:4px;position:relative;top:-1px;">');
+                }}
+            }}
+        }});
+    }}
+    setTimeout(_patchHornBtn,400);setTimeout(_patchHornBtn,1000);setTimeout(_patchHornBtn,2200);
+}})();
+</script>""", height=0)
 
     if current_horns:
         st.markdown(f'<div style="font-size:0.6rem;color:{SILVER};margin-top:0.4rem;">Click ✕ next to any Horn to remove it.</div>', unsafe_allow_html=True)
@@ -4335,8 +4358,8 @@ st.markdown(f'''
     </div>
     <div class="stat-box" title="Consecutive days you've engaged with GOATflow. Keep the Gait alive.">
         <div class="stat-value" style="color:#a78bfa;display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_gait_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon"> {gait_streak}</div>
-        <div class="stat-label">GAIT STREAK</div>
-        <div class="stat-sub">day{"" if gait_streak == 1 else "s"} in a row</div>
+        <div class="stat-label">GAIT</div>
+        <div class="stat-sub" style="font-size:0.55rem;text-transform:uppercase;letter-spacing:0.06em;">streak &bull; {gait_streak} day{"" if gait_streak == 1 else "s"} in a row</div>
     </div>
 </div>
 ''', unsafe_allow_html=True)
