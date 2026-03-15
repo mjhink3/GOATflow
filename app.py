@@ -21,7 +21,7 @@ st.set_page_config(
     page_title="GOATflow | WorkGOAT Ecosystem",
     page_icon="🐐",
     layout="centered",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="collapsed",
 )
 
 PURPLE = "#6100ff"
@@ -2535,25 +2535,21 @@ _slideshow_iife = r"""
   var ANIMALS = [
     { key: 'bull',    caption: "Bulls are full of it" },
     { key: 'ram',     caption: "Rams are too rough" },
-    { key: 'chicken', caption: "Chickens are too chicken" },
     { key: 'cow',     caption: "Cows don\u2019t like to mooove" },
     { key: 'dog',     caption: "Dogs are too friendly" },
     { key: 'cat',     caption: "Cats are too self-centered" },
     { key: 'donkey',  caption: "Donkeys are know-it-alls" },
-    { key: 'lizard',  caption: "Lizards are cold-blooded" },
     { key: 'hamster', caption: "Hamsters run fast nowhere" },
     { key: 'sheep',   caption: "Sheep love sleep" },
-    { key: 'pig',     caption: "Pigs are too food-centric" },
-    { key: 'rabbit',  caption: "Rabbits are too hyper-minded" },
     { key: 'duck',    caption: "Ducks are complete quacks" },
     { key: 'eagle',   caption: "Eagles aren\u2019t always free to help" },
     { key: 'horse',   caption: "Horses are making their own leaps" }
   ];
 
-  var T_FADEIN  = 1500;
-  var T_X_DRAW  = 2000;
-  var T_CAPTION = 1750;
-  var T_PAUSE   = 1750;
+  var T_FADEIN  = 1125;
+  var T_X_DRAW  = 1500;
+  var T_CAPTION = 1312;
+  var T_PAUSE   = 1312;
   var T_BETWEEN = 300;
   var LINE_LEN  = 372; // sqrt(300^2 + 220^2) for 320x240 image with 10px inset
 
