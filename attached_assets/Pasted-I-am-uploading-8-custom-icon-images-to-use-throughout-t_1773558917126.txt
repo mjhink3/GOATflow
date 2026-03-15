@@ -1,0 +1,137 @@
+I am uploading 8 custom icon images to use 
+throughout the GOATflow app to replace 
+emoji placeholders and improve visual consistency.
+
+Save all uploaded icon files to 
+/public/images/icons/ creating the folder 
+if it does not exist.
+
+Use the filenames exactly as I have 
+named them — do not rename anything.
+
+Do NOT touch or modify anything related 
+to the onboarding animal parade sequence. 
+Leave all animal images and that entire 
+onboarding flow completely unchanged.
+
+═══════════════════════════════════════════
+GLOBAL CSS — add to main stylesheet
+═══════════════════════════════════════════
+
+img.goatflow-icon {
+  object-fit: contain;
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+}
+
+img.goatflow-icon-inline {
+  display: inline-block;
+  vertical-align: middle;
+  position: relative;
+  top: -1px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+Do not add border-radius, box-shadow, 
+background-color, or padding to any 
+custom icon — black backgrounds blend 
+naturally with the dark app theme.
+
+═══════════════════════════════════════════
+ICON USAGE MAP
+═══════════════════════════════════════════
+
+Look at each uploaded filename and use 
+common sense to map it to its purpose — 
+the names describe exactly what they are.
+
+Use each icon to replace the corresponding 
+emoji in every location listed below.
+
+DASHBOARD STAT CARDS — 28px × 28px each:
+Active Tracks stat → tracks icon
+Summit Calls stat → summit calls icon
+  Keep red number and urgent styling
+Completed stat → completed icon
+Hay stat → hay icon
+  Keep amber number color
+Fresh Cheese stat → fresh cheese icon
+  Keep green number color
+Clip Rate stat → clip rate icon
+  Keep color-coded border system
+Gait stat → gait icon
+  Keep day count display
+
+ACTIVE TRACK LIST CARDS — 14px × 14px:
+Summit Call tag → summit calls icon
+Standard Track tag → tracks icon
+Completed Track tag → completed icon
+Keep all existing card styling unchanged
+
+PASTURE GAUGE BOTTOM BAR — 14px inline:
+Replace 🧀 with fresh cheese icon
+Replace 🌾 with hay icon
+
+SIDE PANEL MY STATS — 18px × 18px:
+Cheese Churn Rate row → fresh cheese icon
+Ascension Rank row → summit calls icon
+Hay Balance row → hay icon
+Fresh Cheese Banked row → fresh cheese icon
+Clip Rate row → clip rate icon
+Gait row → gait icon
+
+GOATIFICATIONS TOGGLE ROWS — 16px × 16px:
+Fresh Cheese Earned → fresh cheese icon
+Summit Call Overdue → summit calls icon
+Speed Bonus → hay icon
+Clip Rate nudge → clip rate icon
+Daily Reminder → tracks icon
+Gait Milestones → gait icon
+
+IN-APP TOAST NOTIFICATIONS — 16px inline:
+Replace 🧀 with fresh cheese icon
+Replace ⚡ with summit calls icon
+Replace 🌾 with hay icon
+Replace ✂️ with clip rate icon
+Replace 🔥 with gait icon
+
+HAY TO CHEESE CONVERSION ANIMATION:
+Use stacked hay icon at 48px transitioning 
+to fresh cheese icon at 48px
+
+TUTORIAL CARD 3:
+Summit Call example → summit calls icon 20px
+Standard Track example → tracks icon 20px
+
+TUTORIAL CARD 4:
+Replace 🌾 with hay icon at 32px
+Replace 🧀 with fresh cheese icon at 32px
+Replace 🧀 in "Real Tracks. Real Cheese." 
+with fresh cheese icon at 16px inline
+
+═══════════════════════════════════════════
+EMOJI CLEANUP
+═══════════════════════════════════════════
+
+Search user-facing UI and confirm 
+these are replaced everywhere:
+🌾 🧀 ✂️ 📋 ⚡ 🔥 ✅
+
+Do NOT replace:
+- 🐐 goat emoji in any copy text
+- Anything in the onboarding animal parade
+- Emoji in code comments, console logs, 
+  localStorage keys, or variable names
+
+═══════════════════════════════════════════
+VERIFICATION
+═══════════════════════════════════════════
+
+Confirm all icon files saved successfully.
+Confirm goatflow-icon CSS classes defined.
+List any emoji that could not be replaced 
+so I can address separately.
+Do not modify any existing animations 
+or the onboarding sequence.

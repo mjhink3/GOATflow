@@ -611,6 +611,22 @@ CUSTOM_CSS = f"""
         .stButton > button {{ min-height: 48px !important; font-size: 15px !important; }}
     }}
 
+    /* ── Custom icon utility classes ── */
+    img.goatflow-icon {{
+        object-fit: contain;
+        display: inline-block;
+        vertical-align: middle;
+        flex-shrink: 0;
+    }}
+    img.goatflow-icon-inline {{
+        display: inline-block;
+        vertical-align: middle;
+        position: relative;
+        top: -1px;
+        object-fit: contain;
+        flex-shrink: 0;
+    }}
+
     /* ── Scroll indicator ── */
     .scroll-indicator {{
         display: block;
@@ -1968,6 +1984,18 @@ icon_hay_b64 = load_image_b64("static/icon_hay.png", "icon_hay_b64_v1")
 icon_hay_src = f"data:image/png;base64,{icon_hay_b64}" if icon_hay_b64 else ""
 icon_cheese_b64 = load_image_b64("static/icon_fresh_cheese.png", "icon_cheese_b64_v1")
 icon_cheese_src = f"data:image/png;base64,{icon_cheese_b64}" if icon_cheese_b64 else ""
+icon_hay_stack_b64 = load_image_b64("static/icon_hay_stack.png", "icon_hay_stack_b64_v1")
+icon_hay_stack_src = f"data:image/png;base64,{icon_hay_stack_b64}" if icon_hay_stack_b64 else ""
+icon_tracks_b64 = load_image_b64("static/icon_tracks.png", "icon_tracks_b64_v1")
+icon_tracks_src = f"data:image/png;base64,{icon_tracks_b64}" if icon_tracks_b64 else ""
+icon_completed_b64 = load_image_b64("static/icon_completed.png", "icon_completed_b64_v1")
+icon_completed_src = f"data:image/png;base64,{icon_completed_b64}" if icon_completed_b64 else ""
+icon_summit_b64 = load_image_b64("static/icon_summit.png", "icon_summit_b64_v1")
+icon_summit_src = f"data:image/png;base64,{icon_summit_b64}" if icon_summit_b64 else ""
+icon_gait_b64 = load_image_b64("static/icon_gait.png", "icon_gait_b64_v1")
+icon_gait_src = f"data:image/png;base64,{icon_gait_b64}" if icon_gait_b64 else ""
+icon_clip_rate_b64 = load_image_b64("static/icon_clip_rate.png", "icon_clip_rate_b64_v1")
+icon_clip_rate_src = f"data:image/png;base64,{icon_clip_rate_b64}" if icon_clip_rate_b64 else ""
 
 # ── Goatifications IIFE template ── #
 _GOATIF_IIFE_TMPL = r"""
@@ -1980,6 +2008,10 @@ _GOATIF_IIFE_TMPL = r"""
   var ICON = '__GOATIF_ICON__';
   var HAY_ICON = '__HAY_ICON__';
   var CHEESE_ICON = '__CHEESE_ICON__';
+  var SUMMIT_ICON = '__SUMMIT_ICON__';
+  var CLIP_ICON = '__CLIP_ICON__';
+  var TRACKS_ICON = '__TRACKS_ICON__';
+  var GAIT_ICON = '__GAIT_ICON__';
   var PREF_KEY = 'goatflow_notif_prefs';
   var DEF_PREFS = {master:true,freshCheese:true,summitOverdue:true,speedBonus:true,clipRate:false,dailyReminder:false,reminderTime:'8am',streakMilestones:true};
 
@@ -2185,11 +2217,11 @@ _GOATIF_IIFE_TMPL = r"""
     var masterOn = prefs.master!==false;
     var pill = '<span style="font-family:DM Sans,sans-serif;font-size:10px;color:#4b5563;background:rgba(255,255,255,0.05);border-radius:20px;padding:2px 7px;white-space:nowrap;">Max 1/48hrs</span>';
     var rows = _togRow('freshCheese','<img src="'+CHEESE_ICON+'" style="width:14px;height:14px;object-fit:contain;">','Fresh Cheese Earned','When 500 Hay converts',true,'',prefs,false)
-      + _togRow('summitOverdue','\u26a1','Summit Call Overdue','When a Summit Call hits 4+ hours',true,'',prefs,false)
+      + _togRow('summitOverdue','<img src="'+SUMMIT_ICON+'" style="width:14px;height:14px;object-fit:contain;">','Summit Call Overdue','When a Summit Call hits 4+ hours',true,'',prefs,false)
       + _togRow('speedBonus','<img src="'+HAY_ICON+'" style="width:14px;height:14px;object-fit:contain;">','Speed Bonus','24-hour completion bonus earned',true,'',prefs,false)
-      + _togRow('clipRate','\u2702\ufe0f','Clip Rate Nudges','When efficiency needs attention',false,pill,prefs,false)
-      + _togRow('dailyReminder','\ud83d\udccb','Morning Summit Reminder','Nudge if Summit Calls are waiting',false,'',prefs,prefs.dailyReminder)
-      + _togRow('streakMilestones','\ud83d\udd25','Streak Milestones','At 3, 7, 14, and 30 days',true,'',prefs,false);
+      + _togRow('clipRate','<img src="'+CLIP_ICON+'" style="width:14px;height:14px;object-fit:contain;">','Clip Rate Nudges','When efficiency needs attention',false,pill,prefs,false)
+      + _togRow('dailyReminder','<img src="'+TRACKS_ICON+'" style="width:14px;height:14px;object-fit:contain;">','Morning Summit Reminder','Nudge if Summit Calls are waiting',false,'',prefs,prefs.dailyReminder)
+      + _togRow('streakMilestones','<img src="'+GAIT_ICON+'" style="width:14px;height:14px;object-fit:contain;">','Streak Milestones','At 3, 7, 14, and 30 days',true,'',prefs,false);
 
     return '<div id="gf-sb-header" style="display:flex;justify-content:space-between;align-items:center;min-height:44px;cursor:pointer;padding:4px 0;">'
       +'<div style="display:flex;align-items:center;gap:8px;">'
@@ -2636,11 +2668,11 @@ with st.sidebar:
             <span style="font-size:0.6rem;font-weight:700;color:{NEON_GREEN};">{player_data["total_xp"]:,}</span>
         </div>
         <div style="display:flex;justify-content:space-between;margin-bottom:0.2rem;">
-            <span style="font-size:0.6rem;color:{SILVER};">Cheese Churn Rate</span>
+            <span style="font-size:0.6rem;color:{SILVER};display:flex;align-items:center;gap:3px;"><img src="{icon_cheese_src}" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;" class="goatflow-icon"> Cheese Churn Rate</span>
             <span style="font-size:0.6rem;font-weight:700;color:{NEON_VIOLET};">{player_data["tasks_completed"]} churned</span>
         </div>
         <div style="display:flex;justify-content:space-between;margin-bottom:0.2rem;">
-            <span style="font-size:0.6rem;color:{SILVER};">Ascension Rank</span>
+            <span style="font-size:0.6rem;color:{SILVER};display:flex;align-items:center;gap:3px;"><img src="{icon_summit_src}" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;" class="goatflow-icon"> Ascension Rank</span>
             <span style="font-size:0.6rem;font-weight:700;color:{WHITE};">{safe(user_rank)}</span>
         </div>
         <div style="display:flex;justify-content:space-between;margin-bottom:0.2rem;">
@@ -2649,7 +2681,7 @@ with st.sidebar:
         </div>
         <div style="border-top:1px solid {BORDER};margin:0.4rem 0;"></div>
         <div style="display:flex;justify-content:space-between;margin-bottom:0.15rem;">
-            <span style="font-size:0.6rem;color:{SILVER};display:flex;align-items:center;gap:3px;"><img src="{icon_hay_src}" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;"> Hay Balance</span>
+            <span style="font-size:0.6rem;color:{SILVER};display:flex;align-items:center;gap:3px;"><img src="{icon_hay_stack_src}" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;" class="goatflow-icon"> Hay Balance</span>
             <span style="font-size:0.6rem;font-weight:700;color:#f59e0b;">{sb_hay}/{HAY_TO_CHEESE}</span>
         </div>
         <div style="display:flex;justify-content:space-between;margin-bottom:0.3rem;">
@@ -2657,7 +2689,7 @@ with st.sidebar:
             <span style="font-size:0.6rem;font-weight:700;color:#22c55e;display:flex;align-items:center;gap:3px;"><img src="{icon_cheese_src}" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;"> {sb_cheese}</span>
         </div>
         <div style="display:flex;justify-content:space-between;margin-bottom:0.3rem;">
-            <span style="font-size:0.6rem;color:{SILVER};">✂️ Clip Rate (7d)</span>
+            <span style="font-size:0.6rem;color:{SILVER};display:flex;align-items:center;gap:3px;"><img src="{icon_clip_rate_src}" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;" class="goatflow-icon"> Clip Rate (7d)</span>
             <span style="font-size:0.6rem;font-weight:700;color:{_sb_clip_color};">{_sb_clip_display}</span>
         </div>
         {_sb_weekly_bars_html}
@@ -3574,8 +3606,13 @@ _tour_iife_resolved = (_tour_iife
     .replace(r'Hay \uD83C\uDF3E.', 'Hay <img src="__HAY_ICON__" style="width:32px;height:32px;object-fit:contain;vertical-align:middle;">.')
     .replace(r'Fresh Cheese \uD83E\uDDC0', 'Fresh Cheese <img src="__CHEESE_ICON__" style="width:32px;height:32px;object-fit:contain;vertical-align:middle;">')
     .replace(r'Real Cheese. \uD83E\uDDC0', 'Real Cheese. <img src="__CHEESE_ICON__" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;">')
-    .replace('__HAY_ICON__', icon_hay_src)
-    .replace('__CHEESE_ICON__', icon_cheese_src))
+    .replace(r'\u26A1 Summit Call</span>', '<img src="__SUMMIT_ICON__" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;"> Summit Call</span>')
+    .replace(r'\uD83D\uDCCB Standard Track</span>', '<img src="__TRACKS_ICON__" style="width:20px;height:20px;object-fit:contain;vertical-align:middle;"> Standard Track</span>')
+    .replace(r'\u26A1 Summit Calls vs. Standard Tracks', 'Summit Calls vs. Standard Tracks')
+    .replace('__HAY_ICON__', icon_hay_stack_src)
+    .replace('__CHEESE_ICON__', icon_cheese_src)
+    .replace('__SUMMIT_ICON__', icon_summit_src)
+    .replace('__TRACKS_ICON__', icon_tracks_src))
 _tour_iife_json      = _json.dumps(_tour_iife_resolved)
 _slideshow_iife_json = _json.dumps(_slideshow_iife)
 _fab_iife_json       = _json.dumps(_fab_iife)
@@ -3628,8 +3665,12 @@ _stc.html(_ob_iframe_html, height=0, scrolling=False)
 # ── Goatifications engine injection ──
 _goatif_js = (_GOATIF_IIFE_TMPL
     .replace('__GOATIF_ICON__', goatif_icon_src)
-    .replace('__HAY_ICON__', icon_hay_src)
-    .replace('__CHEESE_ICON__', icon_cheese_src))
+    .replace('__HAY_ICON__', icon_hay_stack_src)
+    .replace('__CHEESE_ICON__', icon_cheese_src)
+    .replace('__SUMMIT_ICON__', icon_summit_src)
+    .replace('__CLIP_ICON__', icon_clip_rate_src)
+    .replace('__TRACKS_ICON__', icon_tracks_src)
+    .replace('__GAIT_ICON__', icon_gait_src))
 _stc.html(f'<script>{_goatif_js}</script>', height=0)
 
 # ── Permission prompt (after onboarding completes) ──
@@ -4093,7 +4134,7 @@ def show_hay_popup(task_name, xp_gained, leveled_up, xp_tier, hay_earned):
         f'<div style="text-align:center;">'
         f'{hay_img}'
         f'<div style="color:#f59e0b;font-size:1.35rem;font-weight:900;margin-bottom:0.15rem;font-family:Syne,sans-serif;">{safe(hay_pun)}</div>'
-        f'<div style="color:{NEON_GREEN};font-size:1.5rem;font-weight:900;margin-bottom:0.1rem;display:flex;align-items:center;justify-content:center;gap:6px;">+{hay_earned} Hay <img src="{icon_hay_src}" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;"></div>'
+        f'<div style="color:{NEON_GREEN};font-size:1.5rem;font-weight:900;margin-bottom:0.1rem;display:flex;align-items:center;justify-content:center;gap:6px;">+{hay_earned} Hay <img src="{icon_hay_stack_src}" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;" class="goatflow-icon-inline"></div>'
         f'<div style="color:{SILVER};font-size:0.72rem;margin-bottom:0.25rem;">+{xp_gained:,} CCR also earned</div>'
         f'<div style="color:{SILVER};font-size:0.85rem;font-weight:500;margin-bottom:0.3rem;">{safe(task_name)}</div>'
         f'<div style="color:{NEON_VIOLET};font-size:0.88rem;font-weight:700;font-style:italic;">{safe(goat_pun)}</div>'
@@ -4224,24 +4265,24 @@ _clip_sublabel_html = f'<div class="stat-sub">{clip_rate_sublabel}</div>' if cli
 st.markdown(f'''
 <div class="stats-row">
     <div class="stat-box">
-        <div class="stat-value">{active_count}</div>
+        <div class="stat-value" style="display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_tracks_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon"> {active_count}</div>
         <div class="stat-label">Active Tracks</div>
     </div>
     <div class="stat-box" title="Tracks that cannot wait. Address these first.">
-        <div class="stat-value" style="color:#ff4444;font-family:Syne,sans-serif;">{summit_count}</div>
+        <div class="stat-value" style="color:#ff4444;font-family:Syne,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_summit_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon"> {summit_count}</div>
         <div class="stat-label">Summit Calls</div>
     </div>
     <div class="stat-box">
-        <div class="stat-value">{player["tasks_completed"]}</div>
+        <div class="stat-value" style="display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_completed_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon"> {player["tasks_completed"]}</div>
         <div class="stat-label">Completed</div>
     </div>
     <div class="stat-box">
-        <div class="stat-value" style="color:#f59e0b;font-family:Syne,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_hay_src}" style="width:24px;height:24px;object-fit:contain;"> {hay_balance}</div>
+        <div class="stat-value" style="color:#f59e0b;font-family:Syne,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_hay_stack_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon"> {hay_balance}</div>
         <div class="stat-label">Hay</div>
-        <div class="stat-sub">{hay_balance}/{HAY_TO_CHEESE} to next <img src="{icon_cheese_src}" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;"></div>
+        <div class="stat-sub">{hay_balance}/{HAY_TO_CHEESE} to next <img src="{icon_cheese_src}" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;" class="goatflow-icon-inline"></div>
     </div>
     <div class="stat-box">
-        <div class="stat-value" style="color:#22c55e;font-family:Syne,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_cheese_src}" style="width:24px;height:24px;object-fit:contain;"> {cheese_total}</div>
+        <div class="stat-value" style="color:#22c55e;font-family:Syne,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_cheese_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon"> {cheese_total}</div>
         <div class="stat-label">Fresh Cheese</div>
     </div>
     <div class="stat-box" style="flex-shrink:0;">
@@ -4249,7 +4290,7 @@ st.markdown(f'''
         <div class="stat-label">Active Horns</div>
     </div>
     <div class="stat-box" style="{clip_rate_border_style}" title="Tracks completed vs. Tracks generated over the last 7 days. Refine your Horns to improve your Clip Rate.">
-        <div class="stat-value" style="color:{clip_rate_color};">✂️ {clip_rate_display}</div>
+        <div class="stat-value" style="color:{clip_rate_color};display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_clip_rate_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon"> {clip_rate_display}</div>
         <div class="stat-label">CLIP RATE</div>
         {_clip_sublabel_html}
     </div>
@@ -4441,7 +4482,9 @@ else:
 
         is_summit = bleat_type in ("Summit-Level Bleat", "Summit Call")
         bleat_class = "bleat-summit" if is_summit else "bleat-routine"
-        bleat_label = "⚡ Summit Call" if is_summit else "🌿 Routine Grazing"
+        _summit_tag = f'<img src="{icon_summit_src}" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;" class="goatflow-icon-inline"> Summit Call' if icon_summit_src else "Summit Call"
+        _tracks_tag = f'<img src="{icon_tracks_src}" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;" class="goatflow-icon-inline"> Routine Grazing' if icon_tracks_src else "Routine Grazing"
+        bleat_label = _summit_tag if is_summit else _tracks_tag
 
         is_high_leverage = tier == "High-Leverage"
         if is_summit:
@@ -4517,7 +4560,7 @@ st.markdown(f'''
     <div class="level-badge" style="font-family:Syne,sans-serif;">{safe(cur_pasture)}</div>
     <div style="display:flex;flex-direction:column;gap:2px;">
         <div class="metabolism-label">Pasture Gauge</div>
-        <div style="font-size:0.5rem;color:#f59e0b;white-space:nowrap;display:flex;align-items:center;gap:3px;"><img src="{icon_hay_src}" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;"> {pg_hay_balance}/{HAY_TO_CHEESE} Hay to next <img src="{icon_cheese_src}" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;"></div>
+        <div style="font-size:0.5rem;color:#f59e0b;white-space:nowrap;display:flex;align-items:center;gap:3px;"><img src="{icon_hay_stack_src}" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;" class="goatflow-icon-inline"> {pg_hay_balance}/{HAY_TO_CHEESE} Hay to next <img src="{icon_cheese_src}" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;" class="goatflow-icon-inline"></div>
     </div>
     <div class="xp-bar-outer">
         <div class="xp-bar-inner" style="width:{xp_pct:.1f}%;"></div>
