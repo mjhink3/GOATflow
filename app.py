@@ -197,8 +197,8 @@ CUSTOM_CSS = f"""
 
     /* Compress Streamlit's default ~1rem inter-element gap */
     section[data-testid="stMain"] [data-testid="stVerticalBlock"] {{
-        gap: 0.35rem !important;
-        row-gap: 0.35rem !important;
+        gap: 0.2rem !important;
+        row-gap: 0.2rem !important;
     }}
 
     header[data-testid="stHeader"] {{
@@ -217,11 +217,12 @@ CUSTOM_CSS = f"""
         border-radius: 0 0 10px 10px;
         margin-bottom: 0;
         background: #08080f;
+        padding-top: 52px;
     }}
 
     .gf-banner-wrap img {{
         width: 100%;
-        height: 500px;
+        height: 390px;
         object-fit: contain;
         object-position: center bottom;
         display: block;
@@ -246,8 +247,8 @@ CUSTOM_CSS = f"""
     }}
 
     @media (max-width: 768px) {{
-        .gf-banner-wrap img {{ height: 300px !important; object-fit: contain !important; object-position: center bottom !important; border-radius: 0 0 8px 8px !important; }}
-        .gf-banner-wrap {{ border-radius: 0 0 8px 8px !important; margin-bottom: 0 !important; }}
+        .gf-banner-wrap img {{ height: 240px !important; object-fit: contain !important; object-position: center bottom !important; border-radius: 0 0 8px 8px !important; }}
+        .gf-banner-wrap {{ border-radius: 0 0 8px 8px !important; margin-bottom: 0 !important; padding-top: 44px !important; }}
         .gf-banner-fade {{ height: 20px !important; }}
         .gf-trust-row {{ margin-top: 2px !important; }}
         .privacy-shield-inline {{ font-size: 0.52rem !important; margin-top: 0 !important; display: inline-flex !important; }}
@@ -340,7 +341,7 @@ CUSTOM_CSS = f"""
         text-transform: uppercase;
         letter-spacing: 0.12em;
         margin-bottom: 0.1rem;
-        margin-top: 0.55rem;
+        margin-top: 0.3rem;
     }}
 
     div[data-testid="stFileUploader"] {{
@@ -769,42 +770,53 @@ CUSTOM_CSS = f"""
     }}
 
     .stats-row {{
-        display: flex;
-        gap: 0.8rem;
+        display: grid;
+        grid-template-columns: repeat(8, 1fr);
+        gap: 0.4rem;
         margin-bottom: 0.3rem;
     }}
 
     .stat-box {{
-        flex: 1;
         background: {CARD_BG};
         border: 1px solid {BORDER};
         border-radius: 10px;
-        padding: 0.45rem 0.3rem;
+        padding: 0.4rem 0.2rem;
         text-align: center;
+        min-width: 0;
+        overflow: hidden;
     }}
 
     .stat-value {{
-        font-size: 1.2rem;
+        font-size: 1.0rem;
         font-weight: 800;
         color: {WHITE};
         font-family: 'Syne', sans-serif;
     }}
 
+    .stat-box .goatflow-icon {{
+        width: 20px !important;
+        height: 20px !important;
+    }}
+
     .stat-label {{
-        font-size: 0.6rem;
+        font-size: 0.55rem;
         font-weight: 700;
         color: {SILVER};
         text-transform: uppercase;
-        letter-spacing: 0.1em;
-        margin-top: 0.15rem;
+        letter-spacing: 0.08em;
+        margin-top: 0.1rem;
         font-family: 'DM Sans', sans-serif;
     }}
 
     .stat-sub {{
-        font-size: 0.55rem;
+        font-size: 0.5rem;
         color: {SILVER};
-        margin-top: 0.1rem;
+        margin-top: 0.05rem;
         font-family: 'DM Sans', sans-serif;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
     }}
 
     .stButton > button,
@@ -4303,7 +4315,7 @@ else:
 
 if clip_rate_value is None:
     clip_rate_display = "—"
-    clip_rate_sublabel = "Complete 5 Tracks to unlock"
+    clip_rate_sublabel = "5 Tracks to unlock"
     clip_rate_color = "#9ca3af"
     clip_rate_border_style = ""
 elif clip_rate_value >= 75:
@@ -4325,7 +4337,7 @@ else:
 _sidebar_clip_text = clip_rate_display
 
 horns_count = len(parse_horns(get_horns(current_user_id)))
-_horns_img_stat = f'<img src="data:image/png;base64,{horns_icon_b64}" alt="Horns" style="height:28px;vertical-align:middle;margin-right:4px;">' if horns_icon_b64 else "🐐"
+_horns_img_stat = f'<img src="data:image/png;base64,{horns_icon_b64}" alt="Horns" class="goatflow-icon" style="height:20px;vertical-align:middle;margin-right:4px;">' if horns_icon_b64 else "🐐"
 
 linkedin_total_text = f"I'm at {cur_pasture} (Level {level}) with {player['total_xp']:,} Cheese Churn Points on GOATflow! {player['tasks_completed']} Tracks completed. Part of the WorkGOAT Ecosystem."
 linkedin_total_url = "https://www.linkedin.com/sharing/share-offsite/?" + urllib.parse.urlencode({"url": "https://workgoat.vip", "title": linkedin_total_text, "summary": linkedin_total_text})
@@ -4358,7 +4370,7 @@ st.markdown(f'''
         <div class="stat-value" style="color:#22c55e;font-family:Syne,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_cheese_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon"> {cheese_total}</div>
         <div class="stat-label">Fresh Cheese</div>
     </div>
-    <div class="stat-box" style="flex-shrink:0;">
+    <div class="stat-box">
         <div class="stat-value">{_horns_img_stat} {horns_count}</div>
         <div class="stat-label">Active Horns</div>
     </div>
@@ -4370,7 +4382,7 @@ st.markdown(f'''
     <div class="stat-box" title="Consecutive days you've engaged with GOATflow. Keep the Gait alive.">
         <div class="stat-value" style="color:#a78bfa;display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_gait_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon"> {gait_streak}</div>
         <div class="stat-label">GAIT</div>
-        <div class="stat-sub" style="font-size:0.55rem;text-transform:uppercase;letter-spacing:0.06em;">streak &bull; {gait_streak} day{"" if gait_streak == 1 else "s"} in a row</div>
+        <div class="stat-sub">{gait_streak} day{"" if gait_streak == 1 else "s"} in a row</div>
     </div>
 </div>
 ''', unsafe_allow_html=True)
