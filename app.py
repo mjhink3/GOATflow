@@ -4733,11 +4733,11 @@ doc.head.appendChild(style);
 var overlay=doc.createElement('div');
 overlay.id='gf-priority-feedback';
 overlay.style.cssText='position:fixed;bottom:160px;left:50%;transform:translateX(-50%);width:90%;max-width:380px;background:rgba(8,8,15,0.97);border:1px solid rgba(124,58,237,0.2);border-radius:8px;padding:8px 12px;z-index:9998;display:flex;align-items:center;gap:10px;animation:gfFbSlide 0.2s ease;';
-var goatSpan=doc.createElement('span');goatSpan.textContent='\uD83D\uDC10';goatSpan.style.cssText='font-size:14px;flex-shrink:0;';
+var goatSpan=doc.createElement('span');goatSpan.textContent='\U0001F410';goatSpan.style.cssText='font-size:14px;flex-shrink:0;';
 var txt=doc.createElement('span');txt.textContent='Was this ranked correctly?';txt.style.cssText='font-family:"DM Sans",sans-serif;font-size:11px;color:#9ca3af;flex:1;';
 var btnRow=doc.createElement('div');btnRow.style.cssText='display:flex;gap:6px;flex-shrink:0;';
-var yesBtn=doc.createElement('button');yesBtn.innerHTML='\uD83D\uDC4D Yes';yesBtn.style.cssText='background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.3);color:#4ade80;border-radius:20px;padding:4px 10px;font-family:"DM Sans",sans-serif;font-size:11px;cursor:pointer;';
-var offBtn=doc.createElement('button');offBtn.innerHTML='\uD83D\uDC4E Off';offBtn.style.cssText='background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444;border-radius:20px;padding:4px 10px;font-family:"DM Sans",sans-serif;font-size:11px;cursor:pointer;';
+var yesBtn=doc.createElement('button');yesBtn.innerHTML='\U0001F44D Yes';yesBtn.style.cssText='background:rgba(74,222,128,0.1);border:1px solid rgba(74,222,128,0.3);color:#4ade80;border-radius:20px;padding:4px 10px;font-family:"DM Sans",sans-serif;font-size:11px;cursor:pointer;';
+var offBtn=doc.createElement('button');offBtn.innerHTML='\U0001F44E Off';offBtn.style.cssText='background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);color:#ef4444;border-radius:20px;padding:4px 10px;font-family:"DM Sans",sans-serif;font-size:11px;cursor:pointer;';
 btnRow.appendChild(yesBtn);btnRow.appendChild(offBtn);
 overlay.appendChild(goatSpan);overlay.appendChild(txt);overlay.appendChild(btnRow);
 doc.body.appendChild(overlay);
@@ -5326,7 +5326,7 @@ function updateLoadIndex(){
     msg='\u2713 Load Index '+idxStr+' \u2014 Good balance. You\'ve got this.';
   }else{
     bg='rgba(245,158,11,0.06)';brd='1px solid rgba(245,158,11,0.2)';col='#f59e0b';
-    msg='Load Index '+idxStr+' \u2014 Light load. Real Tracks. Real Cheese. \uD83D\uDC10';
+    msg='Load Index '+idxStr+' \u2014 Light load. Real Tracks. Real Cheese. \U0001F410';
   }
   if(!banner){
     banner=pd.createElement('div');
