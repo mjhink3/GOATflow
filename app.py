@@ -190,7 +190,7 @@ def get_logo_b64():
 
 
 def get_celeb_b64(name: str):
-    return load_image_b64(f"celeb_{name}.png", f"celeb_{name}_b64")
+    return load_image_b64(f"celeb_{name}.webp", f"celeb_{name}_b64_v2")
 
 
 def hash_password(password: str, salt: str = None) -> tuple[str, str]:
@@ -2069,14 +2069,14 @@ logo_img = (
     '<div style="font-size:2rem;font-weight:900;font-family:Syne,sans-serif;color:#6100ff;">GOATflow</div>'
 )
 
-celeb_levelup_b64 = load_image_b64("celeb_levelup_new.png", "celeb_levelup_new_b64")
+celeb_levelup_b64 = load_image_b64("celeb_levelup_new.webp", "celeb_levelup_new_b64_v2")
 celeb_inbox_b64 = get_celeb_b64("inbox_cleared")
 celeb_focus_streak_b64 = get_celeb_b64("focus_streak")
 celeb_priority_achieved_b64 = get_celeb_b64("priority_achieved")
 celeb_power_hour_b64 = get_celeb_b64("power_hour")
 celeb_daily_flow_b64 = get_celeb_b64("daily_flow")
 celeb_task_completed_b64 = get_celeb_b64("task_completed")
-cheese_earned_b64 = load_image_b64("cheese_earned.png", "cheese_earned_b64")
+cheese_earned_b64 = load_image_b64("cheese_earned.webp", "cheese_earned_b64_v2")
 hay_bale_b64 = load_image_b64("attached_assets/ChatGPT_Image_Mar_13,_2026,_09_34_11_PM_1773462872978.png", "hay_bale_b64")
 goat_hoof_b64 = load_image_b64("static/icon_hoof_left.webp", "goat_hoof_b64_v2")
 horns_icon_b64 = load_image_b64("static/icon_horns.webp", "horns_icon_b64_v2")
@@ -3391,7 +3391,7 @@ _slideshow_iife = r"""
             slideTimer = setTimeout(function() {
               if (done) return;
               if (idx + 1 < ANIMALS.length) {
-                imgEl.src = '/app/static/onboarding/animal_' + ANIMALS[idx+1].key + '.jpg';
+                imgEl.src = '/app/static/onboarding/animal_' + ANIMALS[idx+1].key + '.webp';
                 showSlide(idx + 1);
               } else {
                 showLogo();
@@ -3403,7 +3403,7 @@ _slideshow_iife = r"""
     }
 
     // Preload image then animate
-    var nextSrc = '/app/static/onboarding/animal_' + animal.key + '.jpg';
+    var nextSrc = '/app/static/onboarding/animal_' + animal.key + '.webp';
     if (imgEl.src.endsWith(nextSrc.split('/').pop()) && imgEl.complete) {
       startAnim();
     } else {
@@ -3503,7 +3503,7 @@ _slideshow_iife = r"""
   var firstImg = new pw.Image();
   firstImg.onload = function() { showSlide(0); };
   firstImg.onerror = function() { showSlide(0); };
-  firstImg.src = '/app/static/onboarding/animal_bull.jpg';
+  firstImg.src = '/app/static/onboarding/animal_bull.webp';
 })();
 """
 
@@ -4316,7 +4316,7 @@ def show_hay_popup(task_name, xp_gained, leveled_up, xp_tier, hay_earned):
     if leveled_up:
         new_pasture = pasture_name(player_snap["level"])
         old_pasture = pasture_name(player_snap["level"] - 1)
-        celeb_levelup_src = f"data:image/png;base64,{celeb_levelup_b64}" if celeb_levelup_b64 else ""
+        celeb_levelup_src = f"data:image/webp;base64,{celeb_levelup_b64}" if celeb_levelup_b64 else ""
         fence_img = f'<img src="{celeb_levelup_src}" style="height:100px;border-radius:12px;display:block;margin:0 auto 0.5rem auto;">' if celeb_levelup_src else ''
         st.markdown(
             f'<div style="text-align:center;margin-top:0.5rem;padding:0.8rem;background:rgba(139,92,246,0.15);border:1px solid {NEON_VIOLET};border-radius:10px;">'
@@ -4341,7 +4341,7 @@ def show_fresh_cheese_popup(cheese_count):
     cheese_pun = random.choice(FRESH_CHEESE_PUNS)
     player_snap = get_player(current_user_id)
 
-    cheese_src = f"data:image/png;base64,{cheese_earned_b64}" if cheese_earned_b64 else ""
+    cheese_src = f"data:image/webp;base64,{cheese_earned_b64}" if cheese_earned_b64 else ""
     cheese_img = f'<img src="{cheese_src}" alt="Fresh Cheese" style="height:130px;border-radius:12px;display:block;margin:0 auto 0.4rem auto;">' if cheese_src else '🧀'
 
     st.markdown(
@@ -4657,7 +4657,7 @@ else:
 
         glow_eye_icon = ""
         if is_high_leverage and celeb_priority_achieved_b64:
-            glow_src = f"data:image/png;base64,{celeb_priority_achieved_b64}"
+            glow_src = f"data:image/webp;base64,{celeb_priority_achieved_b64}"
             glow_eye_icon = f'<img src="{glow_src}" style="height:24px;border-radius:4px;vertical-align:middle;margin-left:0.4rem;" title="High-Leverage Detected">'
 
         goat_badge = ""
