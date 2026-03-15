@@ -205,8 +205,8 @@ CUSTOM_CSS = f"""
 
     .goat-header {{
         text-align: center;
-        padding: 0.5rem 0 0.6rem 0;
-        margin-bottom: 0.8rem;
+        padding: 0.2rem 0 0.2rem 0;
+        margin-bottom: 0.3rem;
         position: relative;
     }}
 
@@ -228,7 +228,7 @@ CUSTOM_CSS = f"""
     }}
 
     .logo-glow-wrap img {{
-        height: 440px;
+        height: 140px;
         display: block;
         border: none;
         border-radius: 0;
@@ -244,7 +244,7 @@ CUSTOM_CSS = f"""
         color: #ffffff;
         letter-spacing: 0.03em;
         text-align: center;
-        margin-top: 8px;
+        margin-top: 4px;
         text-shadow: 0 0 20px rgba(124, 58, 237, 0.4);
     }}
 
@@ -785,12 +785,12 @@ CUSTOM_CSS = f"""
         background: {CARD_BG};
         border: 1px solid {BORDER};
         border-radius: 10px;
-        padding: 0.8rem;
+        padding: 0.45rem 0.3rem;
         text-align: center;
     }}
 
     .stat-value {{
-        font-size: 1.5rem;
+        font-size: 1.2rem;
         font-weight: 800;
         color: {WHITE};
         font-family: 'Syne', sans-serif;
@@ -813,16 +813,23 @@ CUSTOM_CSS = f"""
         font-family: 'DM Sans', sans-serif;
     }}
 
-    .stButton > button {{
-        background: #7c3aed;
-        color: #FFFFFF;
-        border: none;
-        border-radius: 6px;
-        padding: 0.6rem 2rem;
-        font-weight: 700;
-        font-family: 'Syne', sans-serif;
-        letter-spacing: 0.02em;
-        transition: box-shadow 0.2s;
+    .stButton > button,
+    [data-testid="stButton"] > button,
+    button[data-testid="stBaseButton-secondary"],
+    button[data-testid="stBaseButton-primary"] {{
+        background: #7c3aed !important;
+        color: #FFFFFF !important;
+        border: none !important;
+        border-radius: 8px !important;
+        padding: 0.75rem 2rem !important;
+        font-size: 1.05rem !important;
+        font-weight: 800 !important;
+        font-family: 'Syne', sans-serif !important;
+        letter-spacing: 0.03em !important;
+        min-height: 56px !important;
+        height: auto !important;
+        line-height: 1.4 !important;
+        transition: box-shadow 0.2s, transform 0.1s !important;
     }}
 
     .stButton > button:hover {{
@@ -2156,7 +2163,7 @@ user_rank = ascension_rank(user_level)
 use_crown = user_level >= 5
 
 with st.sidebar:
-    sidebar_logo = f'<img src="{logo_src}" alt="GOATflow" style="height:90px;object-fit:contain;">' if logo_src else '<div style="font-size:1.2rem;font-weight:900;color:#6100ff;">🐐 GOATflow</div>'
+    sidebar_logo = f'<img src="{logo_src}" alt="GOATflow" style="height:150px;object-fit:contain;">' if logo_src else '<div style="font-size:1.2rem;font-weight:900;color:#6100ff;">🐐 GOATflow</div>'
     st.markdown(f'''
     <div style="text-align:center;padding:0.5rem 0 0.2rem 0;">
         {sidebar_logo}
@@ -2168,6 +2175,9 @@ with st.sidebar:
     level_data = compute_level(player_data["total_xp"])
     cur_level, cur_xp_into, cur_xp_needed = level_data
     sidebar_pasture = pasture_name(cur_level)
+
+    _sb_linkedin_text = f"I'm at {sidebar_pasture} (Level {cur_level}) with {player_data['total_xp']:,} Cheese Churn Points on GOATflow! {player_data['tasks_completed']} Tracks completed. Part of the WorkGOAT Ecosystem."
+    _sb_linkedin_url = "https://www.linkedin.com/sharing/share-offsite/?" + urllib.parse.urlencode({"url": "https://workgoat.vip", "title": _sb_linkedin_text, "summary": _sb_linkedin_text})
 
     _level_img_src = get_level_img_src(cur_level)
     if _level_img_src:
@@ -2215,8 +2225,11 @@ with st.sidebar:
             <span style="font-size:0.6rem;color:{SILVER};">Fresh Cheese Banked</span>
             <span style="font-size:0.6rem;font-weight:700;color:#22c55e;">🧀 {sb_cheese}</span>
         </div>
-        <div style="font-size:0.52rem;color:#6b7280;text-align:right;margin-bottom:0.3rem;">
+        <div style="font-size:0.52rem;color:#6b7280;text-align:right;margin-bottom:0.4rem;">
             Ports to WorkGOAT when available — <a href="https://workgoat.vip" target="_blank" style="color:#7c3aed;text-decoration:none;">workgoat.vip</a>
+        </div>
+        <div style="text-align:center;">
+            <a class="linkedin-share-btn" href="{_sb_linkedin_url}" target="_blank" rel="noopener noreferrer">Share Stats on LinkedIn</a>
         </div>
     </div>
     ''', unsafe_allow_html=True)
@@ -2323,6 +2336,65 @@ with st.sidebar:
         '❓ Replay Tutorial</button>',
         unsafe_allow_html=True
     )
+
+# ── Force sidebar closed + inject late button/stat CSS after Streamlit emotion ─
+_stc.html("""
+<script>
+(function() {
+  var pw = window.parent;
+  var pd = pw.document;
+
+  // 1. Inject style tag after Streamlit's emotion CSS so source-order wins
+  function injectStyles() {
+    if (pd.getElementById('gf-late-styles')) return;
+    var s = pd.createElement('style');
+    s.id = 'gf-late-styles';
+    s.textContent = [
+      'button[data-testid="stBaseButton-secondary"],',
+      'button[data-testid="stBaseButton-primary"],',
+      '.stButton > button {',
+      '  min-height: 56px !important;',
+      '  font-size: 1.05rem !important;',
+      '  font-weight: 800 !important;',
+      '  font-family: Syne, sans-serif !important;',
+      '  padding: 0.75rem 2rem !important;',
+      '  background: #7c3aed !important;',
+      '  color: #FFFFFF !important;',
+      '  border: none !important;',
+      '  border-radius: 8px !important;',
+      '  letter-spacing: 0.03em !important;',
+      '}'
+    ].join('\\n');
+    pd.head.appendChild(s);
+  }
+
+  // 2. Close sidebar if it's open
+  function isSidebarOpen() {
+    var sb = pd.querySelector('[data-testid="stSidebar"]');
+    if (!sb) return false;
+    return sb.getBoundingClientRect().left > -50;
+  }
+  function closeSidebar() {
+    if (!isSidebarOpen()) return;
+    var btn = pd.querySelector(
+      'button[aria-label="Close sidebar"], ' +
+      '[data-testid="stSidebarNavToggleButton"] button, ' +
+      '[data-testid="collapsedControl"] button, ' +
+      'button[aria-label="open sidebar"]'
+    );
+    if (btn) btn.click();
+  }
+
+  injectStyles();
+  setTimeout(closeSidebar, 200);
+  setTimeout(closeSidebar, 600);
+  setTimeout(closeSidebar, 1200);
+  // Re-inject styles after Streamlit re-renders
+  setTimeout(injectStyles, 800);
+  setTimeout(injectStyles, 2000);
+})();
+</script>
+""", height=0)
 
 # ── Welcome overlay (first-login, no Horns set) ───────────────────────────────
 _has_horns_js = "true" if current_horns else "false"
@@ -3535,7 +3607,7 @@ if st.session_state.get("just_dropped"):
     incog_label = ' <span class="incognito-badge">🕶️ INCOGNITO</span>' if incognito_active else ''
     st.markdown(f'''
     <div class="completed-toast">
-        <div class="completed-toast-text">⚡ Cheese Churn complete — Tracks re-prioritized{incog_label}</div>
+        <div class="completed-toast-text">🌪️ Churn Complete - Tracks re-prioritized{incog_label}</div>
     </div>
     ''', unsafe_allow_html=True)
     st.session_state["just_dropped"] = False
@@ -3673,7 +3745,6 @@ st.markdown(f'''
     <div class="stat-box">
         <div class="stat-value" style="color:#22c55e;font-family:Syne,sans-serif;">🧀 {cheese_total}</div>
         <div class="stat-label">Fresh Cheese</div>
-        <a class="linkedin-share-btn" href="{linkedin_total_url}" target="_blank" rel="noopener noreferrer" style="margin-top:0.4rem;font-size:0.6rem;padding:0.2rem 0.7rem;">Share</a>
     </div>
 </div>
 ''', unsafe_allow_html=True)
