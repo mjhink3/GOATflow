@@ -3,7 +3,13 @@
 AI-powered operational intelligence SaaS dashboard with multi-user authentication, gamified Cheese Churn Rate system, Hay & Fresh Cheese reward economy, and Stateless Privacy for Postmaster-level operations. Part of the WorkGOAT Ecosystem.
 
 ## Overview
-Users sign in via username/password to access their private dashboard. Each user has isolated data (Tracks/Signals, Horns/Directives, XP, Hay, Fresh Cheese). Users drop files (PDFs, images, text) or record voice into the Track Sieve. GPT-4o-mini classifies inputs as "Routine Grazing" or "Summit Call", merges with existing tasks, and re-sorts by Operational Weight. Tasks persist in PostgreSQL per-user. Completing Tracks earns Cheese Churn Points and Hay.
+Users sign in via username/password to access their private dashboard. Each user has isolated data (Tracks/Signals, Horns/Directives, XP, Hay, Fresh Cheese). Users drop files (PDFs, images, text) or record voice into the Track Sieve (via floating Voice FAB). GPT-4o-mini classifies inputs as "Routine Grazing" or "Summit Call", merges with existing tasks, and re-sorts by Operational Weight. Tasks persist in PostgreSQL per-user. Completing Tracks earns Cheese Churn Points and Hay.
+
+### Mobile UX
+- Above-the-fold layout: logo shrinks to 80px on ≤768px screens; header, tagline, Track Sieve, input zone, and churn button all fit without scrolling on 375×667
+- Floating Voice FAB: `#gf-voice-fab`, position:fixed bottom-right, injected into parent doc via ob_iframe IIFE (step 6), purple → red recording → amber processing → green complete states
+- Stat cards: 2-column CSS grid on mobile (`grid-template-columns: 1fr 1fr`)
+- Scroll indicator: `#gf-scroll-hint` bounces below churn button, auto-hides on first scroll or after 6s
 
 ## Architecture
 - **Framework**: Streamlit (Python), centered layout, single-page

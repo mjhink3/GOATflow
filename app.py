@@ -258,9 +258,24 @@ CUSTOM_CSS = f"""
     }}
 
     @media (max-width: 768px) {{
-        .goat-header-tagline {{ font-size: 15px; }}
-        .goat-header-sub {{ font-size: 12px; }}
-        .logo-glow-wrap img {{ height: 300px; }}
+        .logo-glow-wrap img {{ height: 80px !important; max-height: 80px !important; object-fit: contain; }}
+        .goat-header {{ padding: 0.15rem 0 0.15rem 0 !important; margin-bottom: 0.2rem !important; }}
+        .goat-header-tagline {{ font-size: 12px !important; margin-top: 4px !important; }}
+        .goat-header-sub {{ font-size: 11px !important; margin-top: 2px !important; }}
+        .privacy-shield-inline {{ font-size: 0.52rem !important; margin-top: 6px !important; display: inline-flex !important; }}
+        .trust-badge {{ font-size: 0.85rem !important; margin-top: 4px !important; }}
+        .churn-label {{ margin-bottom: 6px !important; margin-top: 8px !important; }}
+        div[data-testid="stFileUploader"] {{ padding: 10px !important; }}
+        [data-testid="stFileUploaderDropzone"] {{ min-height: 70px !important; padding: 6px 10px !important; }}
+        [data-testid="stFileUploaderDropzone"] p {{ font-size: 12px !important; margin: 2px 0 !important; }}
+        [data-testid="stFileUploaderDropzone"] small {{ font-size: 10px !important; }}
+        .stTextArea textarea {{ min-height: 70px !important; max-height: 90px !important; font-size: 0.82rem !important; }}
+        [data-testid="stHorizontalBlock"]:has([data-testid="stFileUploader"]) {{
+            flex-direction: column !important; gap: 8px !important;
+        }}
+        [data-testid="stHorizontalBlock"]:has([data-testid="stFileUploader"]) > div[data-testid="stColumn"] {{
+            width: 100% !important; min-width: 100% !important; flex: 1 1 100% !important;
+        }}
     }}
 
     .trust-badge {{
@@ -584,6 +599,63 @@ CUSTOM_CSS = f"""
         .sieve-cols {{
             flex-direction: column-reverse;
         }}
+        /* Stat cards: 2-column grid on mobile */
+        .stats-row {{
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 0.4rem !important;
+        }}
+        .stat-box {{
+            padding: 0.4rem 0.3rem !important;
+            min-height: 58px !important;
+        }}
+        .stat-value {{
+            font-size: 1.05rem !important;
+        }}
+        .stat-label {{
+            font-size: 0.5rem !important;
+            letter-spacing: 0.06em !important;
+        }}
+        .stat-sub {{
+            font-size: 0.48rem !important;
+        }}
+        /* Churn button touchable size */
+        .stButton > button {{ min-height: 48px !important; font-size: 15px !important; }}
+    }}
+
+    /* ── Scroll indicator ── */
+    .scroll-indicator {{
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        margin: 0.4rem auto 0.5rem auto;
+        opacity: 0.55;
+        animation: gfScrollBounce 1.6s ease-in-out infinite;
+        cursor: default;
+        width: fit-content;
+    }}
+    .scroll-indicator span {{
+        font-size: 0.6rem;
+        color: #6b7280;
+        font-family: 'DM Sans', sans-serif;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+    }}
+    .scroll-indicator svg {{
+        display: block;
+    }}
+    @keyframes gfScrollBounce {{
+        0%, 100% {{ transform: translateY(0); opacity: 0.55; }}
+        50% {{ transform: translateY(5px); opacity: 0.9; }}
+    }}
+    @media (min-width: 769px) {{
+        .scroll-indicator {{ display: none; }}
+    }}
+
+    /* ── Floating Voice FAB ── */
+    #gf-voice-fab-styles {{
+        display: none;
     }}
 
     .xp-tag {{
@@ -2359,7 +2431,7 @@ _tour_iife = r"""
     t.addStep({
       id: 'sieve',
       title: '\uD83D\uDCE5 The Track Sieve',
-      text: "Drop any chaos in. Snap a photo of a sticky note. Paste an email. Upload a PDF. Record voice. Type a quick thought.<br><br>GOATflow reads all of it and turns it into a prioritized list in seconds.",
+      text: "Drop any chaos in. Snap a photo of a sticky note. Paste an email. Upload a PDF. Type a quick thought.<br><br>See the <span style='color:#a78bfa;font-weight:700;'>🎙️ purple mic button</span> floating in the bottom-right corner? Tap it to speak your tasks directly — it transcribes in real time.<br><br>GOATflow reads all of it and turns it into a prioritized list in seconds.",
       attachTo: { element: '#gf-sieve-anchor', on: 'top' },
       scrollTo: { behavior: 'smooth', block: 'center' },
       buttons: [
@@ -2745,8 +2817,255 @@ _slideshow_iife = r"""
 })();
 """
 
+_fab_iife = r"""(function() {
+  if (document.getElementById('gf-voice-fab')) return;
+
+  /* ── Animations ── */
+  if (!document.getElementById('gf-voice-fab-css')) {
+    var styleEl = document.createElement('style');
+    styleEl.id = 'gf-voice-fab-css';
+    styleEl.textContent = [
+      '@keyframes gfMicPulse{0%,100%{box-shadow:0 4px 20px rgba(124,58,237,0.5);}50%{box-shadow:0 4px 30px rgba(124,58,237,0.85);}}',
+      '@keyframes gfRingPulse{0%{transform:scale(1);opacity:0.5;}100%{transform:scale(2.2);opacity:0;}}',
+      '@keyframes gfSpin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}'
+    ].join('');
+    document.head.appendChild(styleEl);
+  }
+
+  /* ── Pulse rings ── */
+  var rings = [];
+  for (var ri = 0; ri < 3; ri++) {
+    var ring = document.createElement('div');
+    ring.style.cssText = 'position:fixed;border-radius:50%;border:2px solid rgba(239,68,68,0.35);pointer-events:none;z-index:9998;display:none;';
+    document.body.appendChild(ring);
+    rings.push(ring);
+  }
+
+  /* ── Timer badge ── */
+  var timer = document.createElement('div');
+  timer.id = 'gf-voice-timer';
+  timer.style.cssText = 'position:fixed;right:18px;background:rgba(239,68,68,0.92);color:#fff;font-family:"DM Sans",sans-serif;font-size:13px;font-weight:700;border-radius:20px;padding:3px 10px;z-index:9999;display:none;pointer-events:none;';
+  document.body.appendChild(timer);
+
+  /* ── Transcript preview ── */
+  var preview = document.createElement('div');
+  preview.id = 'gf-voice-preview';
+  preview.style.cssText = 'position:fixed;right:10px;max-width:220px;background:rgba(10,10,20,0.96);border:1px solid rgba(124,58,237,0.4);border-radius:8px;padding:8px 12px;color:#9ca3af;font-family:"DM Sans",sans-serif;font-size:12px;font-style:italic;z-index:9999;display:none;word-wrap:break-word;line-height:1.4;pointer-events:none;';
+  document.body.appendChild(preview);
+
+  /* ── "Voice Drop" label (fades after 3 s) ── */
+  var lbl = document.createElement('div');
+  lbl.id = 'gf-voice-label';
+  lbl.textContent = 'Voice Drop';
+  lbl.style.cssText = 'position:fixed;right:82px;background:rgba(10,10,20,0.92);border:1px solid rgba(124,58,237,0.4);color:#a78bfa;font-family:"DM Sans",sans-serif;font-size:11px;border-radius:20px;padding:4px 10px;z-index:9999;opacity:1;transition:opacity 0.5s;white-space:nowrap;pointer-events:none;';
+  document.body.appendChild(lbl);
+  setTimeout(function() {
+    lbl.style.opacity = '0';
+    setTimeout(function() { lbl.style.display = 'none'; }, 500);
+  }, 3000);
+
+  /* ── FAB button ── */
+  var fab = document.createElement('button');
+  fab.id = 'gf-voice-fab';
+  var MIC_SVG = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 10a7 7 0 0 0 14 0"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>';
+  var STOP_SVG = '<svg width="20" height="20" viewBox="0 0 24 24" fill="white"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>';
+  var SPIN_SVG = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" style="animation:gfSpin 1s linear infinite"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>';
+  var CHECK_SVG = '<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>';
+  fab.innerHTML = MIC_SVG;
+  fab.setAttribute('title', 'Voice Drop');
+  fab.style.cssText = 'position:fixed;right:16px;width:58px;height:58px;border-radius:50%;background:#7c3aed;border:2px solid #a78bfa;box-shadow:0 4px 20px rgba(124,58,237,0.5);z-index:9999;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.2s,border-color 0.2s,transform 0.15s,opacity 0.3s;animation:gfMicPulse 2.5s ease-in-out infinite;';
+  document.body.appendChild(fab);
+
+  function positionVertical() {
+    var fabBottom = 84;
+    fab.style.bottom = fabBottom + 'px';
+    lbl.style.bottom = (fabBottom + 16) + 'px';
+    timer.style.bottom = (fabBottom + 68) + 'px';
+    preview.style.bottom = (fabBottom + 68) + 'px';
+    var fabRect = fab.getBoundingClientRect();
+    var cx = fabRect.left + fabRect.width / 2;
+    var cy = fabRect.top + fabRect.height / 2;
+    var sizes = [72, 94, 116];
+    rings.forEach(function(ring, i) {
+      var sz = sizes[i];
+      ring.style.left = (cx - sz / 2) + 'px';
+      ring.style.top = (cy - sz / 2) + 'px';
+      ring.style.width = sz + 'px';
+      ring.style.height = sz + 'px';
+    });
+  }
+  positionVertical();
+  window.addEventListener('resize', positionVertical, { passive: true });
+
+  var state = 'idle';
+  var recognition = null;
+  var timerIv = null;
+  var elapsed = 0;
+  var hasAPI = !!(window.SpeechRecognition || window.webkitSpeechRecognition);
+
+  function findTextarea() {
+    return document.querySelector('[data-testid="stTextArea"] textarea') ||
+           document.querySelector('.stTextArea textarea') ||
+           document.querySelector('textarea');
+  }
+
+  function populateTextarea(text) {
+    if (!text || !text.trim()) return;
+    var ta = findTextarea();
+    if (!ta) return;
+    var existing = ta.value;
+    var newVal = existing && existing.trim() ? existing.trim() + '\n' + text.trim() : text.trim();
+    try {
+      var setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+      setter.call(ta, newVal);
+    } catch(e) { ta.value = newVal; }
+    ta.dispatchEvent(new Event('input', { bubbles: true }));
+    ta.dispatchEvent(new Event('change', { bubbles: true }));
+  }
+
+  function setIdle() {
+    state = 'idle';
+    fab.style.width = '58px'; fab.style.height = '58px';
+    fab.style.background = '#7c3aed'; fab.style.borderColor = '#a78bfa';
+    fab.style.animation = 'gfMicPulse 2.5s ease-in-out infinite';
+    fab.innerHTML = MIC_SVG;
+    timer.style.display = 'none'; preview.style.display = 'none';
+    rings.forEach(function(r) { r.style.display = 'none'; r.style.animation = 'none'; });
+    if (timerIv) { clearInterval(timerIv); timerIv = null; }
+    elapsed = 0;
+  }
+
+  function setRecording() {
+    state = 'recording';
+    fab.style.width = '64px'; fab.style.height = '64px';
+    fab.style.background = '#ef4444'; fab.style.borderColor = '#fca5a5';
+    fab.style.animation = 'none'; fab.innerHTML = STOP_SVG;
+    elapsed = 0; timer.textContent = '0:00'; timer.style.display = 'block';
+    preview.textContent = 'Listening...'; preview.style.display = 'block';
+    timerIv = setInterval(function() {
+      elapsed++;
+      var m = Math.floor(elapsed / 60), s = elapsed % 60;
+      timer.textContent = m + ':' + (s < 10 ? '0' + s : s);
+    }, 1000);
+    positionVertical();
+    rings.forEach(function(ring, i) {
+      ring.style.animation = 'gfRingPulse 1.3s ease-out ' + (i * 0.43) + 's infinite';
+      ring.style.display = 'block';
+    });
+  }
+
+  function setProcessing() {
+    state = 'processing';
+    fab.style.width = '58px'; fab.style.height = '58px';
+    fab.style.background = '#f59e0b'; fab.style.borderColor = '#fcd34d';
+    fab.style.animation = 'none'; fab.innerHTML = SPIN_SVG;
+    timer.style.display = 'none'; preview.textContent = 'Processing...';
+    rings.forEach(function(r) { r.style.display = 'none'; r.style.animation = 'none'; });
+    if (timerIv) { clearInterval(timerIv); timerIv = null; }
+  }
+
+  function setComplete() {
+    state = 'complete';
+    fab.style.background = '#22c55e'; fab.style.borderColor = '#86efac';
+    fab.style.animation = 'none'; fab.innerHTML = CHECK_SVG;
+    preview.style.display = 'none';
+    setTimeout(setIdle, 800);
+  }
+
+  function showFallback() {
+    var modal = document.createElement('div');
+    modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:99999;display:flex;align-items:center;justify-content:center;';
+    var box = document.createElement('div');
+    box.style.cssText = 'background:#0f0f1a;border:1px solid #374151;border-radius:12px;padding:24px;max-width:300px;margin:16px;';
+    box.innerHTML = '<div style="font-family:Syne,sans-serif;font-weight:700;color:#fff;font-size:18px;margin-bottom:12px;">Voice Drop</div><div style="font-family:DM Sans,sans-serif;color:#9ca3af;font-size:13px;line-height:1.6;margin-bottom:16px;">Your browser does not support live voice transcription. Record a voice memo and upload the audio file.</div><button style="background:#7c3aed;color:#fff;border:none;border-radius:6px;padding:8px 18px;font-family:Syne,sans-serif;font-weight:700;cursor:pointer;width:100%;" id="gf-fb-close">Got it</button>';
+    modal.appendChild(box);
+    document.body.appendChild(modal);
+    document.getElementById('gf-fb-close').addEventListener('click', function() { modal.remove(); });
+    modal.addEventListener('click', function(e) { if (e.target === modal) modal.remove(); });
+  }
+
+  fab.addEventListener('click', function() {
+    if (!hasAPI) { showFallback(); return; }
+    if (state === 'recording') {
+      if (recognition) { setProcessing(); recognition.stop(); }
+      return;
+    }
+    if (state !== 'idle') return;
+
+    var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SR();
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = 'en-US';
+    var finalT = '', interimT = '';
+
+    recognition.onstart = function() { setRecording(); };
+
+    recognition.onresult = function(event) {
+      finalT = ''; interimT = '';
+      for (var i = 0; i < event.results.length; i++) {
+        if (event.results[i].isFinal) { finalT += event.results[i][0].transcript + ' '; }
+        else { interimT += event.results[i][0].transcript; }
+      }
+      var disp = (interimT || finalT.trim()).substring(0, 120);
+      if (disp) preview.textContent = disp;
+    };
+
+    recognition.onend = function() {
+      if (state === 'recording') {
+        try { recognition.start(); } catch(e) { finish(finalT || interimT); }
+      } else { finish(finalT || interimT); }
+    };
+
+    recognition.onerror = function(e) {
+      if (e.error === 'not-allowed' || e.error === 'permission-denied') {
+        fab.style.background = '#ef4444'; fab.style.borderColor = '#fca5a5';
+        rings.forEach(function(r) { r.style.display = 'none'; r.style.animation = 'none'; });
+        if (timerIv) { clearInterval(timerIv); timerIv = null; }
+        timer.style.display = 'none';
+        preview.textContent = 'Mic access denied'; preview.style.display = 'block';
+        state = 'denied';
+        setTimeout(setIdle, 3500);
+      } else { finish(finalT || interimT); }
+    };
+
+    function finish(text) {
+      if (text && text.trim()) { setProcessing(); setTimeout(function() { populateTextarea(text.trim()); setComplete(); }, 300); }
+      else { setIdle(); }
+    }
+
+    try { recognition.start(); } catch(e) { showFallback(); }
+  });
+
+  /* ── Modal/dialog awareness ── */
+  var obs = new MutationObserver(function() {
+    var isOpen = !!(document.querySelector('[data-testid="stDialog"]') ||
+                    document.querySelector('[role="dialog"]') ||
+                    document.querySelector('[data-baseweb="modal"]'));
+    fab.style.opacity = isOpen ? '0' : '1';
+    fab.style.pointerEvents = isOpen ? 'none' : 'auto';
+  });
+  obs.observe(document.body, { childList: true, subtree: false });
+
+  /* ── Scroll indicator dismiss ── */
+  (function() {
+    var dismissed = false;
+    function hideHint() {
+      if (dismissed) return; dismissed = true;
+      var h = document.getElementById('gf-scroll-hint');
+      if (!h) return;
+      h.style.transition = 'opacity 0.4s'; h.style.opacity = '0';
+      setTimeout(function() { if (h.parentNode) h.style.display = 'none'; }, 420);
+    }
+    window.addEventListener('scroll', hideHint, { once: true, passive: true });
+    setTimeout(hideHint, 6000);
+  })();
+
+})();"""
+
 _tour_iife_json      = _json.dumps(_tour_iife)
 _slideshow_iife_json = _json.dumps(_slideshow_iife)
+_fab_iife_json       = _json.dumps(_fab_iife)
 
 _ob_iframe_html = f"""<!DOCTYPE html><html><body style="margin:0;padding:0;background:transparent;">
 <script>
@@ -2782,6 +3101,11 @@ _ob_iframe_html = f"""<!DOCTYPE html><html><body style="margin:0;padding:0;backg
   var ssEl = pd.createElement('script');
   ssEl.textContent = {_slideshow_iife_json};
   pd.body.appendChild(ssEl);
+
+  // 6. Inject floating Voice FAB (idempotent guard inside the IIFE)
+  var fabEl = pd.createElement('script');
+  fabEl.textContent = {_fab_iife_json};
+  pd.body.appendChild(fabEl);
 }})();
 </script>
 </body></html>"""
@@ -3110,66 +3434,6 @@ with col_text:
         label_visibility="collapsed",
         key="bleat_text_input",
     )
-    st.markdown("""
-    <div id="voice-drop-container">
-      <button class="voice-drop-btn" id="voice-btn" onclick="toggleVoiceDrop()">🎙️ Voice Drop</button>
-    </div>
-    <div id="voice-status" style="font-size:0.65rem;color:#8B5CF6;text-align:center;margin-top:0.2rem;min-height:1rem;"></div>
-    <script>
-    var voiceRecognition = null;
-    var voiceActive = false;
-    function toggleVoiceDrop() {
-        var btn = document.getElementById('voice-btn');
-        var status = document.getElementById('voice-status');
-        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-            status.textContent = 'Voice not supported in this browser.';
-            return;
-        }
-        if (voiceActive) {
-            if (voiceRecognition) voiceRecognition.stop();
-            voiceActive = false;
-            btn.textContent = '🎙️ Voice Drop';
-            btn.classList.remove('recording');
-            status.textContent = '';
-            return;
-        }
-        var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-        voiceRecognition = new SR();
-        voiceRecognition.continuous = true;
-        voiceRecognition.interimResults = true;
-        voiceRecognition.lang = 'en-US';
-        voiceActive = true;
-        btn.textContent = '⏹ Stop Recording';
-        btn.classList.add('recording');
-        status.textContent = 'Listening...';
-        voiceRecognition.onresult = function(event) {
-            var transcript = '';
-            for (var i = 0; i < event.results.length; i++) {
-                transcript += event.results[i][0].transcript;
-            }
-            var textArea = window.parent.document.querySelector('textarea[data-testid="stTextArea"]') ||
-                           document.querySelector('textarea');
-            if (textArea) {
-                var nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
-                nativeInputValueSetter.call(textArea, transcript);
-                textArea.dispatchEvent(new Event('input', { bubbles: true }));
-            }
-        };
-        voiceRecognition.onerror = function(e) {
-            status.textContent = 'Error: ' + e.error;
-            voiceActive = false;
-            btn.textContent = '🎙️ Voice Drop';
-            btn.classList.remove('recording');
-        };
-        voiceRecognition.onend = function() {
-            if (voiceActive) {
-                voiceRecognition.start();
-            }
-        };
-        voiceRecognition.start();
-    }
-    </script>
-    """, unsafe_allow_html=True)
 
 with col_files:
     uploaded_files = st.file_uploader(
@@ -3182,6 +3446,17 @@ with col_files:
 
 drop_btn = st.button("⚡ Drop Into Churn Engine", use_container_width=True, key="drop_btn",
                      help="GOATflow will metabolize your input and rank everything against your Horns.")
+
+# ── Scroll indicator (mobile only — JS handled in FAB IIFE below) ────────────
+st.markdown("""
+<div class="scroll-indicator" id="gf-scroll-hint">
+  <span>Scroll for stats</span>
+  <svg width="16" height="10" viewBox="0 0 16 10" fill="none">
+    <polyline points="1,1 8,8 15,1" stroke="#6b7280" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+  </svg>
+</div>
+""", unsafe_allow_html=True)
+
 
 if drop_btn:
     has_files = uploaded_files and len(uploaded_files) > 0
