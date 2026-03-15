@@ -186,7 +186,7 @@ def load_image_b64(filename: str, cache_key: str) -> str:
 
 
 def get_logo_b64():
-    return load_image_b64("goatflow_logo.png", "logo_b64_v3")
+    return load_image_b64("goatflow_logo.webp", "logo_b64_v4")
 
 
 def get_celeb_b64(name: str):
@@ -2062,7 +2062,7 @@ setTimeout(function() {
 
 
 logo_b64 = get_logo_b64()
-logo_src = f"data:image/png;base64,{logo_b64}" if logo_b64 else ""
+logo_src = f"data:image/webp;base64,{logo_b64}" if logo_b64 else ""
 logo_img = (
     f'<div class="logo-glow-wrap"><img src="{logo_src}" alt="GOATflow"></div>'
     if logo_src else
@@ -2078,30 +2078,30 @@ celeb_daily_flow_b64 = get_celeb_b64("daily_flow")
 celeb_task_completed_b64 = get_celeb_b64("task_completed")
 cheese_earned_b64 = load_image_b64("cheese_earned.png", "cheese_earned_b64")
 hay_bale_b64 = load_image_b64("attached_assets/ChatGPT_Image_Mar_13,_2026,_09_34_11_PM_1773462872978.png", "hay_bale_b64")
-goat_hoof_b64 = load_image_b64("attached_assets/ChatGPT_Image_Mar_13,_2026,_09_57_48_PM_1773464288205.png", "goat_hoof_b64")
-horns_icon_b64 = load_image_b64("attached_assets/ChatGPT_Image_Mar_13,_2026,_09_16_13_PM_1773461790675.png", "horns_icon_b64")
-banner_b64 = load_image_b64("attached_assets/goatflow_main_screen_logo_1773550462533.png", "banner_b64_v1")
-banner_src = f"data:image/png;base64,{banner_b64}" if banner_b64 else ""
-goatif_icon_b64 = load_image_b64("static/goatification_icon.png", "goatif_icon_b64_v1")
-goatif_icon_src = f"data:image/png;base64,{goatif_icon_b64}" if goatif_icon_b64 else ""
-icon_hay_b64 = load_image_b64("static/icon_hay.png", "icon_hay_b64_v1")
-icon_hay_src = f"data:image/png;base64,{icon_hay_b64}" if icon_hay_b64 else ""
-icon_cheese_b64 = load_image_b64("static/icon_fresh_cheese.png", "icon_cheese_b64_v1")
-icon_cheese_src = f"data:image/png;base64,{icon_cheese_b64}" if icon_cheese_b64 else ""
-icon_hay_stack_b64 = load_image_b64("static/icon_hay_stack.png", "icon_hay_stack_b64_v1")
-icon_hay_stack_src = f"data:image/png;base64,{icon_hay_stack_b64}" if icon_hay_stack_b64 else ""
-icon_tracks_b64 = load_image_b64("static/icon_tracks.png", "icon_tracks_b64_v1")
-icon_tracks_src = f"data:image/png;base64,{icon_tracks_b64}" if icon_tracks_b64 else ""
-icon_completed_b64 = load_image_b64("static/icon_completed.png", "icon_completed_b64_v1")
-icon_completed_src = f"data:image/png;base64,{icon_completed_b64}" if icon_completed_b64 else ""
-icon_summit_b64 = load_image_b64("static/icon_summit.png", "icon_summit_b64_v1")
-icon_summit_src = f"data:image/png;base64,{icon_summit_b64}" if icon_summit_b64 else ""
-icon_gait_b64 = load_image_b64("static/icon_gait.png", "icon_gait_b64_v1")
-icon_gait_src = f"data:image/png;base64,{icon_gait_b64}" if icon_gait_b64 else ""
-icon_clip_rate_b64 = load_image_b64("static/icon_clip_rate.png", "icon_clip_rate_b64_v1")
-icon_level_b64 = load_image_b64("static/icon_level.png", "icon_level_b64_v1")
-icon_level_src = f"data:image/png;base64,{icon_level_b64}" if icon_level_b64 else ""
-icon_clip_rate_src = f"data:image/png;base64,{icon_clip_rate_b64}" if icon_clip_rate_b64 else ""
+goat_hoof_b64 = load_image_b64("static/icon_hoof_left.webp", "goat_hoof_b64_v2")
+horns_icon_b64 = load_image_b64("static/icon_horns.webp", "horns_icon_b64_v2")
+banner_b64 = load_image_b64("static/goatflow_main_screen_logo.webp", "banner_b64_v2")
+banner_src = f"data:image/webp;base64,{banner_b64}" if banner_b64 else ""
+goatif_icon_b64 = load_image_b64("static/goatification_icon.webp", "goatif_icon_b64_v2")
+goatif_icon_src = f"data:image/webp;base64,{goatif_icon_b64}" if goatif_icon_b64 else ""
+icon_hay_b64 = load_image_b64("static/icon_hay.webp", "icon_hay_b64_v2")
+icon_hay_src = f"data:image/webp;base64,{icon_hay_b64}" if icon_hay_b64 else ""
+icon_cheese_b64 = load_image_b64("static/icon_fresh_cheese.webp", "icon_cheese_b64_v2")
+icon_cheese_src = f"data:image/webp;base64,{icon_cheese_b64}" if icon_cheese_b64 else ""
+icon_hay_stack_b64 = load_image_b64("static/icon_hay_stack.webp", "icon_hay_stack_b64_v2")
+icon_hay_stack_src = f"data:image/webp;base64,{icon_hay_stack_b64}" if icon_hay_stack_b64 else ""
+icon_tracks_b64 = load_image_b64("static/icon_tracks.webp", "icon_tracks_b64_v2")
+icon_tracks_src = f"data:image/webp;base64,{icon_tracks_b64}" if icon_tracks_b64 else ""
+icon_completed_b64 = load_image_b64("static/icon_completed.webp", "icon_completed_b64_v2")
+icon_completed_src = f"data:image/webp;base64,{icon_completed_b64}" if icon_completed_b64 else ""
+icon_summit_b64 = load_image_b64("static/icon_summit.webp", "icon_summit_b64_v2")
+icon_summit_src = f"data:image/webp;base64,{icon_summit_b64}" if icon_summit_b64 else ""
+icon_gait_b64 = load_image_b64("static/icon_gait.webp", "icon_gait_b64_v2")
+icon_gait_src = f"data:image/webp;base64,{icon_gait_b64}" if icon_gait_b64 else ""
+icon_clip_rate_b64 = load_image_b64("static/icon_clip_rate.webp", "icon_clip_rate_b64_v2")
+icon_level_b64 = load_image_b64("static/icon_level.webp", "icon_level_b64_v2")
+icon_level_src = f"data:image/webp;base64,{icon_level_b64}" if icon_level_b64 else ""
+icon_clip_rate_src = f"data:image/webp;base64,{icon_clip_rate_b64}" if icon_clip_rate_b64 else ""
 
 # ── Goatifications IIFE template ── #
 _GOATIF_IIFE_TMPL = r"""
@@ -2498,7 +2498,7 @@ def get_level_bite_style(level: int) -> str:
     return f"mask-image:{mask};-webkit-mask-image:{mask};"
 
 if goat_hoof_b64:
-    _hoof_url = f"data:image/png;base64,{goat_hoof_b64}"
+    _hoof_url = f"data:image/webp;base64,{goat_hoof_b64}"
     st.markdown(f"""
 <style>
 /* Replace ALL sidebar toggle arrows (interior collapse + exterior expand) with goat hoof */
@@ -3316,7 +3316,7 @@ _slideshow_iife = r"""
       stage.innerHTML = '';
 
       var logoImg = pd.createElement('img');
-      logoImg.src = '/app/static/goatflow_logo_nobg.png';
+      logoImg.src = '/app/static/goatflow_logo_nobg.webp';
       logoImg.style.cssText = 'width:260px;max-width:80vw;opacity:0;transition:opacity 0.8s;display:block;margin:0 auto;';
       stage.appendChild(logoImg);
 
