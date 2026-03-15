@@ -3062,27 +3062,34 @@ _fab_iife = r"""(function() {
 
     var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SR();
-    recognition.continuous = true;
-    recognition.interimResults = true;
+    recognition.continuous = false;
+    recognition.interimResults = false;
     recognition.lang = 'en-US';
-    var finalT = '', interimT = '';
+    var sessionT = '';
 
     recognition.onstart = function() { setRecording(); };
 
     recognition.onresult = function(event) {
-      finalT = ''; interimT = '';
-      for (var i = 0; i < event.results.length; i++) {
-        if (event.results[i].isFinal) { finalT += event.results[i][0].transcript + ' '; }
-        else { interimT += event.results[i][0].transcript; }
+      var finalTranscript = '';
+      for (var i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          finalTranscript += event.results[i][0].transcript;
+        }
       }
-      var disp = (interimT || finalT.trim()).substring(0, 120);
-      if (disp) preview.textContent = disp;
+      if (finalTranscript) {
+        sessionT += (sessionT ? ' ' : '') + finalTranscript.trim();
+        var disp = sessionT.substring(0, 120);
+        if (disp) preview.textContent = disp;
+        populateTextarea(finalTranscript.trim());
+      }
     };
 
     recognition.onend = function() {
       if (state === 'recording') {
-        try { recognition.start(); } catch(e) { finish(finalT || interimT); }
-      } else { finish(finalT || interimT); }
+        try { recognition.start(); } catch(e) { if (sessionT) { setComplete(); } else { setIdle(); } }
+      } else {
+        if (sessionT) { setComplete(); } else { setIdle(); }
+      }
     };
 
     recognition.onerror = function(e) {
@@ -3094,13 +3101,8 @@ _fab_iife = r"""(function() {
         preview.textContent = 'Mic access denied'; preview.style.display = 'block';
         state = 'denied';
         setTimeout(setIdle, 3500);
-      } else { finish(finalT || interimT); }
+      } else { if (sessionT) { setComplete(); } else { setIdle(); } }
     };
-
-    function finish(text) {
-      if (text && text.trim()) { setProcessing(); setTimeout(function() { populateTextarea(text.trim()); setComplete(); }, 300); }
-      else { setIdle(); }
-    }
 
     try { recognition.start(); } catch(e) { showFallback(); }
   });

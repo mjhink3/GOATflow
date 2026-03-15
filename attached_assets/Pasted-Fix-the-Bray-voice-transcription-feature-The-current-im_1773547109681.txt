@@ -1,0 +1,79 @@
+Fix the Bray voice transcription feature. 
+The current implementation is appending every 
+interim speech recognition result to the textarea 
+causing severe repetition — for example saying 
+"grab some post-it notes" produces:
+"grab grab grab grab grab a grab a grab a thing 
+grab a thing I posted grab a thing I posted notes"
+
+The fix:
+
+In the SpeechRecognition onresult handler, 
+change the implementation to ONLY use final 
+results — never interim results.
+
+Replace the current onresult handler with 
+this exact implementation:
+
+recognition.onresult = function(event) {
+  let finalTranscript = '';
+  
+  for (let i = event.resultIndex; i < event.results.length; i++) {
+    if (event.results[i].isFinal) {
+      finalTranscript += event.results[i][0].transcript;
+    }
+  }
+  
+  if (finalTranscript) {
+    const textarea = document.querySelector(
+      'textarea[placeholder*="Paste emails"]'
+    );
+    if (textarea) {
+      const existing = textarea.value;
+      textarea.value = existing 
+        ? existing + '\n' + finalTranscript 
+        : finalTranscript;
+      
+      // Trigger any React or Vue state updates
+      const event = new Event('input', { bubbles: true });
+      textarea.dispatchEvent(event);
+    }
+  }
+};
+
+Also set:
+recognition.interimResults = false;
+
+This tells the API to only fire onresult 
+when it has a confirmed final transcription — 
+not on every partial word it thinks it heard.
+
+Additionally set:
+recognition.continuous = false;
+
+This stops the recognition after one complete 
+utterance rather than running indefinitely, 
+which further reduces duplicate captures.
+
+To allow the user to record multiple sentences 
+in one session, restart recognition automatically 
+after each final result is captured — only if 
+the user has not yet tapped the button to stop:
+
+recognition.onend = function() {
+  if (isRecording) {
+    recognition.start();
+  }
+};
+
+Where isRecording is the boolean flag that 
+tracks whether the user has actively stopped 
+the recording session by tapping the button.
+
+Test with these phrases after the fix:
+"grab some post-it notes"
+"call Barb about the compliance report"  
+"family dinner at six do not schedule anything"
+
+Each phrase should appear once, cleanly, 
+in the textarea with no repetition.
