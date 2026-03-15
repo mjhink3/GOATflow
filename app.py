@@ -221,7 +221,7 @@ CUSTOM_CSS = f"""
 
     .gf-banner-wrap img {{
         width: 100%;
-        height: 260px;
+        height: 500px;
         object-fit: contain;
         object-position: center bottom;
         display: block;
@@ -241,15 +241,15 @@ CUSTOM_CSS = f"""
 
     .gf-trust-row {{
         text-align: center;
-        margin-top: 8px;
+        margin-top: 0;
         margin-bottom: 0;
     }}
 
     @media (max-width: 768px) {{
-        .gf-banner-wrap img {{ height: 160px !important; object-fit: contain !important; object-position: center bottom !important; border-radius: 0 0 8px 8px !important; }}
+        .gf-banner-wrap img {{ height: 300px !important; object-fit: contain !important; object-position: center bottom !important; border-radius: 0 0 8px 8px !important; }}
         .gf-banner-wrap {{ border-radius: 0 0 8px 8px !important; margin-bottom: 0 !important; }}
         .gf-banner-fade {{ height: 20px !important; }}
-        .gf-trust-row {{ margin-top: 8px !important; }}
+        .gf-trust-row {{ margin-top: 2px !important; }}
         .privacy-shield-inline {{ font-size: 0.52rem !important; margin-top: 0 !important; display: inline-flex !important; }}
         .trust-badge {{ font-size: 0.85rem !important; margin-top: 0 !important; }}
         .churn-label {{ margin-bottom: 6px !important; margin-top: 8px !important; }}
@@ -340,7 +340,7 @@ CUSTOM_CSS = f"""
         text-transform: uppercase;
         letter-spacing: 0.12em;
         margin-bottom: 0.1rem;
-        margin-top: 0;
+        margin-top: 0.55rem;
     }}
 
     div[data-testid="stFileUploader"] {{
