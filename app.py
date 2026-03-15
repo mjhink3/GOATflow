@@ -4424,7 +4424,7 @@ else:
 _sidebar_clip_text = clip_rate_display
 
 horns_count = len(parse_horns(get_horns(current_user_id)))
-_horns_img_stat = f'<img src="data:image/png;base64,{horns_icon_b64}" alt="Horns" class="goatflow-icon" style="height:20px;vertical-align:middle;margin-right:4px;">' if horns_icon_b64 else "🐐"
+_horns_img_stat = f'<img src="data:image/webp;base64,{horns_icon_b64}" alt="Horns" class="goatflow-icon" style="height:20px;vertical-align:middle;margin-right:4px;">' if horns_icon_b64 else "🐐"
 
 linkedin_total_text = f"I'm at {cur_pasture} (Level {level}) with {player['total_xp']:,} Cheese Churn Points on GOATflow! {player['tasks_completed']} Tracks completed. Part of the WorkGOAT Ecosystem."
 linkedin_total_url = "https://www.linkedin.com/sharing/share-offsite/?" + urllib.parse.urlencode({"url": "https://workgoat.vip", "title": linkedin_total_text, "summary": linkedin_total_text})
@@ -4433,7 +4433,7 @@ hay_balance = player.get("hay", 0)
 cheese_total = player.get("fresh_cheese", 0)
 hay_pct = min(int((hay_balance / HAY_TO_CHEESE) * 100), 100)
 
-_clip_sublabel_html = f'<div class="stat-sub">{clip_rate_sublabel}</div>' if clip_rate_sublabel else ''
+_clip_sublabel_html = f'<div class="stat-sub">{clip_rate_sublabel}</div>'
 st.markdown(f'''
 <div class="stats-row">
     <div class="stat-box">
