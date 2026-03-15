@@ -1068,7 +1068,7 @@ CUSTOM_CSS = f"""
 
     .landing-container {{
         text-align: center;
-        padding: 1.5rem 1rem 0.25rem 1rem;
+        padding: 0.5rem 1rem 0.25rem 1rem;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -1076,8 +1076,8 @@ CUSTOM_CSS = f"""
     }}
 
     .landing-container img {{
-        height: 150px;
-        margin-bottom: 0.4rem;
+        height: 185px;
+        margin-bottom: 0.35rem;
     }}
 
     .landing-tagline {{
@@ -2492,11 +2492,22 @@ def get_tier_celeb_b64(tier: str) -> str:
 user_info = get_current_user()
 
 if not user_info:
+    _stc.html("""<script>
+(function(){
+    function applyLoginPad(){
+        var pd=window.parent.document;
+        var bc=pd.querySelector('[data-testid="stMainBlockContainer"]')||pd.querySelector('.block-container');
+        if(!bc){setTimeout(applyLoginPad,150);return;}
+        bc.style.setProperty('padding-top','3.5rem','important');
+    }
+    applyLoginPad();
+})();
+</script>""", height=0)
     st.markdown(f'''
     <div class="landing-container">
         {f'<img src="{logo_src}" alt="GOATflow">' if logo_src else '<div style="font-size:3rem;font-weight:900;font-family:Syne,sans-serif;color:#fff;margin-bottom:2rem;">🐐 GOATflow</div>'}
         <div class="landing-tagline">Grab life by the horns.<br>Leave the bull behind.</div>
-        <div style="font-size:0.76rem;font-weight:500;color:#22c55e;margin-top:0.15rem;font-family:'DM Sans',sans-serif;letter-spacing:0.01em;opacity:0.9;">GOATflow metabolizes chaotic inputs into prioritized operational action and evolves with you.</div>
+        <div style="font-size:0.72rem;font-weight:500;color:#22c55e;margin-top:0.1rem;font-family:\'DM Sans\',sans-serif;letter-spacing:0.01em;opacity:0.85;line-height:1.4;">GOATflow metabolizes chaotic inputs into prioritized operational action and evolves with you.</div>
     </div>
     ''', unsafe_allow_html=True)
 
