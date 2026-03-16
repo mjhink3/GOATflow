@@ -285,7 +285,7 @@ CUSTOM_CSS = f"""
         section[data-testid="stMainBlockContainer"],
         .main .block-container,
         div.block-container {{ padding-top: 0 !important; margin-top: 0 !important; }}
-        .gf-banner-wrap img {{ height: 80px !important; object-fit: cover !important; object-position: center 38% !important; border-radius: 0 0 8px 8px !important; }}
+        .gf-banner-wrap img {{ height: 90px !important; object-fit: cover !important; object-position: center 42% !important; border-radius: 0 0 8px 8px !important; }}
         .gf-banner-wrap {{ border-radius: 0 0 8px 8px !important; margin-top: 0 !important; margin-bottom: 0 !important; padding-top: 0 !important; }}
         .gf-banner-fade {{ height: 12px !important; }}
         .gf-trust-row {{ margin-top: 6px !important; }}
@@ -1130,12 +1130,13 @@ CUSTOM_CSS = f"""
     }}
 
     .landing-container img {{
-        height: 185px;
-        max-height: 200px;
+        max-height: 180px;
         width: auto;
         object-fit: contain;
+        object-position: center center;
+        display: block;
+        margin: 0 auto 8px auto;
         margin-top: 12px;
-        margin-bottom: 8px;
     }}
 
     .landing-tagline {{
@@ -1152,7 +1153,7 @@ CUSTOM_CSS = f"""
 
     @media (max-width: 768px) {{
         .landing-tagline {{ font-size: 0.95rem; }}
-        .landing-container img {{ height: 160px !important; max-height: 200px !important; }}
+        .landing-container img {{ max-height: 180px !important; width: auto !important; object-fit: contain !important; object-position: center center !important; }}
     }}
 
     .landing-sub {{
