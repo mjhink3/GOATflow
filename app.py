@@ -4644,7 +4644,7 @@ if st.session_state.get("just_completed_task"):
     if st.session_state.pop("just_earned_speed_bonus", False):
         _stc.html('<script>setTimeout(function(){if(window.parent.document.hasFocus())return;var f=window.parent.gfFire;if(f)f({title:"GOATflow \U0001F33E",body:"Speed bonus. +10 Hay. That is how it is done.",hapticPattern:[60,40,60],prefKey:"speedBonus"});},800);</script>', height=0)
 
-if st.session_state.get("adaptive_prompt_pending"):
+if st.session_state.get("adaptive_prompt_pending") and not st.session_state.get("just_completed_task"):
     _apt = st.session_state.pop("adaptive_prompt_pending")
     _apt_days = int(_apt.get("days_to_complete", 0))
     _apt_summit = bool(_apt.get("is_summit", False))
@@ -4689,7 +4689,7 @@ var saveBtn=doc.createElement('button');saveBtn.textContent='Save to Trail';save
 btnRow.appendChild(skipBtn);btnRow.appendChild(saveBtn);
 overlay.appendChild(qRow);overlay.appendChild(inp);overlay.appendChild(btnRow);
 doc.body.appendChild(overlay);
-var timer=setTimeout(function(){{dismiss();}},10000);
+var timer=setTimeout(function(){{dismiss();}},30000);
 function dismiss(){{clearTimeout(timer);if(overlay.parentNode)overlay.parentNode.removeChild(overlay);}}
 function saveToTrail(note){{
   if(note&&logId){{
@@ -4716,7 +4716,7 @@ inp.onkeydown=function(e){{if(e.key==='Enter'){{saveToTrail(inp.value.trim());}}
 </script>""", height=0)
 
 # ── FIX 4: Priority Accuracy Feedback overlay ─────────────────────────────
-if st.session_state.get("priority_feedback_pending"):
+if st.session_state.get("priority_feedback_pending") and not st.session_state.get("just_completed_task"):
     _pf = st.session_state.pop("priority_feedback_pending")
     _pf_id_js = str(_pf.get("trackId", "")).replace('"', '\\"')
     _pf_title_js = str(_pf.get("trackTitle", "")).replace("\\", "\\\\").replace('"', '\\"').replace("'", "\\'")
