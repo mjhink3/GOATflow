@@ -641,11 +641,12 @@ CUSTOM_CSS = f"""
             gap: 0.4rem !important;
         }}
         .stat-box {{
-            padding: 0.4rem 0.3rem !important;
-            min-height: 60px !important;
+            padding: 0.5rem 0.25rem !important;
+            min-height: 80px !important;
         }}
         .stat-value {{
-            font-size: 1.05rem !important;
+            font-size: 1.15rem !important;
+            gap: 4px !important;
         }}
         .stat-label {{
             font-size: 0.5rem !important;
@@ -655,7 +656,7 @@ CUSTOM_CSS = f"""
             font-size: 0.48rem !important;
         }}
         /* Churn button touchable size */
-        .stButton > button {{ min-height: 48px !important; font-size: 15px !important; }}
+        .stButton > button {{ min-height: 64px !important; font-size: 15px !important; }}
     }}
 
     /* ── Custom icon utility classes ── */
@@ -829,22 +830,31 @@ CUSTOM_CSS = f"""
         background: {CARD_BG};
         border: 1px solid {BORDER};
         border-radius: 10px;
-        padding: 0.4rem 0.2rem;
+        padding: 0.65rem 0.3rem 0.55rem;
         text-align: center;
         min-width: 0;
         overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
     }}
 
     .stat-value {{
-        font-size: 1.0rem;
+        font-size: 1.35rem;
         font-weight: 800;
         color: {WHITE};
         font-family: 'Syne', sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        flex-wrap: nowrap;
     }}
 
     .stat-box .goatflow-icon {{
-        width: 20px !important;
-        height: 20px !important;
+        width: 40px !important;
+        height: 40px !important;
     }}
 
     .stat-label {{
@@ -881,10 +891,14 @@ CUSTOM_CSS = f"""
         font-weight: 800 !important;
         font-family: 'Syne', sans-serif !important;
         letter-spacing: 0.03em !important;
-        min-height: 56px !important;
+        min-height: 64px !important;
         height: auto !important;
         line-height: 1.4 !important;
         transition: box-shadow 0.2s, transform 0.1s !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 8px !important;
     }}
 
     .stButton > button:hover {{
@@ -3219,10 +3233,10 @@ with st.sidebar:
             st.session_state.pop(key, None)
         st.rerun()
     _btn_style = ("width:100%;background:transparent;border:1px solid #374151;border-radius:8px;"
-                  "color:#6b7280;font-family:'DM Sans',sans-serif;font-size:0.75rem;font-weight:500;"
-                  "padding:8px 12px;cursor:pointer;transition:all 0.2s;margin-top:0.5rem;"
-                  "display:flex;align-items:center;justify-content:center;gap:8px;")
-    _ic_style = "width:22px;height:22px;object-fit:contain;flex-shrink:0;"
+                  "color:#6b7280;font-family:'DM Sans',sans-serif;font-size:0.8rem;font-weight:500;"
+                  "padding:12px 16px;cursor:pointer;transition:all 0.2s;margin-top:0.5rem;"
+                  "display:flex;align-items:center;justify-content:center;gap:10px;")
+    _ic_style = "width:44px;min-width:44px;height:44px;max-height:44px;object-fit:contain;flex-shrink:0;display:inline-block;vertical-align:middle;"
     _tut_icon = (f'<img src="{icon_tutorial_src}" style="{_ic_style}">' if icon_tutorial_src
                  else '<span style="font-size:1rem;">❓</span>')
     _ani_icon = (f'<img src="{icon_animal_intro_src}" style="{_ic_style}">' if icon_animal_intro_src
@@ -3320,7 +3334,7 @@ _stc.html("""
           b._gfCancelIcon = true;
           var xi = pd.createElement('img');
           xi.src = '/app/static/icon_cancel.webp';
-          xi.style.cssText = 'width:20px;height:20px;object-fit:contain;vertical-align:middle;margin-right:6px;display:inline-block;flex-shrink:0;';
+          xi.style.cssText = 'width:40px;height:40px;object-fit:contain;vertical-align:middle;margin-right:8px;display:inline-block;flex-shrink:0;';
           b.insertBefore(xi, b.firstChild);
         }
       }
@@ -3339,7 +3353,7 @@ _stc.html("""
         b._gfLogoutIcon = true;
         var li = pd.createElement('img');
         li.src = '/app/static/icon_logout.png';
-        li.style.cssText = 'width:28px;height:28px;object-fit:contain;vertical-align:middle;margin-right:8px;border-radius:2px;display:inline-block;';
+        li.style.cssText = 'width:56px;height:56px;object-fit:contain;vertical-align:middle;margin-right:10px;border-radius:2px;display:inline-block;';
         b.insertBefore(li, b.firstChild);
       }
       // Churn Engine button icon
@@ -3347,7 +3361,7 @@ _stc.html("""
         b._gfChurnIcon = true;
         var ci = pd.createElement('img');
         ci.src = '/app/static/icon_churn_engine.png';
-        ci.style.cssText = 'width:22px;height:22px;object-fit:contain;vertical-align:middle;margin-right:6px;border-radius:2px;';
+        ci.style.cssText = 'width:44px;height:44px;object-fit:contain;vertical-align:middle;margin-right:8px;border-radius:2px;';
         b.insertBefore(ci, b.firstChild);
       }
       // Complete? button icon
@@ -3355,7 +3369,7 @@ _stc.html("""
         b._gfCompleteIcon = true;
         var cpi = pd.createElement('img');
         cpi.src = '/app/static/icon_completed.webp';
-        cpi.style.cssText = 'width:20px;height:20px;object-fit:contain;vertical-align:middle;margin-right:6px;display:inline-block;flex-shrink:0;';
+        cpi.style.cssText = 'width:40px;height:40px;object-fit:contain;vertical-align:middle;margin-right:8px;display:inline-block;flex-shrink:0;';
         b.insertBefore(cpi, b.firstChild);
       }
       // Replay Animal Intro click binding
@@ -5233,7 +5247,7 @@ else:
 _sidebar_clip_text = clip_rate_display
 
 horns_count = len(parse_horns(get_horns(current_user_id)))
-_horns_img_stat = f'<img src="data:image/webp;base64,{horns_icon_b64}" alt="Horns" class="goatflow-icon" style="height:20px;vertical-align:middle;margin-right:4px;">' if horns_icon_b64 else "🐐"
+_horns_img_stat = f'<img src="data:image/webp;base64,{horns_icon_b64}" alt="Horns" class="goatflow-icon" style="height:40px;vertical-align:middle;">' if horns_icon_b64 else "🐐"
 
 linkedin_total_text = f"I'm at {cur_pasture} (Level {level}) with {player['total_xp']:,} Cheese Churn Points on GOATflow! {player['tasks_completed']} Tracks completed. Part of the WorkGOAT Ecosystem."
 linkedin_total_url = "https://www.linkedin.com/sharing/share-offsite/?" + urllib.parse.urlencode({"url": "https://workgoat.vip", "title": linkedin_total_text, "summary": linkedin_total_text})
@@ -5246,42 +5260,42 @@ _clip_sublabel_html = f'<div class="stat-sub" style="color:{clip_rate_sublabel_c
 st.markdown(f'''
 <div class="stats-row">
     <div class="stat-box">
-        <div class="stat-value" style="display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_tracks_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon" onerror="this.style.display='none'"> {active_count}</div>
+        <div class="stat-value"><img src="{icon_tracks_src}" style="width:56px;height:56px;object-fit:contain;" class="goatflow-icon" onerror="this.style.display='none'"> {active_count}</div>
         <div class="stat-label">Active Tracks</div>
     </div>
     <div class="stat-box" title="Tracks that cannot wait. Address these first.">
-        <div class="stat-value" style="color:#ef4444;font-family:Syne,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_summit_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon" onerror="this.style.display='none'"> {summit_count}</div>
+        <div class="stat-value" style="color:#ef4444;"><img src="{icon_summit_src}" style="width:56px;height:56px;object-fit:contain;" class="goatflow-icon" onerror="this.style.display='none'"> {summit_count}</div>
         <div class="stat-label">Summit Calls</div>
     </div>
     <div class="stat-box">
-        <div class="stat-value" style="display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_completed_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon" onerror="this.style.display='none'"> {player["tasks_completed"]}</div>
+        <div class="stat-value"><img src="{icon_completed_src}" style="width:56px;height:56px;object-fit:contain;" class="goatflow-icon" onerror="this.style.display='none'"> {player["tasks_completed"]}</div>
         <div class="stat-label">Completed</div>
     </div>
     <div class="stat-box">
-        <div class="stat-value" style="color:#f59e0b;font-family:Syne,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_hay_stack_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon" onerror="this.style.display='none'"> {hay_balance}</div>
+        <div class="stat-value" style="color:#f59e0b;"><img src="{icon_hay_stack_src}" style="width:56px;height:56px;object-fit:contain;" class="goatflow-icon" onerror="this.style.display='none'"> {hay_balance}</div>
         <div class="stat-label">Hay</div>
         <div class="stat-sub">{hay_balance}/{HAY_TO_CHEESE} to next <img src="{icon_cheese_src}" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;" class="goatflow-icon-inline" onerror="this.style.display='none'"></div>
     </div>
     <div class="stat-box">
-        <div class="stat-value" style="color:#22c55e;font-family:Syne,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_cheese_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon" onerror="this.style.display='none'"> {cheese_total}</div>
+        <div class="stat-value" style="color:#22c55e;"><img src="{icon_cheese_src}" style="width:56px;height:56px;object-fit:contain;" class="goatflow-icon" onerror="this.style.display='none'"> {cheese_total}</div>
         <div class="stat-label">Fresh Cheese</div>
     </div>
     <div class="stat-box">
-        <div class="stat-value">{_horns_img_stat} {horns_count}</div>
+        <div class="stat-value" style="display:flex;align-items:center;justify-content:center;gap:6px;">{_horns_img_stat} {horns_count}</div>
         <div class="stat-label">Active Horns</div>
     </div>
     <div class="stat-box" style="{clip_rate_border_style}" title="Tracks completed vs. Tracks generated over the last 7 days. Refine your Horns to improve your Clip Rate.">
-        <div class="stat-value" style="color:{clip_rate_color};display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_clip_rate_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon" onerror="this.style.display='none'"> {clip_rate_display}</div>
+        <div class="stat-value" style="color:{clip_rate_color};"><img src="{icon_clip_rate_src}" style="width:56px;height:56px;object-fit:contain;" class="goatflow-icon" onerror="this.style.display='none'"> {clip_rate_display}</div>
         <div class="stat-label">CLIP RATE</div>
         {_clip_sublabel_html}
     </div>
     <div class="stat-box" title="Consecutive days you've completed at least one Track. Keep the Gait alive.">
-        <div class="stat-value" style="color:#a78bfa;display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_gait_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon" onerror="this.style.display='none'"> {"—" if gait_streak == 0 else gait_streak}</div>
+        <div class="stat-value" style="color:#a78bfa;"><img src="{icon_gait_src}" style="width:56px;height:56px;object-fit:contain;" class="goatflow-icon" onerror="this.style.display='none'"> {"—" if gait_streak == 0 else gait_streak}</div>
         <div class="stat-label">GAIT</div>
         <div class="stat-sub">{"Complete a Track today" if gait_streak == 0 else f"{gait_streak} day{'' if gait_streak == 1 else 's'} in a row"}</div>
     </div>
     <div class="stat-box" id="gf-precision-card" title="Percentage of timed Tracks completed within their estimate.">
-        <div class="stat-value" id="gf-precision-val" style="color:#9ca3af;display:flex;align-items:center;justify-content:center;gap:6px;">{("<img src='" + icon_precision_src + "' style='width:28px;height:28px;object-fit:contain;' class='goatflow-icon'>&#8202;") if icon_precision_src else ""}—</div>
+        <div class="stat-value" id="gf-precision-val" style="color:#9ca3af;">{("<img src='" + icon_precision_src + "' style='width:56px;height:56px;object-fit:contain;' class='goatflow-icon'>&#8202;") if icon_precision_src else ""}—</div>
         <div class="stat-label">PRECISION</div>
         <div class="stat-sub" id="gf-precision-sub">5 timed Tracks to unlock</div>
     </div>
