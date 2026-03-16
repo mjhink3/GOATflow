@@ -2334,10 +2334,10 @@ icon_stats_b64 = load_image_b64("static/icon_stats.png", "icon_stats_b64_v1")
 icon_stats_src = f"data:image/png;base64,{icon_stats_b64}" if icon_stats_b64 else ""
 icon_track_sieve_b64 = load_image_b64("static/icon_track_sieve.png", "icon_track_sieve_b64_v1")
 icon_track_sieve_src = f"data:image/png;base64,{icon_track_sieve_b64}" if icon_track_sieve_b64 else ""
-icon_animal_intro_b64 = load_image_b64("static/icon_animal_intro.png", "icon_animal_intro_b64_v1")
-icon_animal_intro_src = f"data:image/png;base64,{icon_animal_intro_b64}" if icon_animal_intro_b64 else ""
-icon_tutorial_b64 = load_image_b64("static/icon_tutorial.png", "icon_tutorial_b64_v1")
-icon_tutorial_src = f"data:image/png;base64,{icon_tutorial_b64}" if icon_tutorial_b64 else ""
+icon_animal_intro_b64 = load_image_b64("static/icon_animal_intro.webp", "icon_animal_intro_b64_v2")
+icon_animal_intro_src = f"data:image/webp;base64,{icon_animal_intro_b64}" if icon_animal_intro_b64 else ""
+icon_tutorial_b64 = load_image_b64("static/icon_tutorial.webp", "icon_tutorial_b64_v2")
+icon_tutorial_src = f"data:image/webp;base64,{icon_tutorial_b64}" if icon_tutorial_b64 else ""
 icon_cancel_b64 = load_image_b64("static/icon_cancel.webp", "icon_cancel_b64_v1")
 icon_cancel_src = f"data:image/webp;base64,{icon_cancel_b64}" if icon_cancel_b64 else ""
 
