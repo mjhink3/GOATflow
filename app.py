@@ -2704,6 +2704,18 @@ _GOATIF_IIFE_TMPL = r"""
     else setTimeout(attachSbObs, 1500);
   }
   attachSbObs();
+
+  // ── First-time Goatifications prompt ──
+  // Only fires once: when the user just completed their very first onboarding tour.
+  // The flag is set by _markDone() in the tour IIFE, only if the user has never been asked or snoozed.
+  try {
+    if (localStorage.getItem('goatflow_goatif_pending')) {
+      localStorage.removeItem('goatflow_goatif_pending');
+      setTimeout(function() {
+        if (typeof pw.gfAskPermission === 'function') pw.gfAskPermission();
+      }, 2500);
+    }
+  } catch(e) {}
 })();
 """
 
@@ -3537,6 +3549,12 @@ _tour_iife = r"""
     });
     function _markDone() {
       try { pw.history.replaceState(null, '', pw.location.pathname + '?ob_done=1'); } catch(e) {}
+      // Schedule Goatifications pop-up only for genuine first-time users (never asked or snoozed).
+      try {
+        if (!localStorage.getItem('goatflow_notif_asked') && !localStorage.getItem('goatflow_notif_snoozed')) {
+          localStorage.setItem('goatflow_goatif_pending', '1');
+        }
+      } catch(e) {}
     }
     t.on('complete', _markDone);
     t.on('cancel', _markDone);
@@ -4332,9 +4350,8 @@ _goatif_js = (_GOATIF_IIFE_TMPL
     .replace('__GAIT_ICON__', icon_gait_src))
 _stc.html(f'<script>{_goatif_js}</script>', height=0)
 
-# ── Permission prompt (after onboarding completes) ──
-if player_data.get("onboarding_done"):
-    _stc.html('<script>setTimeout(function(){var f=window.parent.gfMaybeAskPermission;if(f)f();},3000);</script>', height=0)
+# ── Goatifications prompt is handled entirely client-side via goatflow_goatif_pending localStorage flag ──
+# It fires only once: on the page load immediately after a brand-new user completes the onboarding tour.
 
 
 st.markdown(f"""
