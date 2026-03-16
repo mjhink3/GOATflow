@@ -290,7 +290,7 @@ CUSTOM_CSS = f"""
         .gf-banner-wrap img {{ width: 100% !important; height: auto !important; max-height: 140px !important; object-fit: contain !important; object-position: center top !important; overflow: visible !important; border-radius: 0 0 8px 8px !important; }}
         .gf-banner-wrap {{ overflow: visible !important; border-radius: 0 0 8px 8px !important; margin-top: 0 !important; margin-bottom: 0 !important; padding-top: 0 !important; }}
         .gf-banner-fade {{ height: 12px !important; }}
-        .gf-trust-row {{ margin-top: 6px !important; }}
+        .gf-trust-row {{ margin-top: 0 !important; padding-top: 0 !important; }}
         .privacy-shield-inline {{ font-size: 10px !important; max-width: calc(100% - 32px) !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; margin-top: 0 !important; display: inline-flex !important; }}
         .trust-badge {{ font-size: 0.85rem !important; margin-top: 0 !important; }}
         .churn-label {{ font-size: 11px !important; letter-spacing: 0.02em !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; max-width: 100% !important; margin-bottom: 4px !important; margin-top: 6px !important; }}
@@ -1379,9 +1379,13 @@ CUSTOM_CSS = f"""
     }}
 
     /* Tighten gap: banner → Stateless badge */
+    .gf-banner-wrap img {{
+        margin-bottom: 0 !important;
+    }}
     .gf-trust-row {{
-        margin-top: 2px !important;
+        margin-top: -4px !important;
         padding-top: 0 !important;
+        line-height: 1 !important;
     }}
 
     /* ═══ END OVERRIDES ═══ */
@@ -2334,6 +2338,8 @@ icon_animal_intro_b64 = load_image_b64("static/icon_animal_intro.png", "icon_ani
 icon_animal_intro_src = f"data:image/png;base64,{icon_animal_intro_b64}" if icon_animal_intro_b64 else ""
 icon_tutorial_b64 = load_image_b64("static/icon_tutorial.png", "icon_tutorial_b64_v1")
 icon_tutorial_src = f"data:image/png;base64,{icon_tutorial_b64}" if icon_tutorial_b64 else ""
+icon_cancel_b64 = load_image_b64("static/icon_cancel.webp", "icon_cancel_b64_v1")
+icon_cancel_src = f"data:image/webp;base64,{icon_cancel_b64}" if icon_cancel_b64 else ""
 
 # ── Goatifications IIFE template ── #
 _GOATIF_IIFE_TMPL = r"""
@@ -3298,6 +3304,13 @@ _stc.html("""
         b.style.setProperty('background', '#7f1d1d', 'important');
         b.style.setProperty('color', '#fca5a5', 'important');
         b.style.setProperty('border', '1px solid #ef4444', 'important');
+        if (!b._gfCancelIcon) {
+          b._gfCancelIcon = true;
+          var xi = pd.createElement('img');
+          xi.src = '/app/static/icon_cancel.webp';
+          xi.style.cssText = 'width:20px;height:20px;object-fit:contain;vertical-align:middle;margin-right:6px;display:inline-block;flex-shrink:0;';
+          b.insertBefore(xi, b.firstChild);
+        }
       }
       if (txt === 'Yes, cancel it') {
         b.style.setProperty('background', '#991b1b', 'important');
@@ -3324,6 +3337,14 @@ _stc.html("""
         ci.src = '/app/static/icon_churn_engine.png';
         ci.style.cssText = 'width:22px;height:22px;object-fit:contain;vertical-align:middle;margin-right:6px;border-radius:2px;';
         b.insertBefore(ci, b.firstChild);
+      }
+      // Complete? button icon
+      if (txt.indexOf('Complete?') !== -1 && !b._gfCompleteIcon) {
+        b._gfCompleteIcon = true;
+        var cpi = pd.createElement('img');
+        cpi.src = '/app/static/icon_completed.webp';
+        cpi.style.cssText = 'width:20px;height:20px;object-fit:contain;vertical-align:middle;margin-right:6px;display:inline-block;flex-shrink:0;';
+        b.insertBefore(cpi, b.firstChild);
       }
       // Replay Animal Intro click binding
       if (txt.indexOf('Replay Animal Intro') !== -1 && !b._gfAnimalBound) {
@@ -4654,7 +4675,7 @@ with col_files:
         label_visibility="collapsed",
     )
 
-drop_btn = st.button("⚡ Drop Into Churn Engine", use_container_width=True, key="drop_btn",
+drop_btn = st.button("Drop Into Churn Engine", use_container_width=True, key="drop_btn",
                      help="GOATflow will metabolize your input and rank everything against your Horns.")
 
 # ── FIX 1: Time Available Modal — intercepts drop button click ─────────────
@@ -5262,12 +5283,13 @@ function updatePrecisionCard(){
   if(!valEl||!subEl)return;
   try{
     var stats=JSON.parse(localStorage.getItem(PR_KEY)||'{"precise":0,"total":0}');
+    var _pIc=valEl.querySelector('img');var _pH=_pIc?_pIc.outerHTML:'';
     if(stats.total<5){
-      valEl.textContent='\u2014';valEl.style.color='#9ca3af';
+      valEl.innerHTML=_pH+'\u2014';valEl.style.color='#9ca3af';
       subEl.textContent='5 timed Tracks to unlock';
     }else{
       var rate=Math.round((stats.precise/stats.total)*100);
-      valEl.textContent=rate+'%';
+      valEl.innerHTML=_pH+rate+'%';
       subEl.textContent=stats.precise+' of '+stats.total+' on time';
       if(rate>=75)valEl.style.color='#4ade80';
       else if(rate>=50)valEl.style.color='#f59e0b';
@@ -5681,7 +5703,7 @@ else:
         else:
             _bc1, _bc2 = st.columns([3, 1])
             with _bc1:
-                if st.button("✅ Complete?", key=f"complete_{sig['id']}", use_container_width=True):
+                if st.button("Complete?", key=f"complete_{sig['id']}", use_container_width=True):
                     if is_incognito_sig:
                         xp_tier = sig.get("xp_reward", "Standard")
                         xp = XP_TIERS.get(xp_tier, 500)
