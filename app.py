@@ -287,8 +287,6 @@ CUSTOM_CSS = f"""
         section[data-testid="stMainBlockContainer"],
         .main .block-container,
         div.block-container {{ padding-top: 0 !important; margin-top: 0 !important; }}
-        .stApp, section[data-testid="stMain"], section[data-testid="stMainBlockContainer"],
-        div.block-container, [data-testid="stVerticalBlock"], [data-testid="stVerticalBlockBorderWrapper"] {{ overflow: visible !important; }}
         .gf-banner-wrap img {{ width: 100% !important; height: auto !important; max-height: 140px !important; object-fit: contain !important; object-position: center top !important; overflow: visible !important; border-radius: 0 0 8px 8px !important; }}
         .gf-banner-wrap {{ overflow: visible !important; border-radius: 0 0 8px 8px !important; margin-top: 0 !important; margin-bottom: 0 !important; padding-top: 0 !important; }}
         .gf-banner-fade {{ height: 12px !important; }}
@@ -1340,6 +1338,52 @@ CUSTOM_CSS = f"""
         50%  {{ transform: translateY(var(--ty, -20px)); opacity: 0.7; }}
         100% {{ transform: translateY(0);           opacity: 0.4; }}
     }}
+
+    /* ═══ GOATFLOW CRITICAL OVERRIDES ═══ */
+
+    /* LOGIN LOGO — show full mascot uncropped */
+    .landing-container {{
+        overflow: visible !important;
+        clip-path: none !important;
+    }}
+
+    .landing-container img {{
+        width: 210px !important;
+        height: auto !important;
+        max-height: none !important;
+        object-fit: unset !important;
+        overflow: visible !important;
+        display: block !important;
+        margin: 8px auto 0 auto !important;
+        padding: 0 !important;
+    }}
+
+    /* DASHBOARD BANNER — full goat, no crop */
+    .gf-banner-wrap img {{
+        width: 100% !important;
+        height: auto !important;
+        max-height: 150px !important;
+        object-fit: contain !important;
+        object-position: center top !important;
+        display: block !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+    }}
+
+    .gf-banner-wrap {{
+        overflow: visible !important;
+        padding-top: 0 !important;
+        margin-bottom: 0 !important;
+    }}
+
+    /* Tighten gap: banner → Stateless badge */
+    .gf-trust-row {{
+        margin-top: 2px !important;
+        padding-top: 0 !important;
+    }}
+
+    /* ═══ END OVERRIDES ═══ */
 </style>
 """
 
