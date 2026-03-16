@@ -249,7 +249,7 @@ CUSTOM_CSS = f"""
     .gf-banner-wrap {{
         position: relative;
         width: 100%;
-        overflow: hidden;
+        overflow: visible;
         border-radius: 0 0 10px 10px;
         margin-bottom: 0;
         background: #08080f;
@@ -285,8 +285,8 @@ CUSTOM_CSS = f"""
         section[data-testid="stMainBlockContainer"],
         .main .block-container,
         div.block-container {{ padding-top: 0 !important; margin-top: 0 !important; }}
-        .gf-banner-wrap img {{ height: 90px !important; object-fit: cover !important; object-position: center 42% !important; border-radius: 0 0 8px 8px !important; }}
-        .gf-banner-wrap {{ border-radius: 0 0 8px 8px !important; margin-top: 0 !important; margin-bottom: 0 !important; padding-top: 0 !important; }}
+        .gf-banner-wrap img {{ width: 100% !important; height: auto !important; max-height: 140px !important; object-fit: contain !important; object-position: center top !important; border-radius: 0 0 8px 8px !important; }}
+        .gf-banner-wrap {{ overflow: visible !important; border-radius: 0 0 8px 8px !important; margin-top: 0 !important; margin-bottom: 0 !important; padding-top: 0 !important; }}
         .gf-banner-fade {{ height: 12px !important; }}
         .gf-trust-row {{ margin-top: 6px !important; }}
         .privacy-shield-inline {{ font-size: 0.52rem !important; margin-top: 0 !important; display: inline-flex !important; }}
@@ -1127,16 +1127,16 @@ CUSTOM_CSS = f"""
         flex-direction: column;
         align-items: center;
         justify-content: center;
+        overflow: visible;
     }}
 
     .landing-container img {{
-        max-height: 180px;
-        width: auto;
-        object-fit: contain;
-        object-position: center center;
+        width: 220px;
+        height: auto;
+        max-height: none;
         display: block;
-        margin: 0 auto 8px auto;
-        margin-top: 12px;
+        margin: 12px auto 8px auto;
+        overflow: visible;
     }}
 
     .landing-tagline {{
@@ -1153,7 +1153,7 @@ CUSTOM_CSS = f"""
 
     @media (max-width: 768px) {{
         .landing-tagline {{ font-size: 0.95rem; }}
-        .landing-container img {{ max-height: 180px !important; width: auto !important; object-fit: contain !important; object-position: center center !important; }}
+        .landing-container img {{ width: 220px !important; height: auto !important; max-height: none !important; overflow: visible !important; }}
     }}
 
     .landing-sub {{
@@ -1689,7 +1689,13 @@ def get_difficulty_multiplier(user_id: str, category: str, tasks_completed: int)
         conn.close()
 
 
-def complete_signal(signal_id: int, user_id: str):
+def complete_signal(signal_id: int, user_id: str, time_estimate_minutes: int = None):
+    # TODO — Pre-launch schema additions needed:
+    # 1. Add time_estimate_minutes column to signals table
+    # 2. Add elapsed_minutes column to operational_log table
+    # 3. Migrate goatflow_priority_feedback from localStorage to server-side table
+    # 4. Migrate goatflow_precision_stats from localStorage to server-side table
+    # These are required before public launch to support cross-device stat persistence.
     import datetime
     conn = get_db()
     try:
@@ -1702,7 +1708,7 @@ def complete_signal(signal_id: int, user_id: str):
             row = cur.fetchone()
             if not row:
                 conn.rollback()
-                return None, 0, False, 0, 0, False, False, 1.0, None
+                return None, 0, False, 0, 0, 0, 0, 1.0, None
             xp = XP_TIERS.get(row["xp_reward"], 500)
             cur.execute("SELECT total_xp, hay, fresh_cheese, tasks_completed FROM player WHERE user_id = %s", (user_id,))
             player_row = cur.fetchone()
@@ -1717,18 +1723,27 @@ def complete_signal(signal_id: int, user_id: str):
             is_summit = row["bleat_type"] in ("Summit-Level Bleat", "Summit Call")
             base_hay = HAY_SUMMIT_BONUS if is_summit else HAY_BASE.get(row["xp_reward"], 10)
 
-            speed_bonus_earned = False
+            speed_bonus_hay = 0
             logged_at = row["created_at"]
             if logged_at:
                 age = datetime.datetime.utcnow() - logged_at.replace(tzinfo=None)
-                if age.total_seconds() < 86400:
-                    speed_bonus_earned = True
+                elapsed_minutes = age.total_seconds() / 60
+                if time_estimate_minutes is not None:
+                    if elapsed_minutes <= time_estimate_minutes:
+                        speed_bonus_hay = 25
+                    elif elapsed_minutes <= time_estimate_minutes * 2:
+                        speed_bonus_hay = 10
+                    elif age.total_seconds() < 86400:
+                        speed_bonus_hay = 5
+                else:
+                    if age.total_seconds() < 86400:
+                        speed_bonus_hay = HAY_SPEED_BONUS
 
             category = row.get("category") or "other"
             difficulty_multiplier = get_difficulty_multiplier(user_id, category, tasks_completed_so_far)
             hay_earned = round(base_hay * difficulty_multiplier)
-            if speed_bonus_earned:
-                hay_earned += HAY_SPEED_BONUS
+            if speed_bonus_hay:
+                hay_earned += speed_bonus_hay
 
             new_hay = old_hay + hay_earned
             cheese_gained = new_hay // HAY_TO_CHEESE
@@ -1757,10 +1772,10 @@ def complete_signal(signal_id: int, user_id: str):
             log_id = log_row["id"] if log_row else None
             conn.commit()
             leveled_up = new_level > old_level
-            return row["xp_reward"], xp, leveled_up, hay_earned, new_hay_remainder, cheese_converted, speed_bonus_earned, difficulty_multiplier, log_id
+            return row["xp_reward"], xp, leveled_up, hay_earned, new_hay_remainder, cheese_converted, speed_bonus_hay, difficulty_multiplier, log_id
     except Exception:
         conn.rollback()
-        return None, 0, False, 0, 0, False, False, 1.0, None
+        return None, 0, False, 0, 0, 0, 0, 1.0, None
     finally:
         conn.close()
 
@@ -4701,8 +4716,11 @@ if st.session_state.get("just_completed_task"):
         hay_earned = 10
         _diff_mult = 1.0
     show_hay_popup(task_name, xp_gained, leveled_up, xp_tier, hay_earned, _diff_mult)
-    if st.session_state.pop("just_earned_speed_bonus", False):
-        _stc.html('<script>setTimeout(function(){if(window.parent.document.hasFocus())return;var f=window.parent.gfFire;if(f)f({title:"GOATflow \U0001F33E",body:"Speed bonus. +10 Hay. That is how it is done.",hapticPattern:[60,40,60],prefKey:"speedBonus"});},800);</script>', height=0)
+    _sb_hay_amt = st.session_state.pop("just_earned_speed_bonus", 0)
+    if _sb_hay_amt:
+        _sb_msg = {25: "\u26a1 On time \u2014 +25 Hay", 10: "\u26a1 Close \u2014 +10 Hay", 5: "\u26a1 Same day \u2014 +5 Hay"}.get(int(_sb_hay_amt), f"\u26a1 Speed bonus \u2014 +{_sb_hay_amt} Hay")
+        _sb_msg_js = _sb_msg.replace('"', '\\"')
+        _stc.html(f'<script>setTimeout(function(){{if(window.parent.document.hasFocus())return;var f=window.parent.gfFire;if(f)f({{title:"GOATflow \U0001F33E",body:"{_sb_msg_js}",hapticPattern:[60,40,60],prefKey:"speedBonus"}});}},800);</script>', height=0)
 
 if st.session_state.get("adaptive_prompt_pending") and not st.session_state.get("just_completed_task"):
     _apt = st.session_state.pop("adaptive_prompt_pending")
@@ -4823,6 +4841,10 @@ offBtn.addEventListener('click',function(){{
 }})();
 </script>""", height=0)
 
+_te_sig_param = st.query_params.get("te_sig", "")
+_te_mins_raw = st.query_params.get("te_mins", "")
+_te_mins_param = int(_te_mins_raw) if _te_mins_raw and _te_mins_raw.isdigit() else None
+
 signals = get_active_signals(current_user_id)
 if st.session_state.get("incognito_mode", False):
     incog_sigs = st.session_state.get("incognito_signals", [])
@@ -4911,14 +4933,89 @@ st.markdown(f'''
         <div class="stat-label">CLIP RATE</div>
         {_clip_sublabel_html}
     </div>
-    <div class="stat-box" title="Consecutive days you've engaged with GOATflow. Keep the Gait alive.">
-        <div class="stat-value" style="color:#a78bfa;display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_gait_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon" onerror="this.style.display='none'"> {gait_streak}</div>
+    <div class="stat-box" title="Consecutive days you've completed at least one Track. Keep the Gait alive.">
+        <div class="stat-value" style="color:#a78bfa;display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_gait_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon" onerror="this.style.display='none'"> {"—" if gait_streak == 0 else gait_streak}</div>
         <div class="stat-label">GAIT</div>
-        <div class="stat-sub">{gait_streak} day{"" if gait_streak == 1 else "s"} in a row</div>
+        <div class="stat-sub">{"Complete a Track today" if gait_streak == 0 else f"{gait_streak} day{'' if gait_streak == 1 else 's'} in a row"}</div>
+    </div>
+    <div class="stat-box" id="gf-precision-card" title="Percentage of timed Tracks completed within their estimate.">
+        <div class="stat-value" id="gf-precision-val" style="color:#9ca3af;">—</div>
+        <div class="stat-label">PRECISION</div>
+        <div class="stat-sub" id="gf-precision-sub">5 timed Tracks to unlock</div>
     </div>
 </div>
 ''', unsafe_allow_html=True)
 
+
+_stc.html("""<script>
+(function(){
+var PR_KEY='goatflow_precision_stats';
+var FB_KEY='goatflow_priority_feedback';
+
+function updatePrecisionCard(){
+  var valEl=window.parent.document.getElementById('gf-precision-val');
+  var subEl=window.parent.document.getElementById('gf-precision-sub');
+  if(!valEl||!subEl)return;
+  try{
+    var stats=JSON.parse(localStorage.getItem(PR_KEY)||'{"precise":0,"total":0}');
+    if(stats.total<5){
+      valEl.textContent='\u2014';valEl.style.color='#9ca3af';
+      subEl.textContent='5 timed Tracks to unlock';
+    }else{
+      var rate=Math.round((stats.precise/stats.total)*100);
+      valEl.textContent=rate+'%';
+      subEl.textContent=stats.precise+' of '+stats.total+' on time';
+      if(rate>=75)valEl.style.color='#4ade80';
+      else if(rate>=50)valEl.style.color='#f59e0b';
+      else valEl.style.color='#ef4444';
+      var card=valEl.closest('.stat-box')||valEl.parentElement&&valEl.parentElement.parentElement;
+      if(card){
+        if(rate>=75)card.style.borderColor='#4ade80';
+        else if(rate>=50)card.style.borderColor='#f59e0b';
+        else card.style.borderColor='#ef4444';
+      }
+    }
+  }catch(e){}
+}
+
+function injectHornEffectiveness(){
+  var pd=window.parent.document;
+  if(pd.getElementById('gf-horn-eff'))return;
+  var lockBtn=null;
+  pd.querySelectorAll('button').forEach(function(b){
+    if(b.textContent&&b.textContent.indexOf('Lock In My Horns')>-1)lockBtn=b;
+  });
+  if(!lockBtn)return;
+  var container=lockBtn.closest('[data-testid="stVerticalBlock"]')||lockBtn.parentElement;
+  if(!container)return;
+  var eff=null;
+  try{
+    var feedback=JSON.parse(localStorage.getItem(FB_KEY)||'[]');
+    var ago30=Date.now()-(30*24*60*60*1000);
+    var recent=feedback.filter(function(f){return f.timestamp>=ago30;});
+    if(recent.length>=10){
+      var correct=recent.filter(function(f){return f.ranked==='correct';}).length;
+      eff=Math.round((correct/recent.length)*100);
+    }
+  }catch(e){}
+  var color=eff===null?'#4b5563':eff>=80?'#4ade80':eff>=60?'#f59e0b':'#ef4444';
+  var desc=eff===null?'Rate 10 Tracks to unlock':eff>=80?'Your Horns are dialed in.':eff>=60?'Getting there. Keep refining.':'Your priorities have shifted. Time to update your Horns.';
+  var val=eff===null?'\u2014':(eff+'%');
+  var div=pd.createElement('div');
+  div.id='gf-horn-eff';
+  div.style.cssText='border-top:1px solid rgba(255,255,255,0.06);margin:8px 0;padding:8px 0 4px 0;';
+  div.innerHTML='<div style="font-family:\\'DM Sans\\',sans-serif;font-size:12px;font-weight:500;color:#6b7280;margin-bottom:4px;">Horn Effectiveness</div>'
+    +'<div style="font-family:Syne,sans-serif;font-size:18px;font-weight:700;color:'+color+';">'+val+'</div>'
+    +'<div style="font-family:\\'DM Sans\\',sans-serif;font-size:11px;color:#4b5563;margin-top:2px;">'+desc+'</div>';
+  lockBtn.parentElement.insertBefore(div,lockBtn);
+}
+
+setTimeout(updatePrecisionCard,500);
+setTimeout(updatePrecisionCard,1500);
+setTimeout(injectHornEffectiveness,600);
+setTimeout(injectHornEffectiveness,1600);
+})();
+</script>""", height=0)
 
 _horns_for_onboard = parse_horns(get_horns(current_user_id))
 if not _horns_for_onboard and not signals:
@@ -5262,13 +5359,14 @@ else:
                 st.session_state["just_completed_task"] = (sig['task_name'], xp, False, xp_tier, hay_amt)
                 st.rerun()
             else:
-                reward, xp, leveled_up, hay_earned, hay_remaining, cheese_count, speed_bonus, diff_mult, comp_log_id = complete_signal(sig['id'], current_user_id)
+                _te_for_sig = _te_mins_param if (_te_sig_param == str(sig['id'])) else None
+                reward, xp, leveled_up, hay_earned, hay_remaining, cheese_count, speed_bonus, diff_mult, comp_log_id = complete_signal(sig['id'], current_user_id, _te_for_sig)
                 if reward:
                     st.session_state["just_completed_task"] = (sig['task_name'], xp, leveled_up, reward, hay_earned, diff_mult)
                     if cheese_count:
                         st.session_state["fresh_cheese_pending"] = cheese_count
                     if speed_bonus:
-                        st.session_state["just_earned_speed_bonus"] = True
+                        st.session_state["just_earned_speed_bonus"] = speed_bonus
                     import datetime as _dt
                     _sig_created = sig.get("created_at")
                     _days_elapsed = 0
@@ -5407,6 +5505,73 @@ function run(){
 }
 function tryRun(n){if(pd.querySelectorAll('.signal-card[data-signal-id]').length>0){run();}else if(n>0){setTimeout(function(){tryRun(n-1);},200);}}
 setTimeout(function(){tryRun(15);},250);
+})();
+</script>""", height=0)
+
+_stc.html("""<script>
+(function(){
+var pd=window.parent.document;
+var EST_PFX='gf_te_';
+var EST_MINS={'5 min':5,'15 min':15,'30 min':30,'1 hr':60,'2+ hrs':120};
+var PR_KEY='goatflow_precision_stats';
+
+function getEstMins(sigId){
+  var v=localStorage.getItem(EST_PFX+sigId);
+  return v&&EST_MINS[v]?EST_MINS[v]:null;
+}
+
+function getSignalIdFromCompleteBtn(btn){
+  var node=btn;
+  for(var i=0;i<12;i++){
+    if(node&&node.querySelector){
+      var card=node.querySelector&&node.closest&&node.closest('.signal-card[data-signal-id]');
+      if(card)return card.getAttribute('data-signal-id');
+    }
+    if(node)node=node.parentElement;
+    else break;
+  }
+  return null;
+}
+
+function getSignalCreatedAt(sigId){
+  var card=pd.querySelector('.signal-card[data-signal-id="'+sigId+'"]');
+  return card?card.getAttribute('data-created-at'):null;
+}
+
+function updatePrecisionStats(sigId,estMins){
+  var createdAtStr=getSignalCreatedAt(sigId);
+  if(!createdAtStr||!estMins)return;
+  try{
+    var created=new Date(createdAtStr).getTime();
+    if(isNaN(created))return;
+    var elapsed=(Date.now()-created)/60000;
+    var isPrecise=elapsed<=estMins;
+    var stats=JSON.parse(localStorage.getItem(PR_KEY)||'{"precise":0,"total":0}');
+    stats.total+=1;
+    if(isPrecise)stats.precise+=1;
+    localStorage.setItem(PR_KEY,JSON.stringify(stats));
+  }catch(e){}
+}
+
+pd.addEventListener('click',function(e){
+  var el=e.target;
+  while(el&&el.tagName!=='BUTTON')el=el.parentElement;
+  if(!el)return;
+  var txt=el.textContent||'';
+  if(txt.indexOf('Complete')===-1)return;
+  var sigId=getSignalIdFromCompleteBtn(el);
+  if(!sigId)return;
+  var estMins=getEstMins(sigId);
+  if(estMins){
+    updatePrecisionStats(sigId,estMins);
+    try{
+      var url=new URL(window.parent.location.href);
+      url.searchParams.set('te_sig',sigId);
+      url.searchParams.set('te_mins',String(estMins));
+      window.parent.history.replaceState({},'',url.toString());
+    }catch(err){}
+  }
+},true);
 })();
 </script>""", height=0)
 
