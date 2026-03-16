@@ -1849,6 +1849,31 @@ def complete_signal(signal_id: int, user_id: str, time_estimate_minutes: int = N
         conn.close()
 
 
+def cancel_signal(signal_id, user_id: str) -> bool:
+    conn = get_db()
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT task_name, why, operational_weight, xp_reward, category FROM signals WHERE id = %s AND user_id = %s", (signal_id, user_id))
+            row = cur.fetchone()
+            if not row:
+                return False
+            cur.execute("DELETE FROM signals WHERE id = %s AND user_id = %s", (signal_id, user_id))
+            import datetime as _dt2
+            cur.execute("""
+                INSERT INTO operational_log (user_id, task_name, task_why, resolution, horn_applied_name, priority_score, xp_tier, category, logged_at, hay_earned)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """, (user_id, row["task_name"], row["why"] or "", "cancelled",
+                  "", row["operational_weight"], row["xp_reward"],
+                  row["category"] or "other", _dt2.datetime.utcnow(), 0))
+            conn.commit()
+            return True
+    except Exception:
+        conn.rollback()
+        return False
+    finally:
+        conn.close()
+
+
 def get_horns(user_id: str) -> str:
     conn = get_db()
     try:
@@ -2295,6 +2320,16 @@ icon_clip_rate_b64 = load_image_b64("static/icon_clip_rate.webp", "icon_clip_rat
 icon_level_b64 = load_image_b64("static/icon_level.webp", "icon_level_b64_v2")
 icon_level_src = f"data:image/webp;base64,{icon_level_b64}" if icon_level_b64 else ""
 icon_clip_rate_src = f"data:image/webp;base64,{icon_clip_rate_b64}" if icon_clip_rate_b64 else ""
+icon_churn_engine_b64 = load_image_b64("static/icon_churn_engine.png", "icon_churn_engine_b64_v1")
+icon_churn_engine_src = f"data:image/png;base64,{icon_churn_engine_b64}" if icon_churn_engine_b64 else ""
+icon_logout_b64 = load_image_b64("static/icon_logout.png", "icon_logout_b64_v1")
+icon_logout_src = f"data:image/png;base64,{icon_logout_b64}" if icon_logout_b64 else ""
+icon_precision_b64 = load_image_b64("static/icon_precision.png", "icon_precision_b64_v1")
+icon_precision_src = f"data:image/png;base64,{icon_precision_b64}" if icon_precision_b64 else ""
+icon_stats_b64 = load_image_b64("static/icon_stats.png", "icon_stats_b64_v1")
+icon_stats_src = f"data:image/png;base64,{icon_stats_b64}" if icon_stats_b64 else ""
+icon_track_sieve_b64 = load_image_b64("static/icon_track_sieve.png", "icon_track_sieve_b64_v1")
+icon_track_sieve_src = f"data:image/png;base64,{icon_track_sieve_b64}" if icon_track_sieve_b64 else ""
 
 # ── Goatifications IIFE template ── #
 _GOATIF_IIFE_TMPL = r"""
@@ -2975,7 +3010,7 @@ with st.sidebar:
     sb_cheese = player_data.get("fresh_cheese", 0)
     st.markdown(f'''
     <div style="margin-top:0.5rem;padding:0.6rem;background:{CARD_BG};border-radius:8px;border:1px solid {BORDER};">
-        <div style="font-size:0.7rem;font-weight:700;color:{WHITE};margin-bottom:0.4rem;font-family:Syne,sans-serif;">📊 My Stats</div>
+        <div style="font-size:0.7rem;font-weight:700;color:{WHITE};margin-bottom:0.4rem;font-family:Syne,sans-serif;display:flex;align-items:center;gap:5px;">{"<img src='" + icon_stats_src + "' style='width:18px;height:18px;object-fit:contain;vertical-align:middle;' class='goatflow-icon'>" if icon_stats_src else "📊"} My Stats</div>
         <div style="display:flex;justify-content:space-between;margin-bottom:0.2rem;">
             <span style="font-size:0.6rem;color:{SILVER};">Total Grit (XP)</span>
             <span style="font-size:0.6rem;font-weight:700;color:{NEON_GREEN};">{player_data["total_xp"]:,}</span>
@@ -3161,14 +3196,20 @@ with st.sidebar:
                      "just_dropped", "just_purged", "fresh_cheese_pending", "just_earned_fresh_cheese"]:
             st.session_state.pop(key, None)
         st.rerun()
+    _btn_style = ("width:100%;background:transparent;border:1px solid #374151;border-radius:8px;"
+                  "color:#6b7280;font-family:'DM Sans',sans-serif;font-size:0.75rem;font-weight:500;"
+                  "padding:8px 0;cursor:pointer;transition:all 0.2s;margin-top:0.5rem;")
+    _btn_hover_on  = "this.style.borderColor='#7c3aed';this.style.color='#a78bfa';"
+    _btn_hover_off = "this.style.borderColor='#374151';this.style.color='#6b7280';"
     st.markdown(
-        '<button onclick="if(window.gfStartTour){gfStartTour();}" '
-        'style="width:100%;background:transparent;border:1px solid #374151;border-radius:8px;color:#6b7280;'
-        'font-family:\'DM Sans\',sans-serif;font-size:0.75rem;font-weight:500;padding:8px 0;cursor:pointer;'
-        'transition:all 0.2s;margin-top:0.5rem;" '
-        'onmouseover="this.style.borderColor=\'#7c3aed\';this.style.color=\'#a78bfa\';" '
-        'onmouseout="this.style.borderColor=\'#374151\';this.style.color=\'#6b7280\';">'
-        '❓ Replay Tutorial</button>',
+        f'<button onclick="if(window.gfStartTour){{gfStartTour();}}" '
+        f'style="{_btn_style}" '
+        f'onmouseover="{_btn_hover_on}" onmouseout="{_btn_hover_off}">'
+        '❓ Replay Tutorial</button>'
+        f'<button onclick="if(window.gfReplaySlideshow){{gfReplaySlideshow();}}" '
+        f'style="{_btn_style}" '
+        f'onmouseover="{_btn_hover_on}" onmouseout="{_btn_hover_off}">'
+        '🎪 Replay Animal Intro</button>',
         unsafe_allow_html=True
     )
 
@@ -3242,6 +3283,49 @@ _stc.html("""
   // Re-inject styles after Streamlit re-renders
   setTimeout(injectStyles, 800);
   setTimeout(injectStyles, 2000);
+
+  // 5. Style Cancel buttons red and inject Logout icon
+  function injectCancelAndLogoutStyles() {
+    var allBtns = pd.querySelectorAll('button');
+    allBtns.forEach(function(b) {
+      var txt = b.textContent ? b.textContent.trim() : '';
+      // Red cancel buttons
+      if (txt === 'Cancel') {
+        b.style.setProperty('background', '#7f1d1d', 'important');
+        b.style.setProperty('color', '#fca5a5', 'important');
+        b.style.setProperty('border', '1px solid #ef4444', 'important');
+      }
+      if (txt === 'Yes, cancel it') {
+        b.style.setProperty('background', '#991b1b', 'important');
+        b.style.setProperty('color', '#fecaca', 'important');
+        b.style.setProperty('border', '1px solid #ef4444', 'important');
+      }
+      if (txt === 'No, keep it') {
+        b.style.setProperty('background', '#1f2937', 'important');
+        b.style.setProperty('color', '#9ca3af', 'important');
+        b.style.setProperty('border', '1px solid #374151', 'important');
+      }
+      // Logout icon
+      if (txt.indexOf('Logout') !== -1 && !b._gfLogoutIcon) {
+        b._gfLogoutIcon = true;
+        var li = pd.createElement('img');
+        li.src = '/app/static/icon_logout.png';
+        li.style.cssText = 'width:20px;height:20px;object-fit:contain;vertical-align:middle;margin-right:6px;border-radius:2px;';
+        b.insertBefore(li, b.firstChild);
+      }
+      // Churn Engine button icon
+      if (txt.indexOf('Drop Into Churn Engine') !== -1 && !b._gfChurnIcon) {
+        b._gfChurnIcon = true;
+        var ci = pd.createElement('img');
+        ci.src = '/app/static/icon_churn_engine.png';
+        ci.style.cssText = 'width:22px;height:22px;object-fit:contain;vertical-align:middle;margin-right:6px;border-radius:2px;';
+        b.insertBefore(ci, b.firstChild);
+      }
+    });
+  }
+  setTimeout(injectCancelAndLogoutStyles, 600);
+  setTimeout(injectCancelAndLogoutStyles, 1400);
+  setTimeout(injectCancelAndLogoutStyles, 3000);
 })();
 </script>
 """, height=0)
@@ -3476,9 +3560,6 @@ _slideshow_iife = r"""
   var pw = window.parent;
   var pd = pw.document;
 
-  if (!pw.gfObForce || pw._gfSlideshowStarted) return;
-  pw._gfSlideshowStarted = true;
-
   var ANIMALS = [
     { key: 'bull',    caption: "Bulls are full of it" },
     { key: 'ram',     caption: "Rams are too rough" },
@@ -3703,7 +3784,15 @@ _slideshow_iife = r"""
     }
   }
 
-  // ── Build overlay ──────────────────────────────────────────────────────────
+  // ── Build overlay (wrapped in runSlideshow for replay support) ────────────
+  function runSlideshow() {
+    var ex = pd.getElementById('gf-slideshow-overlay');
+    if (ex && ex.parentNode) ex.parentNode.removeChild(ex);
+    overlay = null; imgEl = null; svgEl = null; line1 = null; line2 = null;
+    captionEl = null; titleEl = null; dotsWrap = null;
+    if (slideTimer) { clearTimeout(slideTimer); slideTimer = null; }
+    done = false;
+
   overlay = pd.createElement('div');
   overlay.id = 'gf-slideshow-overlay';
   overlay.style.cssText = [
@@ -3794,6 +3883,19 @@ _slideshow_iife = r"""
   firstImg.onload = function() { showSlide(0); };
   firstImg.onerror = function() { showSlide(0); };
   firstImg.src = '/app/static/onboarding/animal_bull.webp';
+  } // end runSlideshow()
+
+  pw.gfReplaySlideshow = function() {
+    done = false;
+    pw._gfSlideshowStarted = true;
+    pw.gfObForce = true;
+    runSlideshow();
+  };
+
+  if (pw.gfObForce && !pw._gfSlideshowStarted) {
+    pw._gfSlideshowStarted = true;
+    runSlideshow();
+  }
 })();
 """
 
@@ -4386,7 +4488,8 @@ st.markdown(f'''
 </div>
 ''', unsafe_allow_html=True)
 
-st.markdown('<div id="gf-sieve-anchor" class="churn-label">📊 The Track Sieve — Drop Intel</div>', unsafe_allow_html=True)
+_sieve_icon_tag = f'<img src="{icon_track_sieve_src}" style="width:28px;height:28px;object-fit:contain;vertical-align:middle;margin-right:6px;" class="goatflow-icon">' if icon_track_sieve_src else "📊"
+st.markdown(f'<div id="gf-sieve-anchor" class="churn-label">{_sieve_icon_tag} The Track Sieve — Drop Intel</div>', unsafe_allow_html=True)
 
 # ── Track Sieve one-time tooltip ──────────────────────────────────────────────
 st.markdown("""
@@ -4472,9 +4575,8 @@ function gfDismissSieveTooltip() {
 
 col_files, col_text = st.columns([1, 1])
 
-if st.session_state.get("_clear_bleat_text"):
-    st.session_state["bleat_text_input"] = ""
-    st.session_state["_clear_bleat_text"] = False
+if "sieve_counter" not in st.session_state:
+    st.session_state["sieve_counter"] = 0
 
 with col_text:
     extra_text = st.text_area(
@@ -4482,7 +4584,7 @@ with col_text:
         height=90,
         placeholder="Paste emails, post-it notes, memos, quick tasks...",
         label_visibility="collapsed",
-        key="bleat_text_input",
+        key=f"bleat_text_{st.session_state['sieve_counter']}",
     )
 
 with col_files:
@@ -4735,7 +4837,7 @@ setInterval(function(){
                     save_signals(current_user_id, [s.model_dump() for s in result.signals])
                 st.session_state["just_dropped"] = True
                 st.session_state["just_purged"] = True
-                st.session_state["_clear_bleat_text"] = True
+                st.session_state["sieve_counter"] = st.session_state.get("sieve_counter", 0) + 1
                 st.rerun()
             except Exception as e:
                 import traceback
@@ -5083,7 +5185,7 @@ st.markdown(f'''
         <div class="stat-sub">{"Complete a Track today" if gait_streak == 0 else f"{gait_streak} day{'' if gait_streak == 1 else 's'} in a row"}</div>
     </div>
     <div class="stat-box" id="gf-precision-card" title="Percentage of timed Tracks completed within their estimate.">
-        <div class="stat-value" id="gf-precision-val" style="color:#9ca3af;">—</div>
+        <div class="stat-value" id="gf-precision-val" style="color:#9ca3af;display:flex;align-items:center;justify-content:center;gap:6px;">{("<img src='" + icon_precision_src + "' style='width:28px;height:28px;object-fit:contain;' class='goatflow-icon'>&#8202;") if icon_precision_src else ""}—</div>
         <div class="stat-label">PRECISION</div>
         <div class="stat-sub" id="gf-precision-sub">5 timed Tracks to unlock</div>
     </div>
@@ -5493,42 +5595,74 @@ else:
         st.markdown(card_html, unsafe_allow_html=True)
 
         is_incognito_sig = isinstance(sig.get('id'), str) and str(sig['id']).startswith("incog_")
-        if st.button(f"✅ Complete?", key=f"complete_{sig['id']}", use_container_width=True):
-            if is_incognito_sig:
-                xp_tier = sig.get("xp_reward", "Standard")
-                xp = XP_TIERS.get(xp_tier, 500)
-                hay_amt = HAY_BASE.get(xp_tier, 10)
-                incog_sigs = st.session_state.get("incognito_signals", [])
-                st.session_state["incognito_signals"] = [s for s in incog_sigs if s.get("id") != sig["id"]]
-                st.session_state["just_completed_task"] = (sig['task_name'], xp, False, xp_tier, hay_amt)
-                st.rerun()
-            else:
-                _te_for_sig = _te_mins_param if (_te_sig_param == str(sig['id'])) else None
-                reward, xp, leveled_up, hay_earned, hay_remaining, cheese_count, speed_bonus, diff_mult, comp_log_id = complete_signal(sig['id'], current_user_id, _te_for_sig)
-                if reward:
-                    st.session_state["just_completed_task"] = (sig['task_name'], xp, leveled_up, reward, hay_earned, diff_mult)
-                    if cheese_count:
-                        st.session_state["fresh_cheese_pending"] = cheese_count
-                    if speed_bonus:
-                        st.session_state["just_earned_speed_bonus"] = speed_bonus
-                    import datetime as _dt
-                    _sig_created = sig.get("created_at")
-                    _days_elapsed = 0
-                    if _sig_created:
-                        _created_clean = _sig_created.replace(tzinfo=None) if hasattr(_sig_created, "replace") else _sig_created
-                        _days_elapsed = max(0, (_dt.datetime.utcnow() - _created_clean).days)
-                    st.session_state["adaptive_prompt_pending"] = {
-                        "task_name": sig["task_name"],
-                        "log_id": comp_log_id,
-                        "days_to_complete": _days_elapsed,
-                        "is_summit": sig.get("bleat_type") in ("Summit-Level Bleat", "Summit Call"),
-                        "category": sig.get("category", "other"),
-                        "diff_mult": diff_mult,
-                    }
-                    st.session_state["priority_feedback_pending"] = {
-                        "trackId": str(sig.get("id", "")),
-                        "trackTitle": sig["task_name"],
-                    }
+        _sig_id_str = str(sig.get('id', ''))
+        _is_pending_cancel = st.session_state.get("pending_cancel_id") == _sig_id_str
+
+        if _is_pending_cancel:
+            st.markdown(
+                '<div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.4);'
+                'border-radius:8px;padding:10px 14px;margin-bottom:6px;font-family:\'DM Sans\',sans-serif;'
+                'font-size:0.85rem;color:#fca5a5;text-align:center;font-weight:600;">'
+                'Pooositive you want to cancel this Track?</div>',
+                unsafe_allow_html=True
+            )
+            _cc1, _cc2 = st.columns([1, 1])
+            with _cc1:
+                if st.button("Yes, cancel it", key=f"confirm_cancel_{_sig_id_str}", use_container_width=True):
+                    if is_incognito_sig:
+                        incog_sigs = st.session_state.get("incognito_signals", [])
+                        st.session_state["incognito_signals"] = [s for s in incog_sigs if str(s.get("id")) != _sig_id_str]
+                    else:
+                        cancel_signal(sig['id'], current_user_id)
+                    st.session_state.pop("pending_cancel_id", None)
+                    st.rerun()
+            with _cc2:
+                if st.button("No, keep it", key=f"keep_cancel_{_sig_id_str}", use_container_width=True):
+                    st.session_state.pop("pending_cancel_id", None)
+                    st.rerun()
+        else:
+            _bc1, _bc2 = st.columns([3, 1])
+            with _bc1:
+                if st.button("✅ Complete?", key=f"complete_{sig['id']}", use_container_width=True):
+                    if is_incognito_sig:
+                        xp_tier = sig.get("xp_reward", "Standard")
+                        xp = XP_TIERS.get(xp_tier, 500)
+                        hay_amt = HAY_BASE.get(xp_tier, 10)
+                        incog_sigs = st.session_state.get("incognito_signals", [])
+                        st.session_state["incognito_signals"] = [s for s in incog_sigs if s.get("id") != sig["id"]]
+                        st.session_state["just_completed_task"] = (sig['task_name'], xp, False, xp_tier, hay_amt)
+                        st.rerun()
+                    else:
+                        _te_for_sig = _te_mins_param if (_te_sig_param == str(sig['id'])) else None
+                        reward, xp, leveled_up, hay_earned, hay_remaining, cheese_count, speed_bonus, diff_mult, comp_log_id = complete_signal(sig['id'], current_user_id, _te_for_sig)
+                        if reward:
+                            st.session_state["just_completed_task"] = (sig['task_name'], xp, leveled_up, reward, hay_earned, diff_mult)
+                            if cheese_count:
+                                st.session_state["fresh_cheese_pending"] = cheese_count
+                            if speed_bonus:
+                                st.session_state["just_earned_speed_bonus"] = speed_bonus
+                            import datetime as _dt
+                            _sig_created = sig.get("created_at")
+                            _days_elapsed = 0
+                            if _sig_created:
+                                _created_clean = _sig_created.replace(tzinfo=None) if hasattr(_sig_created, "replace") else _sig_created
+                                _days_elapsed = max(0, (_dt.datetime.utcnow() - _created_clean).days)
+                            st.session_state["adaptive_prompt_pending"] = {
+                                "task_name": sig["task_name"],
+                                "log_id": comp_log_id,
+                                "days_to_complete": _days_elapsed,
+                                "is_summit": sig.get("bleat_type") in ("Summit-Level Bleat", "Summit Call"),
+                                "category": sig.get("category", "other"),
+                                "diff_mult": diff_mult,
+                            }
+                            st.session_state["priority_feedback_pending"] = {
+                                "trackId": str(sig.get("id", "")),
+                                "trackTitle": sig["task_name"],
+                            }
+                            st.rerun()
+            with _bc2:
+                if st.button("Cancel", key=f"cancel_{_sig_id_str}", use_container_width=True):
+                    st.session_state["pending_cancel_id"] = _sig_id_str
                     st.rerun()
 
 # ── FIX 2, 3, 6: Track time estimate, Load Index, Staggered entrance ──────
