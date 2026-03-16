@@ -1129,7 +1129,7 @@ CUSTOM_CSS = f"""
 
     .landing-container {{
         text-align: center;
-        padding: 10px 1rem 0.25rem 1rem;
+        padding: 64px 1rem 0 1rem;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -1143,27 +1143,27 @@ CUSTOM_CSS = f"""
         max-height: none;
         object-fit: unset;
         display: block;
-        margin: 0 auto 8px auto;
+        margin: 0 auto 6px auto;
         padding: 0;
         overflow: visible;
     }}
 
     .landing-tagline {{
-        font-size: 1.05rem;
+        font-size: 1.0rem;
         font-weight: 800;
         font-family: 'Syne', sans-serif;
         color: {WHITE};
-        margin: 0 auto 6px auto;
-        line-height: 1.35;
+        margin: 0 auto 4px auto;
+        line-height: 1.3;
         max-width: 400px;
         text-align: center;
         text-shadow: 0 0 20px rgba(124, 58, 237, 0.4);
     }}
 
     @media (max-width: 768px) {{
-        .landing-tagline {{ font-size: 0.95rem; }}
-        .landing-container img {{ width: 200px !important; height: auto !important; max-height: none !important; object-fit: unset !important; overflow: visible !important; padding: 0 !important; margin: 0 auto 8px auto !important; }}
-        .landing-container {{ padding-top: 10px !important; overflow: visible !important; align-items: center !important; justify-content: flex-start !important; }}
+        .landing-tagline {{ font-size: 0.9rem; }}
+        .landing-container img {{ width: 190px !important; height: auto !important; max-height: none !important; object-fit: unset !important; overflow: visible !important; padding: 0 !important; margin: 0 auto 6px auto !important; }}
+        .landing-container {{ padding: 64px 1rem 0 1rem !important; overflow: visible !important; align-items: center !important; justify-content: flex-start !important; }}
     }}
 
     .landing-sub {{
@@ -1343,18 +1343,19 @@ CUSTOM_CSS = f"""
 
     /* LOGIN LOGO — show full mascot uncropped */
     .landing-container {{
+        padding-top: 64px !important;
         overflow: visible !important;
         clip-path: none !important;
     }}
 
     .landing-container img {{
-        width: 210px !important;
+        width: 190px !important;
         height: auto !important;
         max-height: none !important;
         object-fit: unset !important;
         overflow: visible !important;
         display: block !important;
-        margin: 8px auto 0 auto !important;
+        margin: 0 auto 6px auto !important;
         padding: 0 !important;
     }}
 
@@ -2766,7 +2767,6 @@ if not user_info:
     <div class="landing-container">
         {f'<img src="{logo_src}" alt="GOATflow">' if logo_src else '<div style="font-size:3rem;font-weight:900;font-family:Syne,sans-serif;color:#fff;margin-bottom:2rem;">🐐 GOATflow</div>'}
         <div class="landing-tagline">Grab life by the horns.<br>Leave the bull behind.</div>
-        <div style="font-size:0.72rem;font-weight:500;color:#22c55e;margin-top:0;margin-bottom:12px;font-family:\'DM Sans\',sans-serif;letter-spacing:0.01em;line-height:1.6;text-align:center;">Nothing that matters gets lost.<br>Nothing that doesn\'t matter gets in the way.</div>
     </div>
     ''', unsafe_allow_html=True)
 
