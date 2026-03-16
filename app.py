@@ -3719,15 +3719,15 @@ _slideshow_iife = r"""
     overlay.innerHTML = '';
 
     var bamWrap = pd.createElement('div');
-    bamWrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;padding:0 24px;box-sizing:border-box;text-align:center;max-width:380px;margin:0 auto;';
+    bamWrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;padding:0 28px;box-sizing:border-box;text-align:center;max-width:480px;margin:0 auto;';
 
     var bamLogo = pd.createElement('img');
     bamLogo.src = '/app/static/goatflow_logo_nobg.webp';
-    bamLogo.style.cssText = 'width:80px;height:auto;opacity:0;transition:opacity 0.5s;animation:gfFloatBAM 3s ease-in-out infinite;';
+    bamLogo.style.cssText = 'width:180px;max-width:60vw;height:auto;opacity:0;transition:opacity 0.6s;animation:gfFloatBAM 3s ease-in-out infinite;display:block;margin:0 auto;';
     if (!pd.getElementById('gf-bam-float-kf')) {
       var kf = pd.createElement('style');
       kf.id = 'gf-bam-float-kf';
-      kf.textContent = '@keyframes gfFloatBAM{0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);}}';
+      kf.textContent = '@keyframes gfFloatBAM{0%,100%{transform:translateY(0);}50%{transform:translateY(-12px);}}';
       pd.head.appendChild(kf);
     }
     bamWrap.appendChild(bamLogo);
@@ -3740,8 +3740,8 @@ _slideshow_iife = r"""
       return el;
     }
 
-    var l1 = makeLine('THIS is what you\u2019ve always needed.', 'font-family:"Syne",sans-serif;font-weight:700;font-size:22px;color:#ffffff;', 32);
-    var l2 = makeLine('GOATS.', 'font-family:"Syne",sans-serif;font-weight:700;font-size:18px;color:#4ade80;', 16);
+    var l1 = makeLine('THIS is what you\u2019ve always needed.', 'font-family:"Syne",sans-serif;font-weight:700;font-size:22px;color:#ffffff;', 28);
+    var l2 = makeLine('GOATS.', 'font-family:"Syne",sans-serif;font-weight:700;font-size:20px;color:#4ade80;letter-spacing:0.08em;', 14);
     var l3 = makeLine('Leave the asleep to the sheep.<br>You\u2019ve got to become your Greatest Of All Time self.<br>That takes guts. That takes GOATS.', 'font-family:"DM Sans",sans-serif;font-weight:400;font-size:15px;color:#9ca3af;line-height:1.6;max-width:300px;', 16);
     var l4 = makeLine('Let\u2019s go. \uD83D\uDC10', 'font-family:"Syne",sans-serif;font-weight:700;font-size:18px;color:#f59e0b;', 24);
 
