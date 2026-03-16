@@ -257,10 +257,12 @@ CUSTOM_CSS = f"""
 
     .gf-banner-wrap img {{
         width: 100%;
-        height: 390px;
+        height: auto;
+        max-height: 160px;
         object-fit: contain;
-        object-position: center bottom;
+        object-position: center top;
         display: block;
+        overflow: visible;
         border-radius: 0 0 10px 10px;
     }}
 
@@ -285,13 +287,20 @@ CUSTOM_CSS = f"""
         section[data-testid="stMainBlockContainer"],
         .main .block-container,
         div.block-container {{ padding-top: 0 !important; margin-top: 0 !important; }}
-        .gf-banner-wrap img {{ width: 100% !important; height: auto !important; max-height: 140px !important; object-fit: contain !important; object-position: center top !important; border-radius: 0 0 8px 8px !important; }}
+        .stApp, section[data-testid="stMain"], section[data-testid="stMainBlockContainer"],
+        div.block-container, [data-testid="stVerticalBlock"], [data-testid="stVerticalBlockBorderWrapper"] {{ overflow: visible !important; }}
+        .gf-banner-wrap img {{ width: 100% !important; height: auto !important; max-height: 140px !important; object-fit: contain !important; object-position: center top !important; overflow: visible !important; border-radius: 0 0 8px 8px !important; }}
         .gf-banner-wrap {{ overflow: visible !important; border-radius: 0 0 8px 8px !important; margin-top: 0 !important; margin-bottom: 0 !important; padding-top: 0 !important; }}
         .gf-banner-fade {{ height: 12px !important; }}
         .gf-trust-row {{ margin-top: 6px !important; }}
-        .privacy-shield-inline {{ font-size: 0.52rem !important; margin-top: 0 !important; display: inline-flex !important; }}
+        .privacy-shield-inline {{ font-size: 10px !important; max-width: calc(100% - 32px) !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; margin-top: 0 !important; display: inline-flex !important; }}
         .trust-badge {{ font-size: 0.85rem !important; margin-top: 0 !important; }}
-        .churn-label {{ margin-bottom: 4px !important; margin-top: 6px !important; }}
+        .churn-label {{ font-size: 11px !important; letter-spacing: 0.02em !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; max-width: 100% !important; margin-bottom: 4px !important; margin-top: 6px !important; }}
+        .stat-label {{ font-size: 9px !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }}
+        .stat-sub {{ font-size: 9px !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; }}
+        .stat-box {{ padding: 8px 6px !important; }}
+        .stats-row {{ gap: 6px !important; }}
+        .metabolism-label {{ font-size: 10px !important; white-space: nowrap !important; }}
         div[data-testid="stFileUploader"] {{ padding: 8px !important; }}
         [data-testid="stFileUploaderDropzone"] {{ min-height: 80px !important; padding: 6px 10px !important; }}
         [data-testid="stFileUploaderDropzone"] p {{ font-size: 12px !important; margin: 2px 0 !important; }}
@@ -1122,20 +1131,22 @@ CUSTOM_CSS = f"""
 
     .landing-container {{
         text-align: center;
-        padding: 0 1rem 0.25rem 1rem;
+        padding: 10px 1rem 0.25rem 1rem;
         display: flex;
         flex-direction: column;
         align-items: center;
-        justify-content: center;
+        justify-content: flex-start;
         overflow: visible;
     }}
 
     .landing-container img {{
-        width: 220px;
+        width: 200px;
         height: auto;
         max-height: none;
+        object-fit: unset;
         display: block;
-        margin: 12px auto 8px auto;
+        margin: 0 auto 8px auto;
+        padding: 0;
         overflow: visible;
     }}
 
@@ -1153,7 +1164,8 @@ CUSTOM_CSS = f"""
 
     @media (max-width: 768px) {{
         .landing-tagline {{ font-size: 0.95rem; }}
-        .landing-container img {{ width: 220px !important; height: auto !important; max-height: none !important; overflow: visible !important; }}
+        .landing-container img {{ width: 200px !important; height: auto !important; max-height: none !important; object-fit: unset !important; overflow: visible !important; padding: 0 !important; margin: 0 auto 8px auto !important; }}
+        .landing-container {{ padding-top: 10px !important; overflow: visible !important; align-items: center !important; justify-content: flex-start !important; }}
     }}
 
     .landing-sub {{
@@ -4953,22 +4965,26 @@ else:
 
 if clip_rate_value is None:
     clip_rate_display = "—"
-    clip_rate_sublabel = "5 Tracks to unlock"
+    clip_rate_sublabel = "Complete 5 Tracks to unlock"
+    clip_rate_sublabel_color = "#4b5563"
     clip_rate_color = "#9ca3af"
     clip_rate_border_style = ""
 elif clip_rate_value >= 75:
     clip_rate_display = f"{clip_rate_value}%"
-    clip_rate_sublabel = ""
+    clip_rate_sublabel = "Above par \U0001F410"
+    clip_rate_sublabel_color = "#4ade80"
     clip_rate_color = "#4ade80"
     clip_rate_border_style = "border-color:#3DAA6A;"
 elif clip_rate_value >= 50:
     clip_rate_display = f"{clip_rate_value}%"
-    clip_rate_sublabel = ""
+    clip_rate_sublabel = "Par is 75%"
+    clip_rate_sublabel_color = "#f59e0b"
     clip_rate_color = "#f59e0b"
     clip_rate_border_style = "border-color:#f59e0b;"
 else:
     clip_rate_display = f"{clip_rate_value}%"
-    clip_rate_sublabel = ""
+    clip_rate_sublabel = "Par is 75% \u2014 refine your Horns"
+    clip_rate_sublabel_color = "#ef4444"
     clip_rate_color = "#ef4444"
     clip_rate_border_style = "border-color:#ef4444;"
 
@@ -4984,7 +5000,7 @@ hay_balance = player.get("hay", 0)
 cheese_total = player.get("fresh_cheese", 0)
 hay_pct = min(int((hay_balance / HAY_TO_CHEESE) * 100), 100)
 
-_clip_sublabel_html = f'<div class="stat-sub">{clip_rate_sublabel}</div>'
+_clip_sublabel_html = f'<div class="stat-sub" style="color:{clip_rate_sublabel_color};">{clip_rate_sublabel}</div>'
 st.markdown(f'''
 <div class="stats-row">
     <div class="stat-box">
@@ -5121,7 +5137,7 @@ if clip_rate_value is not None and _total_completed >= 5 and clip_rate_value < 6
     var nudge=pd.createElement('div');
     nudge.id='gf-clip-nudge';
     nudge.style.cssText='background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:10px 14px;margin-bottom:10px;position:relative;font-family:DM Sans,sans-serif;font-size:13px;color:#f59e0b;line-height:1.6;';
-    nudge.innerHTML='Your Clip Rate is at {_cr_val_js}% this week. If Tracks feel off-priority, add a Horn to dial it in. The AI gets sharper every time you do. <a href="#" id="gf-refine-horn-link" style="color:#f59e0b;font-weight:700;text-decoration:none;">Refine a Horn \u2192</a><button id="gf-nudge-dismiss-btn" style="position:absolute;top:5px;right:8px;background:none;border:none;color:#f59e0b;cursor:pointer;font-size:16px;line-height:1;padding:0;">\u00d7</button>';
+    nudge.innerHTML='Your Clip Rate is at {_cr_val_js}% \u2014 par is 75%. If Tracks feel off-priority, add a Horn to dial it in. The AI gets sharper every time you do. <a href="#" id="gf-refine-horn-link" style="color:#f59e0b;font-weight:700;text-decoration:none;">Refine a Horn \u2192</a><button id="gf-nudge-dismiss-btn" style="position:absolute;top:5px;right:8px;background:none;border:none;color:#f59e0b;cursor:pointer;font-size:16px;line-height:1;padding:0;">\u00d7</button>';
     function insert(){{
         var statsRow=pd.querySelector('.stats-row');
         if(!statsRow){{ setTimeout(insert,300); return; }}
