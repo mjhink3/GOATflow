@@ -5692,7 +5692,7 @@ function checkStreakMilestones(){{
   achieved.push(currentStreak);saveJ(STREAK_ACH_KEY,achieved);
   setTimeout(function(){{
     var f=window.parent.gfFire;
-    if(f)f({{title:'GOATflow \uD83D\uDC10',body:milestones[currentStreak],hapticPattern:[100,60,100,60,100],prefKey:'streakMilestones'}});
+    if(f)f({{title:'GOATflow \U0001F410',body:milestones[currentStreak],hapticPattern:[100,60,100,60,100],prefKey:'streakMilestones'}});
   }},1500);
 }}
 function checkClipRateNudge(){{
