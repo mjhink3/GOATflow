@@ -282,20 +282,23 @@ CUSTOM_CSS = f"""
     }}
 
     @media (max-width: 768px) {{
-        .gf-banner-wrap img {{ height: 240px !important; object-fit: contain !important; object-position: center bottom !important; border-radius: 0 0 8px 8px !important; }}
-        .gf-banner-wrap {{ border-radius: 0 0 8px 8px !important; margin-bottom: 0 !important; }}
-        .gf-banner-fade {{ height: 20px !important; }}
-        .gf-trust-row {{ margin-top: 2px !important; }}
+        section[data-testid="stMainBlockContainer"],
+        .main .block-container,
+        div.block-container {{ padding-top: 0 !important; margin-top: 0 !important; }}
+        .gf-banner-wrap img {{ height: 80px !important; object-fit: cover !important; object-position: center 38% !important; border-radius: 0 0 8px 8px !important; }}
+        .gf-banner-wrap {{ border-radius: 0 0 8px 8px !important; margin-top: 0 !important; margin-bottom: 0 !important; padding-top: 0 !important; }}
+        .gf-banner-fade {{ height: 12px !important; }}
+        .gf-trust-row {{ margin-top: 6px !important; }}
         .privacy-shield-inline {{ font-size: 0.52rem !important; margin-top: 0 !important; display: inline-flex !important; }}
         .trust-badge {{ font-size: 0.85rem !important; margin-top: 0 !important; }}
-        .churn-label {{ margin-bottom: 6px !important; margin-top: 8px !important; }}
-        div[data-testid="stFileUploader"] {{ padding: 10px !important; }}
-        [data-testid="stFileUploaderDropzone"] {{ min-height: 70px !important; padding: 6px 10px !important; }}
+        .churn-label {{ margin-bottom: 4px !important; margin-top: 6px !important; }}
+        div[data-testid="stFileUploader"] {{ padding: 8px !important; }}
+        [data-testid="stFileUploaderDropzone"] {{ min-height: 80px !important; padding: 6px 10px !important; }}
         [data-testid="stFileUploaderDropzone"] p {{ font-size: 12px !important; margin: 2px 0 !important; }}
         [data-testid="stFileUploaderDropzone"] small {{ font-size: 10px !important; }}
-        .stTextArea textarea {{ min-height: 70px !important; max-height: 90px !important; font-size: 0.82rem !important; }}
+        .stTextArea textarea {{ min-height: 70px !important; max-height: 80px !important; font-size: 0.82rem !important; }}
         [data-testid="stHorizontalBlock"]:has([data-testid="stFileUploader"]) {{
-            flex-direction: column !important; gap: 8px !important;
+            flex-direction: column !important; gap: 6px !important;
         }}
         [data-testid="stHorizontalBlock"]:has([data-testid="stFileUploader"]) > div[data-testid="stColumn"] {{
             width: 100% !important; min-width: 100% !important; flex: 1 1 100% !important;
@@ -632,7 +635,7 @@ CUSTOM_CSS = f"""
         }}
         .stat-box {{
             padding: 0.4rem 0.3rem !important;
-            min-height: 58px !important;
+            min-height: 60px !important;
         }}
         .stat-value {{
             font-size: 1.05rem !important;
@@ -1119,7 +1122,7 @@ CUSTOM_CSS = f"""
 
     .landing-container {{
         text-align: center;
-        padding: 0.5rem 1rem 0.25rem 1rem;
+        padding: 0 1rem 0.25rem 1rem;
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -1128,7 +1131,11 @@ CUSTOM_CSS = f"""
 
     .landing-container img {{
         height: 185px;
-        margin-bottom: 0.35rem;
+        max-height: 200px;
+        width: auto;
+        object-fit: contain;
+        margin-top: 12px;
+        margin-bottom: 8px;
     }}
 
     .landing-tagline {{
@@ -1136,7 +1143,7 @@ CUSTOM_CSS = f"""
         font-weight: 800;
         font-family: 'Syne', sans-serif;
         color: {WHITE};
-        margin: 2px auto 0.2rem auto;
+        margin: 0 auto 6px auto;
         line-height: 1.35;
         max-width: 400px;
         text-align: center;
@@ -1145,6 +1152,7 @@ CUSTOM_CSS = f"""
 
     @media (max-width: 768px) {{
         .landing-tagline {{ font-size: 0.95rem; }}
+        .landing-container img {{ height: 160px !important; max-height: 200px !important; }}
     }}
 
     .landing-sub {{
@@ -2647,7 +2655,7 @@ if not user_info:
         var pd=window.parent.document;
         var bc=pd.querySelector('[data-testid="stMainBlockContainer"]')||pd.querySelector('.block-container');
         if(!bc){setTimeout(applyLoginPad,150);return;}
-        bc.style.setProperty('padding-top','3.5rem','important');
+        bc.style.setProperty('padding-top','0','important');
     }
     applyLoginPad();
 })();
@@ -2656,7 +2664,7 @@ if not user_info:
     <div class="landing-container">
         {f'<img src="{logo_src}" alt="GOATflow">' if logo_src else '<div style="font-size:3rem;font-weight:900;font-family:Syne,sans-serif;color:#fff;margin-bottom:2rem;">🐐 GOATflow</div>'}
         <div class="landing-tagline">Grab life by the horns.<br>Leave the bull behind.</div>
-        <div style="font-size:0.72rem;font-weight:500;color:#22c55e;margin-top:0.1rem;font-family:\'DM Sans\',sans-serif;letter-spacing:0.01em;opacity:0.85;line-height:1.4;">GOATflow metabolizes chaotic inputs into prioritized operational action and evolves with you.</div>
+        <div style="font-size:0.72rem;font-weight:500;color:#22c55e;margin-top:0;margin-bottom:12px;font-family:\'DM Sans\',sans-serif;letter-spacing:0.01em;line-height:1.6;text-align:center;">Nothing that matters gets lost.<br>Nothing that doesn\'t matter gets in the way.</div>
     </div>
     ''', unsafe_allow_html=True)
 
@@ -4423,6 +4431,16 @@ function showModal(dropBtn){
   pd.body.appendChild(overlay);
 }
 
+function styleDropBtn(btn){
+  if(btn._gfStyled) return;
+  btn._gfStyled=true;
+  btn.style.setProperty('background','#7c3aed','important');
+  btn.style.setProperty('background-image','none','important');
+  btn.style.setProperty('color','#ffffff','important');
+  btn.style.setProperty('font-weight','700','important');
+  btn.style.setProperty('border','none','important');
+  btn.style.setProperty('box-shadow','0 0 20px rgba(124,58,237,0.5)','important');
+}
 function attachListener(){
   var pd=window.parent.document;
   var btn=null;
@@ -4430,6 +4448,7 @@ function attachListener(){
     if(b.textContent&&b.textContent.indexOf('Drop Into Churn Engine')>-1) btn=b;
   });
   if(!btn) return false;
+  styleDropBtn(btn);
   if(btn._gfTimeIntercepted) return true;
   btn._gfTimeIntercepted=true;
   btn.addEventListener('click',function(e){
