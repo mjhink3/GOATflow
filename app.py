@@ -5036,57 +5036,60 @@ if st.session_state.get("show_trail"):
                 _meta_html = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:3px;margin-bottom:4px;">' + "".join(_meta_parts) + '</div>' if _meta_parts else ""
 
                 _entry_id = entry.get("id", "")
-                st.markdown(f'''
-                <div class="trail-entry" data-log-id="{_entry_id}" style="border-left:3px solid {res_color};padding:8px 12px;margin-bottom:8px;background:{CARD_BG};border-radius:0 8px 8px 0;">
-                    <div style="font-size:14px;font-weight:600;font-family:\'DM Sans\',sans-serif;color:{WHITE};">{safe(entry["task_name"])}</div>
-                    {_meta_html}
-                    <div style="font-size:0.7rem;color:{SILVER};margin-bottom:4px;">{safe(entry.get("task_why",""))}</div>
-                    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:4px;">
-                        <span style="font-size:0.6rem;color:{res_color};font-weight:700;">{res.upper()}</span>
-                        {horn_label}
-                    </div>
-                </div>
-                ''', unsafe_allow_html=True)
+                _entry_html = (
+                    f'<div style="border-left:3px solid {res_color};padding:8px 12px;margin-bottom:4px;background:{CARD_BG};border-radius:0 8px 8px 0;">'
+                    f'<div style="font-size:14px;font-weight:600;font-family:\'DM Sans\',sans-serif;color:{WHITE};">{safe(entry["task_name"])}</div>'
+                    f'{_meta_html}'
+                    f'<div style="font-size:0.7rem;color:{SILVER};margin-bottom:4px;">{safe(entry.get("task_why",""))}</div>'
+                    f'<div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:2px;">'
+                    f'<span style="font-size:0.6rem;color:{res_color};font-weight:700;">{res.upper()}</span>'
+                    f'{horn_label}'
+                    f'</div></div>'
+                )
+                st.markdown(_entry_html, unsafe_allow_html=True)
                 _note_key = str(_entry_id)
-                _stc.html(f"""<script>
+                _stc.html(f"""<html><head><style>html,body{{margin:0;padding:0;background:transparent!important;overflow:hidden;font-family:"DM Sans",sans-serif;}}</style></head><body><script>
 (function(){{
 var NOTES_KEY='goatflow_trail_notes';
 var logId='{_note_key}';
 function getNotes(){{try{{return JSON.parse(localStorage.getItem(NOTES_KEY)||'{{}}');}}catch(e){{return {{}};}}}}
 function saveNote(n){{var ns=getNotes();ns[logId]={{note:n,savedAt:Date.now()}};localStorage.setItem(NOTES_KEY,JSON.stringify(ns));}}
+function resize(h){{try{{window.frameElement.style.height=h+'px';}}catch(e){{}}}}
 function renderArea(){{
   var ex=getNotes()[logId];
-  document.body.style.cssText='margin:0;padding:0;background:transparent;overflow:hidden;';
   document.body.innerHTML='';
   if(!ex||!ex.note){{
-    var row=document.createElement('div');row.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:4px 0;';
-    var txt=document.createElement('span');txt.style.cssText='font-size:11px;color:#374151;font-style:italic;font-family:"DM Sans",sans-serif;';txt.textContent='No trail note added';
+    var row=document.createElement('div');row.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:3px 0;';
+    var txt=document.createElement('span');txt.style.cssText='font-size:11px;color:#374151;font-style:italic;';txt.textContent='No trail note added';
     var btn=document.createElement('button');btn.textContent='+';btn.style.cssText='background:none;border:1px solid #374151;color:#9ca3af;font-size:11px;width:18px;height:18px;border-radius:3px;cursor:pointer;padding:0;flex-shrink:0;line-height:1;';
     row.appendChild(txt);row.appendChild(btn);document.body.appendChild(row);
+    resize(26);
     btn.onclick=function(){{showInput('');}};
   }}else{{
-    var nr=document.createElement('div');nr.style.cssText='display:flex;align-items:flex-start;gap:8px;padding:4px 0;';
-    var nt=document.createElement('div');nt.style.cssText='font-size:12px;color:#9ca3af;font-style:italic;font-family:"DM Sans",sans-serif;line-height:1.5;flex:1;';nt.textContent=ex.note;
-    var eb=document.createElement('button');eb.innerHTML='&#9998;';eb.style.cssText='background:none;border:none;color:#9ca3af;font-size:11px;cursor:pointer;padding:0;flex-shrink:0;';
+    var nr=document.createElement('div');nr.style.cssText='display:flex;align-items:flex-start;gap:8px;padding:3px 0;';
+    var nt=document.createElement('div');nt.style.cssText='font-size:12px;color:#a78bfa;font-style:italic;line-height:1.5;flex:1;';nt.textContent=ex.note;
+    var eb=document.createElement('button');eb.innerHTML='&#9998;';eb.style.cssText='background:none;border:none;color:#6b7280;font-size:11px;cursor:pointer;padding:0;flex-shrink:0;';
     nr.appendChild(nt);nr.appendChild(eb);document.body.appendChild(nr);
+    resize(Math.min(10+nt.scrollHeight,80));
     eb.onclick=function(){{showInput(ex.note);}};
   }}
 }}
 function showInput(val){{
   document.body.innerHTML='';
-  var w=document.createElement('div');w.style.marginTop='4px';
+  var w=document.createElement('div');
   var ta=document.createElement('textarea');ta.value=val;ta.maxLength=200;ta.placeholder='What do you want to remember about this one?';
-  ta.style.cssText='width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px;font-family:"DM Sans",sans-serif;font-size:13px;color:#9ca3af;resize:none;height:70px;box-sizing:border-box;outline:none;';
+  ta.style.cssText='width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:8px;font-size:12px;color:#9ca3af;resize:none;height:60px;box-sizing:border-box;outline:none;';
   var footer=document.createElement('div');footer.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-top:3px;';
-  var cc=document.createElement('span');cc.style.cssText='font-size:10px;color:#4b5563;font-family:"DM Sans",sans-serif;';cc.textContent=val.length+'/200';
-  var sb=document.createElement('button');sb.textContent='Save Note';sb.style.cssText='background:none;border:none;color:#7c3aed;font-family:"DM Sans",sans-serif;font-size:12px;font-weight:500;cursor:pointer;padding:0;display:'+(val.length>0?'block':'none')+';';
-  footer.appendChild(cc);footer.appendChild(sb);w.appendChild(ta);w.appendChild(footer);document.body.appendChild(w);ta.focus();ta.selectionStart=ta.value.length;
+  var cc=document.createElement('span');cc.style.cssText='font-size:10px;color:#4b5563;';cc.textContent=val.length+'/200';
+  var sb=document.createElement('button');sb.textContent='Save Note';sb.style.cssText='background:none;border:none;color:#7c3aed;font-size:12px;font-weight:500;cursor:pointer;padding:0;display:'+(val.length>0?'block':'none')+';';
+  footer.appendChild(cc);footer.appendChild(sb);w.appendChild(ta);w.appendChild(footer);document.body.appendChild(w);
+  resize(90);ta.focus();ta.selectionStart=ta.value.length;
   ta.oninput=function(){{cc.textContent=ta.value.length+'/200';sb.style.display=ta.value.length>0?'block':'none';}};
   sb.onclick=function(){{var n=ta.value.trim();if(n){{saveNote(n);renderArea();}}}};
 }}
 renderArea();
 }})();
-</script>""", height=30, scrolling=False)
+</script></body></html>""", height=28, scrolling=False)
 
         st.markdown(f'<div style="margin-top:1.2rem;border-top:1px solid {BORDER};padding-top:0.8rem;"><div style="font-family:Syne,sans-serif;font-size:0.7rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.6rem;">Achievements</div></div>', unsafe_allow_html=True)
         _achievement_defs = [
