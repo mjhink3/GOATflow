@@ -1830,19 +1830,28 @@ def get_operational_log(user_id: str, filter_type: str = "all") -> list[dict]:
 
 
 def get_clip_rate_data(user_id: str) -> dict:
-    """Returns {generated_7d, completed_7d} for rolling 7-day Clip Rate."""
+    """Returns {generated_7d, completed_7d} for rolling 7-day Clip Rate.
+
+    Generated = active signals created in last 7d  +  operational_log entries
+                whose original creation date (logged_at) is in last 7d.
+    Completed = operational_log entries resolved as 'completed' in last 7d.
+    """
     conn = get_db()
     try:
         with conn.cursor() as cur:
-            cur.execute(
-                "SELECT COUNT(*) FROM signals WHERE user_id = %s AND created_at >= NOW() - INTERVAL '7 days'",
-                (user_id,)
-            )
+            cur.execute("""
+                SELECT
+                  (SELECT COUNT(*) FROM signals
+                   WHERE user_id = %s AND created_at >= NOW() - INTERVAL '7 days')
+                + (SELECT COUNT(*) FROM operational_log
+                   WHERE user_id = %s AND logged_at >= NOW() - INTERVAL '7 days')
+            """, (user_id, user_id))
             generated = int(cur.fetchone()[0])
-            cur.execute(
-                "SELECT COUNT(*) FROM signals WHERE user_id = %s AND completed = TRUE AND completed_at >= NOW() - INTERVAL '7 days'",
-                (user_id,)
-            )
+            cur.execute("""
+                SELECT COUNT(*) FROM operational_log
+                WHERE user_id = %s AND resolution = 'completed'
+                  AND resolved_at >= NOW() - INTERVAL '7 days'
+            """, (user_id,))
             completed = int(cur.fetchone()[0])
             return {"generated": generated, "completed": completed}
     except Exception:
@@ -1852,19 +1861,17 @@ def get_clip_rate_data(user_id: str) -> dict:
 
 
 def get_engagement_streak(user_id: str) -> int:
-    """Returns consecutive days of engagement (signal created or completed) up to today."""
+    """Returns consecutive calendar days on which the user completed at least one Track."""
     from datetime import date, timedelta
     conn = get_db()
     try:
         with conn.cursor() as cur:
             cur.execute("""
-                SELECT DISTINCT DATE(created_at AT TIME ZONE 'UTC') AS activity_date
-                FROM signals WHERE user_id = %s
-                UNION
-                SELECT DISTINCT DATE(completed_at AT TIME ZONE 'UTC') AS activity_date
-                FROM signals WHERE user_id = %s AND completed = TRUE AND completed_at IS NOT NULL
-                ORDER BY activity_date DESC
-            """, (user_id, user_id))
+                SELECT DISTINCT DATE(resolved_at AT TIME ZONE 'UTC') AS completion_date
+                FROM operational_log
+                WHERE user_id = %s AND resolution = 'completed' AND resolved_at IS NOT NULL
+                ORDER BY completion_date DESC
+            """, (user_id,))
             rows = cur.fetchall()
     except Exception:
         return 0
@@ -1894,15 +1901,26 @@ def get_weekly_clip_rates(user_id: str) -> list:
     try:
         with conn.cursor() as cur:
             for w in range(3, -1, -1):
-                cur.execute(
-                    "SELECT COUNT(*) FROM signals WHERE user_id = %s AND created_at >= NOW() - INTERVAL %s AND created_at < NOW() - INTERVAL %s",
-                    (user_id, f"{(w+1)*7} days", f"{w*7} days")
-                )
+                i_start = f"{(w+1)*7} days"
+                i_end   = f"{w*7} days"
+                cur.execute("""
+                    SELECT
+                      (SELECT COUNT(*) FROM signals
+                       WHERE user_id = %s
+                         AND created_at >= NOW() - INTERVAL %s
+                         AND created_at <  NOW() - INTERVAL %s)
+                    + (SELECT COUNT(*) FROM operational_log
+                       WHERE user_id = %s
+                         AND logged_at >= NOW() - INTERVAL %s
+                         AND logged_at <  NOW() - INTERVAL %s)
+                """, (user_id, i_start, i_end, user_id, i_start, i_end))
                 generated = int(cur.fetchone()[0])
-                cur.execute(
-                    "SELECT COUNT(*) FROM signals WHERE user_id = %s AND completed = TRUE AND completed_at >= NOW() - INTERVAL %s AND completed_at < NOW() - INTERVAL %s",
-                    (user_id, f"{(w+1)*7} days", f"{w*7} days")
-                )
+                cur.execute("""
+                    SELECT COUNT(*) FROM operational_log
+                    WHERE user_id = %s AND resolution = 'completed'
+                      AND resolved_at >= NOW() - INTERVAL %s
+                      AND resolved_at <  NOW() - INTERVAL %s
+                """, (user_id, i_start, i_end))
                 completed = int(cur.fetchone()[0])
                 rate = round((completed / generated) * 100) if generated > 0 else 0
                 label = "This Wk" if w == 0 else f"Wk -{w}"
@@ -4868,7 +4886,7 @@ st.markdown(f'''
         <div class="stat-label">Active Tracks</div>
     </div>
     <div class="stat-box" title="Tracks that cannot wait. Address these first.">
-        <div class="stat-value" style="color:#ff4444;font-family:Syne,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_summit_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon" onerror="this.style.display='none'"> {summit_count}</div>
+        <div class="stat-value" style="color:#ef4444;font-family:Syne,sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;"><img src="{icon_summit_src}" style="width:28px;height:28px;object-fit:contain;" class="goatflow-icon" onerror="this.style.display='none'"> {summit_count}</div>
         <div class="stat-label">Summit Calls</div>
     </div>
     <div class="stat-box">
