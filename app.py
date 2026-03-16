@@ -2330,6 +2330,10 @@ icon_stats_b64 = load_image_b64("static/icon_stats.png", "icon_stats_b64_v1")
 icon_stats_src = f"data:image/png;base64,{icon_stats_b64}" if icon_stats_b64 else ""
 icon_track_sieve_b64 = load_image_b64("static/icon_track_sieve.png", "icon_track_sieve_b64_v1")
 icon_track_sieve_src = f"data:image/png;base64,{icon_track_sieve_b64}" if icon_track_sieve_b64 else ""
+icon_animal_intro_b64 = load_image_b64("static/icon_animal_intro.png", "icon_animal_intro_b64_v1")
+icon_animal_intro_src = f"data:image/png;base64,{icon_animal_intro_b64}" if icon_animal_intro_b64 else ""
+icon_tutorial_b64 = load_image_b64("static/icon_tutorial.png", "icon_tutorial_b64_v1")
+icon_tutorial_src = f"data:image/png;base64,{icon_tutorial_b64}" if icon_tutorial_b64 else ""
 
 # ── Goatifications IIFE template ── #
 _GOATIF_IIFE_TMPL = r"""
@@ -3190,7 +3194,7 @@ with st.sidebar:
     ''', unsafe_allow_html=True)
 
     st.markdown("---")
-    if st.button("🚪 Logout", use_container_width=True, key="logout_btn"):
+    if st.button("Logout", use_container_width=True, key="logout_btn"):
         for key in ["auth_user_id", "auth_user_name", "auth_display_name",
                      "incognito_signals", "incognito_mode", "just_completed_task",
                      "just_dropped", "just_purged", "fresh_cheese_pending", "just_earned_fresh_cheese"]:
@@ -3198,18 +3202,18 @@ with st.sidebar:
         st.rerun()
     _btn_style = ("width:100%;background:transparent;border:1px solid #374151;border-radius:8px;"
                   "color:#6b7280;font-family:'DM Sans',sans-serif;font-size:0.75rem;font-weight:500;"
-                  "padding:8px 0;cursor:pointer;transition:all 0.2s;margin-top:0.5rem;")
-    _btn_hover_on  = "this.style.borderColor='#7c3aed';this.style.color='#a78bfa';"
-    _btn_hover_off = "this.style.borderColor='#374151';this.style.color='#6b7280';"
+                  "padding:8px 12px;cursor:pointer;transition:all 0.2s;margin-top:0.5rem;"
+                  "display:flex;align-items:center;justify-content:center;gap:8px;")
+    _ic_style = "width:22px;height:22px;object-fit:contain;flex-shrink:0;"
+    _tut_icon = (f'<img src="{icon_tutorial_src}" style="{_ic_style}">' if icon_tutorial_src
+                 else '<span style="font-size:1rem;">❓</span>')
+    _ani_icon = (f'<img src="{icon_animal_intro_src}" style="{_ic_style}">' if icon_animal_intro_src
+                 else '<span style="font-size:1rem;">🎪</span>')
     st.markdown(
-        f'<button onclick="if(window.gfStartTour){{gfStartTour();}}" '
-        f'style="{_btn_style}" '
-        f'onmouseover="{_btn_hover_on}" onmouseout="{_btn_hover_off}">'
-        '❓ Replay Tutorial</button>'
-        f'<button onclick="if(window.gfReplaySlideshow){{gfReplaySlideshow();}}" '
-        f'style="{_btn_style}" '
-        f'onmouseover="{_btn_hover_on}" onmouseout="{_btn_hover_off}">'
-        '🎪 Replay Animal Intro</button>',
+        f'<button data-gf-id="replay-tutorial" style="{_btn_style}">'
+        f'{_tut_icon}<span>Replay Tutorial</span></button>'
+        f'<button data-gf-id="replay-animal" style="{_btn_style}">'
+        f'{_ani_icon}<span>Replay Animal Intro</span></button>',
         unsafe_allow_html=True
     )
 
@@ -3310,7 +3314,7 @@ _stc.html("""
         b._gfLogoutIcon = true;
         var li = pd.createElement('img');
         li.src = '/app/static/icon_logout.png';
-        li.style.cssText = 'width:20px;height:20px;object-fit:contain;vertical-align:middle;margin-right:6px;border-radius:2px;';
+        li.style.cssText = 'width:28px;height:28px;object-fit:contain;vertical-align:middle;margin-right:8px;border-radius:2px;display:inline-block;';
         b.insertBefore(li, b.firstChild);
       }
       // Churn Engine button icon
@@ -3321,11 +3325,29 @@ _stc.html("""
         ci.style.cssText = 'width:22px;height:22px;object-fit:contain;vertical-align:middle;margin-right:6px;border-radius:2px;';
         b.insertBefore(ci, b.firstChild);
       }
+      // Replay Animal Intro click binding
+      if (txt.indexOf('Replay Animal Intro') !== -1 && !b._gfAnimalBound) {
+        b._gfAnimalBound = true;
+        b.addEventListener('click', function(e) {
+          e.stopPropagation();
+          if (typeof pw.gfReplaySlideshow === 'function') pw.gfReplaySlideshow();
+        });
+      }
+      // Replay Tutorial click binding
+      if (txt.indexOf('Replay Tutorial') !== -1 && !b._gfReplayBound) {
+        b._gfReplayBound = true;
+        b.addEventListener('click', function(e) {
+          e.stopPropagation();
+          if (typeof pw.gfStartTour === 'function') pw.gfStartTour();
+        });
+      }
     });
   }
   setTimeout(injectCancelAndLogoutStyles, 600);
   setTimeout(injectCancelAndLogoutStyles, 1400);
   setTimeout(injectCancelAndLogoutStyles, 3000);
+  setTimeout(injectCancelAndLogoutStyles, 5000);
+  setTimeout(injectCancelAndLogoutStyles, 8000);
 })();
 </script>
 """, height=0)
@@ -3518,25 +3540,29 @@ _tour_iife = r"""
       pw.location.reload();
     }
   };
-  // Bind Replay Tutorial button click via DOM listener (Streamlit strips onclick attrs).
-  // Poll until the button is found in the sidebar, then bind once.
+  // Bind Replay Tutorial button via data-gf-id attribute (Streamlit strips onclick attrs).
   function _bindReplayBtn() {
-    var walker = pd.createTreeWalker(pd.body, 4 /* NodeFilter.SHOW_TEXT */);
-    var node;
-    while ((node = walker.nextNode())) {
-      if (node.nodeValue && node.nodeValue.indexOf('Replay Tutorial') !== -1) {
-        var target = node.parentElement;
-        while (target && target.tagName === 'SPAN') target = target.parentElement;
-        if (target && !target._gfReplayBound) {
-          target._gfReplayBound = true;
-          target.style.cursor = 'pointer';
-          target.addEventListener('click', function(e) {
-            e.stopPropagation();
-            if (typeof pw.gfStartTour === 'function') pw.gfStartTour();
-          });
-          return true;
+    var btn = pd.querySelector('[data-gf-id="replay-tutorial"]');
+    if (!btn) {
+      // Fallback: walk text nodes
+      var walker = pd.createTreeWalker(pd.body, 4);
+      var node;
+      while ((node = walker.nextNode())) {
+        if (node.nodeValue && node.nodeValue.indexOf('Replay Tutorial') !== -1) {
+          var t = node.parentElement;
+          while (t && t.tagName === 'SPAN') t = t.parentElement;
+          if (t && t.tagName === 'BUTTON') { btn = t; break; }
         }
       }
+    }
+    if (btn && !btn._gfReplayBound) {
+      btn._gfReplayBound = true;
+      btn.style.cursor = 'pointer';
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (typeof pw.gfStartTour === 'function') pw.gfStartTour();
+      });
+      return true;
     }
     return false;
   }
@@ -3545,6 +3571,38 @@ _tour_iife = r"""
       if (_bindReplayBtn()) pw.clearInterval(_rbTimer);
     }, 600);
     pw.setTimeout(function() { pw.clearInterval(_rbTimer); }, 30000);
+  }
+
+  // Bind Replay Animal Intro button via data-gf-id attribute.
+  function _bindAnimalIntroBtn() {
+    var btn = pd.querySelector('[data-gf-id="replay-animal"]');
+    if (!btn) {
+      var walker = pd.createTreeWalker(pd.body, 4);
+      var node;
+      while ((node = walker.nextNode())) {
+        if (node.nodeValue && node.nodeValue.indexOf('Replay Animal Intro') !== -1) {
+          var t = node.parentElement;
+          while (t && t.tagName === 'SPAN') t = t.parentElement;
+          if (t && t.tagName === 'BUTTON') { btn = t; break; }
+        }
+      }
+    }
+    if (btn && !btn._gfAnimalBound) {
+      btn._gfAnimalBound = true;
+      btn.style.cursor = 'pointer';
+      btn.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (typeof pw.gfReplaySlideshow === 'function') pw.gfReplaySlideshow();
+      });
+      return true;
+    }
+    return false;
+  }
+  if (!_bindAnimalIntroBtn()) {
+    var _abTimer = pw.setInterval(function() {
+      if (_bindAnimalIntroBtn()) pw.clearInterval(_abTimer);
+    }, 600);
+    pw.setTimeout(function() { pw.clearInterval(_abTimer); }, 30000);
   }
   // Auto-start is handled by slideshow; gfStartTour() is called from there.
 })();
