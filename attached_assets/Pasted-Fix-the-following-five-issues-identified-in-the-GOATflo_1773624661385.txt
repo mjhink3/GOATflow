@@ -1,0 +1,239 @@
+Fix the following five issues identified 
+in the GOATflow feature audit. 
+Implement all fixes in one pass.
+
+═══════════════════════════════════════
+FIX 1 — BAM SCREEN
+Add the missing BAM transition screen 
+between the animal parade and tutorial
+═══════════════════════════════════════
+
+Currently the animal parade ends and 
+goes directly to the GOATflow logo 
+then immediately starts the Shepherd.js 
+tutorial. The BAM screen is missing entirely.
+
+After the last animal card plays 
+and before Shepherd.js starts:
+
+STEP 1 — White flash:
+Flash the screen white (#ffffff) 
+for 150ms then cut to the BAM screen.
+
+STEP 2 — BAM screen displays:
+Full screen overlay, same z-index 
+as the parade, dark background #08080f.
+
+Layout centered:
+GOATflow logo at top, 80px wide
+with float animation if available.
+
+Then staggered text — each line 
+fades in 400ms after the previous:
+
+Line 1 — Syne 700, 22px, white:
+"THIS is what you've always needed."
+
+Line 2 — Syne 700, 18px, #4ade80, 
+margin-top 16px:
+"GOATS."
+
+Line 3 — DM Sans 400, 15px, #9ca3af,
+margin-top 16px, line-height 1.6,
+centered, max-width 300px:
+"Leave the asleep to the sheep."
+"You've got to become your Greatest 
+Of All Time self."
+"That takes guts. That takes GOATS."
+
+Line 4 — Syne 700, 18px, #f59e0b,
+margin-top 24px:
+"Let's go. 🐐"
+
+2 seconds after Line 4 appears 
+show the "Let's Start" button:
+Background: #7c3aed
+White text, Syne 700, 16px
+Border-radius: 8px, padding: 14px 40px
+Text: "Let's Start"
+Clicking advances to Shepherd.js tutorial.
+
+Also show "Skip intro →" in bottom 
+right from the very start of the parade:
+DM Sans 400, 12px, #4b5563
+Clicking jumps directly to Shepherd.js.
+
+═══════════════════════════════════════
+FIX 2 — FINAL TUTORIAL STEP
+Wire "Let's go" to open Horns panel
+═══════════════════════════════════════
+
+Currently the final Shepherd.js step 
+button calls t.complete only and 
+closes the tutorial without direction.
+
+Update the final step's button 
+complete callback to:
+
+1. Call t.complete() to close Shepherd
+2. Immediately after, open the side panel:
+   Find the function that opens the 
+   sidebar/side panel and call it
+3. Scroll the side panel to the 
+   Horns section
+4. Focus the Horn input field 
+   so the keyboard opens on mobile
+   and the user can immediately 
+   type their first Horn
+
+If focusing the input causes layout 
+issues on mobile, at minimum open 
+the side panel and scroll to the 
+Horns section without focusing the input.
+
+The user should land on the Horns 
+panel ready to set their first Horn — 
+not on the blank dashboard wondering 
+what to do next.
+
+═══════════════════════════════════════
+FIX 3 — RESET FUNCTION
+Fix goatflow_resetOnboarding() to 
+also clear the server-side DB flag
+═══════════════════════════════════════
+
+Currently goatflow_resetOnboarding() 
+clears two localStorage keys but leaves 
+onboarding_done = TRUE in the database, 
+so the parade never re-fires.
+
+Update the reset function to also 
+call a server endpoint that resets 
+the DB flag:
+
+window.goatflow_resetOnboarding = 
+  async function() {
+    localStorage.removeItem(
+      'goatflow_onboarding_complete'
+    );
+    localStorage.removeItem(
+      'goatflow_welcomed'
+    );
+    try {
+      await fetch('/api/reset-onboarding', {
+        method: 'POST',
+        credentials: 'include'
+      });
+    } catch(e) {
+      console.log('DB reset failed:', e);
+    }
+    location.reload();
+  }
+
+Create the server endpoint 
+POST /api/reset-onboarding:
+- Requires active session (authenticated)
+- Sets onboarding_done = FALSE 
+  for the current user in the DB
+- Returns { success: true }
+- Only works for authenticated users — 
+  cannot be called without a session
+
+After this fix running 
+goatflow_resetOnboarding() in the 
+console will fully reset onboarding 
+for the logged-in user and the 
+parade will fire again on reload.
+
+═══════════════════════════════════════
+FIX 4 — STREAK MILESTONE GOATIFICATIONS
+Add detection logic for 3/7/14/30 days
+═══════════════════════════════════════
+
+The toggle UI and haptic patterns for 
+streak milestones exist but there is 
+no actual detection logic that checks 
+when a milestone is reached.
+
+After every Track completion, 
+check the current Gait streak value. 
+If the streak just reached exactly 
+3, 7, 14, or 30 days:
+
+const milestones = {
+  3: "3 days straight. The goat approves. Keep going.",
+  7: "A full week. You are building something.",
+  14: "Two weeks. This is becoming who you are.",
+  30: "30 days. You are not the same person who downloaded this app."
+};
+
+if (milestones[currentStreak]) {
+  fireGoatification({
+    title: "GOATflow 🐐",
+    body: milestones[currentStreak],
+    hapticPattern: [100, 60, 100, 60, 100],
+    prefKey: 'streakMilestones'
+  });
+}
+
+Store fired milestones to prevent 
+re-firing if streak briefly breaks 
+and returns to the same number:
+localStorage.setItem(
+  'goatflow_streak_achieved',
+  JSON.stringify(achievedMilestones)
+)
+
+Before firing check if this milestone 
+was already achieved:
+if (achievedMilestones.includes(currentStreak)) 
+  return;
+
+The 14-day milestone is the most 
+critical for beta testing — 
+testers who complete the full 
+14-day run must receive this 
+Goatification on day 14. 
+It is the emotional payoff for 
+the entire beta experience.
+
+═══════════════════════════════════════
+FIX 5 — CLIP RATE NUDGE GOATIFICATION
+Add the missing trigger logic for T4
+═══════════════════════════════════════
+
+The Clip Rate Nudge toggle exists 
+with correct default (OFF) but there 
+is no detection or firing logic.
+
+After every page load and after 
+every Track completion check:
+
+1. Get the user's Clip Rate for 
+   the last 3 days of app usage
+2. If Clip Rate has been below 60% 
+   for 3 consecutive active days:
+3. Check last nudge timestamp in 
+   localStorage:
+   'goatflow_cliprate_last_nudge'
+4. If more than 48 hours since 
+   last nudge:
+
+fireGoatification({
+  title: "GOATflow ✂️",
+  body: `Clip Rate at ${clipRate}%. Add a Horn. The AI is listening.`,
+  hapticPattern: [150],
+  prefKey: 'clipRate'
+});
+
+localStorage.setItem(
+  'goatflow_cliprate_last_nudge',
+  Date.now()
+);
+
+This is OFF by default so it will 
+only fire for users who opt in.
+Maximum once per 48 hours.
+Never fires for users with fewer 
+than 5 completed Tracks 
+(insufficient data).

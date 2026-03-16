@@ -1569,7 +1569,7 @@ def create_user(username: str, password: str, display_name: str):
         with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute("SELECT id FROM users WHERE username = %s", (username.lower(),))
             if cur.fetchone():
-                return None, "Username already taken."
+                return None, "That goatname is already claimed. Try another. 🐐"
             pw_hash, salt = hash_password(password)
             cur.execute(
                 "INSERT INTO users (username, password_hash, password_salt, display_name) VALUES (%s, %s, %s, %s) RETURNING id, username, display_name",
@@ -1592,9 +1592,9 @@ def authenticate_user(username: str, password: str):
             cur.execute("SELECT id, username, display_name, password_hash, password_salt FROM users WHERE username = %s", (username.lower(),))
             user = cur.fetchone()
             if not user:
-                return None, "Invalid username or password."
+                return None, "Invalid goatname or paaassword."
             if not verify_password(password, user["password_hash"], user["password_salt"]):
-                return None, "Invalid username or password."
+                return None, "Invalid goatname or paaassword."
             return {"id": user["id"], "username": user["username"], "display_name": user["display_name"]}, None
     except Exception as e:
         return None, str(e)
@@ -1627,6 +1627,18 @@ def mark_onboarding_done(user_id: str):
     try:
         with conn.cursor() as cur:
             cur.execute("UPDATE player SET onboarding_done = TRUE WHERE user_id = %s", (user_id,))
+            conn.commit()
+    except Exception:
+        pass
+    finally:
+        conn.close()
+
+
+def reset_onboarding_for_user(user_id: str):
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE player SET onboarding_done = FALSE WHERE user_id = %s", (user_id,))
             conn.commit()
     except Exception:
         pass
@@ -2706,8 +2718,8 @@ if not user_info:
 
     with login_tab:
         with st.form("login_form"):
-            login_username = st.text_input("Username", key="login_username", placeholder="Enter your username")
-            login_password = st.text_input("Password", type="password", key="login_password", placeholder="Enter your password")
+            login_username = st.text_input("Goatname", key="login_username", placeholder="Enter your goatname")
+            login_password = st.text_input("Paaassword", type="password", key="login_password", placeholder="Enter your paaassword")
             login_submitted = st.form_submit_button("🔐 Login to GOATflow", use_container_width=True)
             if login_submitted:
                 if not login_username or not login_password:
@@ -2725,19 +2737,19 @@ if not user_info:
     with signup_tab:
         with st.form("signup_form"):
             signup_display = st.text_input("Display Name", key="signup_display", placeholder="How should we call you?")
-            signup_username = st.text_input("Username", key="signup_username", placeholder="Choose a unique username")
-            signup_password = st.text_input("Password", type="password", key="signup_password", placeholder="Choose a password (min 6 characters)")
-            signup_confirm = st.text_input("Confirm Password", type="password", key="signup_confirm", placeholder="Re-enter your password")
+            signup_username = st.text_input("Goatname", key="signup_username", placeholder="Choose a unique goatname")
+            signup_password = st.text_input("Paaassword", type="password", key="signup_password", placeholder="Choose a paaassword (min 6 characters)")
+            signup_confirm = st.text_input("Confirm Paaassword", type="password", key="signup_confirm", placeholder="Re-enter your paaassword")
             signup_submitted = st.form_submit_button("🐐 Create Account", use_container_width=True)
             if signup_submitted:
                 if not signup_display or not signup_username or not signup_password:
                     st.error("All fields are required.")
                 elif len(signup_password) < 6:
-                    st.error("Password must be at least 6 characters.")
+                    st.error("Paaassword must be at least 6 characters.")
                 elif signup_password != signup_confirm:
-                    st.error("Passwords do not match.")
+                    st.error("Paaasswords do not match.")
                 elif len(signup_username) < 3:
-                    st.error("Username must be at least 3 characters.")
+                    st.error("Goatname must be at least 3 characters.")
                 else:
                     user, err = create_user(signup_username, signup_password, signup_display)
                     if err:
@@ -2825,6 +2837,10 @@ QUICK_SCRIPTS = [
 player_data = get_player(current_user_id)
 if st.query_params.get("ob_done") == "1":
     mark_onboarding_done(current_user_id)
+    st.query_params.clear()
+    st.rerun()
+if st.query_params.get("ob_reset") == "1":
+    reset_onboarding_for_user(current_user_id)
     st.query_params.clear()
     st.rerun()
 user_level = player_data["level"]
@@ -3317,7 +3333,23 @@ _tour_iife = r"""
       scrollTo: true,
       buttons: [
         { text: '\u2190 Back', action: t.back, classes: 'shepherd-button-secondary' },
-        { text: "Let\u2019s Goat \uD83D\uDC10", action: t.complete }
+        { text: "Let\u2019s Goat \uD83D\uDC10", action: function() {
+          t.complete();
+          setTimeout(function() {
+            var toggle = pd.querySelector('[data-testid="stSidebarNavToggleButton"] button, [data-testid="collapsedControl"] button, button[aria-label="open sidebar"]');
+            if (toggle) toggle.click();
+            setTimeout(function() {
+              var sidebar = pd.querySelector('[data-testid="stSidebar"]');
+              if (!sidebar) return;
+              var inputs = sidebar.querySelectorAll('input[type="text"], textarea');
+              if (inputs.length > 0) {
+                var hornInput = inputs[inputs.length - 1];
+                hornInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                hornInput.focus();
+              }
+            }, 500);
+          }, 200);
+        }}
       ]
     });
     function _markDone() {
@@ -3334,8 +3366,17 @@ _tour_iife = r"""
     pw._gfTour.start();
   };
   pw.goatflow_resetOnboarding = function() {
-    try { pw.history.replaceState(null, '', pw.location.pathname); } catch(e) {}
-    pw.location.reload();
+    localStorage.removeItem('goatflow_onboarding_complete');
+    localStorage.removeItem('goatflow_welcomed');
+    pw._gfSlideshowStarted = false;
+    pw.gfObForce = true;
+    try {
+      var url = new URL(pw.location.href);
+      url.searchParams.set('ob_reset', '1');
+      pw.location.href = url.toString();
+    } catch(e) {
+      pw.location.reload();
+    }
   };
   // Bind Replay Tutorial button click via DOM listener (Streamlit strips onclick attrs).
   // Poll until the button is found in the sidebar, then bind once.
@@ -3456,6 +3497,59 @@ _slideshow_iife = r"""
     });
   }
 
+  function showBam() {
+    if (done) return;
+    // Replace overlay contents with the BAM screen
+    overlay.innerHTML = '';
+
+    var bamWrap = pd.createElement('div');
+    bamWrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;padding:0 24px;box-sizing:border-box;text-align:center;max-width:380px;margin:0 auto;';
+
+    var bamLogo = pd.createElement('img');
+    bamLogo.src = '/app/static/goatflow_logo_nobg.webp';
+    bamLogo.style.cssText = 'width:80px;height:auto;opacity:0;transition:opacity 0.5s;animation:gfFloatBAM 3s ease-in-out infinite;';
+    if (!pd.getElementById('gf-bam-float-kf')) {
+      var kf = pd.createElement('style');
+      kf.id = 'gf-bam-float-kf';
+      kf.textContent = '@keyframes gfFloatBAM{0%,100%{transform:translateY(0);}50%{transform:translateY(-8px);}}';
+      pd.head.appendChild(kf);
+    }
+    bamWrap.appendChild(bamLogo);
+
+    function makeLine(text, style, mt) {
+      var el = pd.createElement('div');
+      el.style.cssText = style + ';margin-top:' + mt + 'px;opacity:0;transition:opacity 0.5s;';
+      el.innerHTML = text;
+      bamWrap.appendChild(el);
+      return el;
+    }
+
+    var l1 = makeLine('THIS is what you\u2019ve always needed.', 'font-family:"Syne",sans-serif;font-weight:700;font-size:22px;color:#ffffff;', 32);
+    var l2 = makeLine('GOATS.', 'font-family:"Syne",sans-serif;font-weight:700;font-size:18px;color:#4ade80;', 16);
+    var l3 = makeLine('Leave the asleep to the sheep.<br>You\u2019ve got to become your Greatest Of All Time self.<br>That takes guts. That takes GOATS.', 'font-family:"DM Sans",sans-serif;font-weight:400;font-size:15px;color:#9ca3af;line-height:1.6;max-width:300px;', 16);
+    var l4 = makeLine('Let\u2019s go. \uD83D\uDC10', 'font-family:"Syne",sans-serif;font-weight:700;font-size:18px;color:#f59e0b;', 24);
+
+    var startBtn = pd.createElement('button');
+    startBtn.textContent = 'Let\u2019s Start';
+    startBtn.style.cssText = 'margin-top:28px;background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:14px 40px;font-family:"Syne",sans-serif;font-weight:700;font-size:16px;cursor:pointer;opacity:0;transition:opacity 0.4s;';
+    startBtn.onclick = function() { finishSlideshow(false); };
+    bamWrap.appendChild(startBtn);
+
+    overlay.appendChild(bamWrap);
+
+    // Staggered fade-ins
+    requestAnimationFrame(function() {
+      requestAnimationFrame(function() {
+        bamLogo.style.opacity = '1';
+        slideTimer = setTimeout(function() { l1.style.opacity = '1'; }, 400);
+        slideTimer = setTimeout(function() { l2.style.opacity = '1'; }, 800);
+        slideTimer = setTimeout(function() { l3.style.opacity = '1'; }, 1200);
+        slideTimer = setTimeout(function() { l4.style.opacity = '1'; }, 1600);
+        slideTimer = setTimeout(function() { startBtn.style.opacity = '1'; }, 3600);
+      });
+    });
+  }
+
   function showLogo() {
     if (done) return;
     // Fade out slide content
@@ -3466,34 +3560,18 @@ _slideshow_iife = r"""
 
     slideTimer = setTimeout(function() {
       if (done) return;
-      // Replace content area with logo finale
-      var stage = pd.getElementById('gf-ss-stage');
-      if (!stage) return;
-      stage.innerHTML = '';
+      // Step 1: white flash
+      var flash = pd.createElement('div');
+      flash.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:#ffffff;z-index:100001;opacity:1;transition:opacity 0.15s;pointer-events:none;';
+      pd.body.appendChild(flash);
 
-      var logoImg = pd.createElement('img');
-      logoImg.src = '/app/static/goatflow_logo_nobg.webp';
-      logoImg.style.cssText = 'width:260px;max-width:80vw;opacity:0;transition:opacity 0.8s;display:block;margin:0 auto;';
-      stage.appendChild(logoImg);
-
-      var tag = pd.createElement('div');
-      tag.textContent = 'The choice is clear.';
-      tag.style.cssText = 'margin-top:20px;color:#a78bfa;font-family:"Syne",sans-serif;font-size:22px;font-weight:700;opacity:0;transition:opacity 0.8s;text-align:center;';
-      stage.appendChild(tag);
-
-      var sub = pd.createElement('div');
-      sub.textContent = 'Starting your tour\u2026';
-      sub.style.cssText = 'margin-top:10px;color:#6b7280;font-size:14px;font-family:"DM Sans",sans-serif;opacity:0;transition:opacity 0.6s;text-align:center;';
-      stage.appendChild(sub);
-
-      requestAnimationFrame(function() {
-        requestAnimationFrame(function() {
-          logoImg.style.opacity = '1';
-          slideTimer = setTimeout(function() { tag.style.opacity = '1'; }, 400);
-          slideTimer = setTimeout(function() { sub.style.opacity = '1'; }, 800);
-          slideTimer = setTimeout(function() { finishSlideshow(false); }, 2400);
-        });
-      });
+      slideTimer = setTimeout(function() {
+        flash.style.opacity = '0';
+        slideTimer = setTimeout(function() {
+          if (flash.parentNode) flash.parentNode.removeChild(flash);
+          showBam();
+        }, 200);
+      }, 150);
     }, T_BETWEEN);
   }
 
@@ -3976,8 +4054,14 @@ _ob_iframe_html = f"""<!DOCTYPE html><html><body style="margin:0;padding:0;backg
     localStorage.removeItem('goatflow_welcomed');
     pw._gfSlideshowStarted = false;
     pw.gfObForce = true;
-    console.log('GOATflow onboarding reset — reload to trigger sequence');
-    pw.location.reload();
+    console.log('GOATflow onboarding reset — clearing server flag and reloading...');
+    try {{
+      var url = new URL(pw.location.href);
+      url.searchParams.set('ob_reset', '1');
+      pw.location.href = url.toString();
+    }} catch(e) {{
+      pw.location.reload();
+    }}
   }};
 
   // 4. Inject tour IIFE (defines pw.gfStartTour — no auto-start, slideshow handles that)
@@ -5581,7 +5665,12 @@ var ACH_KEY='goatflow_achievements';
 var HIST_KEY='goatflow_completion_history';
 var SESS_KEY='goatflow_session_history';
 var PAT_KEY='goatflow_patterns';
+var STREAK_ACH_KEY='goatflow_streak_achieved';
+var CLIP_NUDGE_KEY='goatflow_cliprate_last_nudge';
 var activeCount={active_count};
+var currentStreak={gait_streak};
+var currentClipRate={_json.dumps(clip_rate_value)};
+var totalCompleted={_total_completed};
 function getJ(k){{try{{return JSON.parse(localStorage.getItem(k)||'[]');}}catch(e){{return [];}}}}
 function getJObj(k){{try{{return JSON.parse(localStorage.getItem(k)||'{{}}');}}catch(e){{return {{}};}}}}
 function saveJ(k,v){{localStorage.setItem(k,JSON.stringify(v));}}
@@ -5593,6 +5682,35 @@ function fireAch(id,label,desc,hay){{
     var f=window.parent.gfFire;
     if(f)f({{title:'Achievement Unlocked: '+label,body:desc,hapticPattern:[100,60,100,60,100],prefKey:'ach_'+id}});
   }},1200);
+}}
+function checkStreakMilestones(){{
+  if(currentStreak<=0)return;
+  var milestones={{3:'3 days straight. The goat approves. Keep going.',7:'A full week. You are building something.',14:'Two weeks. This is becoming who you are.',30:'30 days. You are not the same person who downloaded this app.'}};
+  if(!milestones[currentStreak])return;
+  var achieved=getJ(STREAK_ACH_KEY);
+  if(achieved.indexOf(currentStreak)!==-1)return;
+  achieved.push(currentStreak);saveJ(STREAK_ACH_KEY,achieved);
+  setTimeout(function(){{
+    var f=window.parent.gfFire;
+    if(f)f({{title:'GOATflow \uD83D\uDC10',body:milestones[currentStreak],hapticPattern:[100,60,100,60,100],prefKey:'streakMilestones'}});
+  }},1500);
+}}
+function checkClipRateNudge(){{
+  if(currentClipRate===null||totalCompleted<5)return;
+  if(currentClipRate>=60)return;
+  var lastNudge=parseInt(localStorage.getItem(CLIP_NUDGE_KEY)||'0',10);
+  if(Date.now()-lastNudge<172800000)return;
+  var hist=getJ(HIST_KEY);
+  if(hist.length<3)return;
+  var last3=hist.slice(-3);
+  var now=Date.now();
+  var all3Recent=last3.every(function(h){{return now-(h.ts||0)<259200000;}});
+  if(!all3Recent)return;
+  localStorage.setItem(CLIP_NUDGE_KEY,String(Date.now()));
+  setTimeout(function(){{
+    var f=window.parent.gfFire;
+    if(f)f({{title:'GOATflow \u2702\uFE0F',body:'Clip Rate at '+currentClipRate+'%. Add a Horn. The AI is listening.',hapticPattern:[150],prefKey:'clipRate'}});
+  }},2000);
 }}
 function recordSession(){{
   var s=getJ(SESS_KEY);s.push({{activeCount:activeCount,ts:Date.now()}});
@@ -5686,6 +5804,8 @@ checkKnowThyself();
 checkTheHardWay();
 checkPatternBroken();
 runPatternAnalysis();
+checkStreakMilestones();
+checkClipRateNudge();
 }})();
 </script>""", height=0)
 

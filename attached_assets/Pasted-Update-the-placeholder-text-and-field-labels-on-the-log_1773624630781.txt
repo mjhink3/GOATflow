@@ -1,0 +1,80 @@
+Update the placeholder text and field 
+labels on the login and create account 
+forms. These are copy changes only — 
+do not change any functionality, 
+validation logic, or styling.
+
+LOGIN TAB:
+
+Username field placeholder:
+Change from: "Enter your username"
+Change to: "Enter your goatname"
+
+Password field placeholder:
+Change from: "Enter your password"
+Change to: "Enter your paaassword"
+
+Username field label (if visible above input):
+Change from: "Username"
+Change to: "Goatname"
+
+Password field label (if visible above input):
+Change from: "Password"
+Change to: "Paaassword"
+
+CREATE ACCOUNT TAB:
+
+Username field placeholder:
+Change from: "Choose a unique username"
+Change to: "Choose a unique goatname"
+
+Username field label (if visible):
+Change from: "Username"
+Change to: "Goatname"
+
+Password field placeholder:
+Change from: "Choose a password (min 6 characters)"
+Change to: "Choose a paaassword (min 6 characters)"
+
+Password field label (if visible):
+Change from: "Password"
+Change to: "Paaassword"
+
+Confirm password field placeholder:
+Change from: "Re-enter your password"
+Change to: "Re-enter your paaassword"
+
+Confirm password field label (if visible):
+Change from: "Confirm Password" or 
+  "Re-enter Password" or similar
+Change to: "Confirm Paaassword"
+
+Any error messages that reference 
+"username" should be updated to 
+reference "goatname" instead:
+Example: "Username already taken" 
+  → "That goatname is already claimed. 
+     Try another. 🐐"
+Example: "Username is required"
+  → "Goatname is required"
+Example: "Invalid username"
+  → "Invalid goatname"
+
+Any error messages that reference 
+"password" should be updated to use 
+"paaassword" in the same style:
+Example: "Password must be at least 
+  6 characters"
+  → "Paaassword must be at least 
+     6 characters"
+Example: "Passwords do not match"
+  → "Paaasswords do not match"
+
+Do not change:
+- The actual field names or IDs in the code
+  (keep id="username" and id="password" 
+  for technical compatibility)
+- Any validation logic or rules
+- Any backend references to username/password
+- The Login to GOATflow button text
+- Any other text on the page
