@@ -2174,6 +2174,8 @@ icon_tracks_b64 = load_image_b64("static/icon_tracks.webp", "icon_tracks_b64_v2"
 icon_tracks_src = f"data:image/webp;base64,{icon_tracks_b64}" if icon_tracks_b64 else ""
 icon_completed_b64 = load_image_b64("static/icon_completed.webp", "icon_completed_b64_v2")
 icon_completed_src = f"data:image/webp;base64,{icon_completed_b64}" if icon_completed_b64 else ""
+icon_trail_notes_b64 = load_image_b64("static/icon_trail_notes.webp", "icon_trail_notes_b64_v1")
+icon_trail_notes_src = f"data:image/webp;base64,{icon_trail_notes_b64}" if icon_trail_notes_b64 else ""
 icon_summit_b64 = load_image_b64("static/icon_summit.webp", "icon_summit_b64_v2")
 icon_summit_src = f"data:image/webp;base64,{icon_summit_b64}" if icon_summit_b64 else ""
 icon_gait_b64 = load_image_b64("static/icon_gait.webp", "icon_gait_b64_v2")
@@ -2504,10 +2506,10 @@ _GOATIF_IIFE_TMPL = r"""
 
   function buildGoatifSidebar() {
     if (pd.getElementById('gf-goatif-sidebar')) return;
-    // Find "Your Trail" button
+    // Find "Trail Notes" button
     var buttons = pd.querySelectorAll('[data-testid="stSidebar"] button');
     var trailBtn = null;
-    buttons.forEach(function(b){ if(b.textContent.replace(/\s+/g,' ').trim().indexOf('Your Trail')!==-1) trailBtn=b; });
+    buttons.forEach(function(b){ if(b.textContent.replace(/\s+/g,' ').trim().indexOf('Trail Notes')!==-1) trailBtn=b; });
     if (!trailBtn) return;
     // Walk up to a stVerticalBlock or similar container
     var el = trailBtn;
@@ -2992,9 +2994,29 @@ with st.sidebar:
         st.code(qs["text"], language=None)
 
     st.markdown("---")
-    if st.button("📜 Your Trail", use_container_width=True, key="trail_btn"):
+    if st.button("Trail Notes", use_container_width=True, key="trail_btn"):
         st.session_state["show_trail"] = True
         st.rerun()
+    if icon_trail_notes_src:
+        _stc.html(f"""<script>
+(function(){{
+  var src='{icon_trail_notes_src}';
+  function inject(){{
+    var pd=window.parent.document;
+    var btns=pd.querySelectorAll('[data-testid="stSidebar"] button');
+    var tb=null;
+    btns.forEach(function(b){{if(b.textContent.replace(/\\s+/g,' ').trim()==='Trail Notes')tb=b;}});
+    if(!tb){{setTimeout(inject,300);return;}}
+    if(tb.querySelector('img[data-gf-trail]'))return;
+    var img=pd.createElement('img');img.src=src;img.setAttribute('data-gf-trail','1');
+    img.style.cssText='width:18px;height:18px;object-fit:contain;vertical-align:middle;margin-right:6px;flex-shrink:0;';
+    var p=tb.querySelector('p');
+    if(p){{p.style.display='flex';p.style.alignItems='center';p.insertBefore(img,p.firstChild);}}
+    else{{tb.style.display='flex';tb.style.alignItems='center';tb.insertBefore(img,tb.firstChild);}}
+  }}
+  inject();
+}})();
+</script>""", height=0)
 
     st.markdown("---")
     st.markdown(f'<div style="text-align:center;font-size:1.1rem;font-weight:800;color:{WHITE};margin-bottom:0.2rem;">🛡️ OpSec Layer</div>', unsafe_allow_html=True)
@@ -4945,7 +4967,7 @@ if horn_conflicts and not st.session_state.get("conflict_resolved"):
 
 if st.session_state.get("show_trail"):
     st.session_state["show_trail"] = False
-    @st.dialog("📜 Your Trail", width="large")
+    @st.dialog("Trail Notes", width="large")
     def show_trail_dialog():
         filter_col1, filter_col2, filter_col3, filter_col4 = st.columns(4)
         with filter_col1:
@@ -5023,9 +5045,48 @@ if st.session_state.get("show_trail"):
                         <span style="font-size:0.6rem;color:{res_color};font-weight:700;">{res.upper()}</span>
                         {horn_label}
                     </div>
-                    <div class="trail-note-area" data-log-id="{_entry_id}"></div>
                 </div>
                 ''', unsafe_allow_html=True)
+                _note_key = str(_entry_id)
+                _stc.html(f"""<script>
+(function(){{
+var NOTES_KEY='goatflow_trail_notes';
+var logId='{_note_key}';
+function getNotes(){{try{{return JSON.parse(localStorage.getItem(NOTES_KEY)||'{{}}');}}catch(e){{return {{}};}}}}
+function saveNote(n){{var ns=getNotes();ns[logId]={{note:n,savedAt:Date.now()}};localStorage.setItem(NOTES_KEY,JSON.stringify(ns));}}
+function renderArea(){{
+  var ex=getNotes()[logId];
+  document.body.style.cssText='margin:0;padding:0;background:transparent;overflow:hidden;';
+  document.body.innerHTML='';
+  if(!ex||!ex.note){{
+    var row=document.createElement('div');row.style.cssText='display:flex;align-items:center;justify-content:space-between;padding:4px 0;';
+    var txt=document.createElement('span');txt.style.cssText='font-size:11px;color:#374151;font-style:italic;font-family:"DM Sans",sans-serif;';txt.textContent='No trail note added';
+    var btn=document.createElement('button');btn.textContent='+';btn.style.cssText='background:none;border:1px solid #374151;color:#9ca3af;font-size:11px;width:18px;height:18px;border-radius:3px;cursor:pointer;padding:0;flex-shrink:0;line-height:1;';
+    row.appendChild(txt);row.appendChild(btn);document.body.appendChild(row);
+    btn.onclick=function(){{showInput('');}};
+  }}else{{
+    var nr=document.createElement('div');nr.style.cssText='display:flex;align-items:flex-start;gap:8px;padding:4px 0;';
+    var nt=document.createElement('div');nt.style.cssText='font-size:12px;color:#9ca3af;font-style:italic;font-family:"DM Sans",sans-serif;line-height:1.5;flex:1;';nt.textContent=ex.note;
+    var eb=document.createElement('button');eb.innerHTML='&#9998;';eb.style.cssText='background:none;border:none;color:#9ca3af;font-size:11px;cursor:pointer;padding:0;flex-shrink:0;';
+    nr.appendChild(nt);nr.appendChild(eb);document.body.appendChild(nr);
+    eb.onclick=function(){{showInput(ex.note);}};
+  }}
+}}
+function showInput(val){{
+  document.body.innerHTML='';
+  var w=document.createElement('div');w.style.marginTop='4px';
+  var ta=document.createElement('textarea');ta.value=val;ta.maxLength=200;ta.placeholder='What do you want to remember about this one?';
+  ta.style.cssText='width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px;font-family:"DM Sans",sans-serif;font-size:13px;color:#9ca3af;resize:none;height:70px;box-sizing:border-box;outline:none;';
+  var footer=document.createElement('div');footer.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-top:3px;';
+  var cc=document.createElement('span');cc.style.cssText='font-size:10px;color:#4b5563;font-family:"DM Sans",sans-serif;';cc.textContent=val.length+'/200';
+  var sb=document.createElement('button');sb.textContent='Save Note';sb.style.cssText='background:none;border:none;color:#7c3aed;font-family:"DM Sans",sans-serif;font-size:12px;font-weight:500;cursor:pointer;padding:0;display:'+(val.length>0?'block':'none')+';';
+  footer.appendChild(cc);footer.appendChild(sb);w.appendChild(ta);w.appendChild(footer);document.body.appendChild(w);ta.focus();ta.selectionStart=ta.value.length;
+  ta.oninput=function(){{cc.textContent=ta.value.length+'/200';sb.style.display=ta.value.length>0?'block':'none';}};
+  sb.onclick=function(){{var n=ta.value.trim();if(n){{saveNote(n);renderArea();}}}};
+}}
+renderArea();
+}})();
+</script>""", height=30, scrolling=False)
 
         st.markdown(f'<div style="margin-top:1.2rem;border-top:1px solid {BORDER};padding-top:0.8rem;"><div style="font-family:Syne,sans-serif;font-size:0.7rem;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:0.08em;margin-bottom:0.6rem;">Achievements</div></div>', unsafe_allow_html=True)
         _achievement_defs = [
@@ -5048,39 +5109,7 @@ if st.session_state.get("show_trail"):
 
         _stc.html("""<script>
 (function(){
-var NOTES_KEY='goatflow_trail_notes';
 var ACH_KEY='goatflow_achievements';
-function getNotes(){try{return JSON.parse(localStorage.getItem(NOTES_KEY)||'{}');}catch(e){return {};}}
-function saveNote(logId,note){var n=getNotes();n[logId]={note:note,savedAt:Date.now()};localStorage.setItem(NOTES_KEY,JSON.stringify(n));}
-function renderNoteArea(area,logId){
-  var notes=getNotes();var ex=notes[logId];
-  area.innerHTML='';
-  if(!ex||!ex.note){
-    var row=document.createElement('div');row.style.cssText='display:flex;align-items:center;justify-content:space-between;margin-top:5px;';
-    var txt=document.createElement('span');txt.style.cssText='font-size:11px;color:#374151;font-style:italic;font-family:"DM Sans",sans-serif;';txt.textContent='No trail note added';
-    var btn=document.createElement('button');btn.textContent='+';btn.style.cssText='background:none;border:1px solid #374151;color:#9ca3af;font-size:11px;width:18px;height:18px;border-radius:3px;cursor:pointer;padding:0;flex-shrink:0;line-height:1;';
-    row.appendChild(txt);row.appendChild(btn);area.appendChild(row);
-    btn.onclick=function(){showInput(area,logId,'');};
-  } else {
-    var nr=document.createElement('div');nr.style.cssText='display:flex;align-items:flex-start;gap:8px;margin-top:5px;';
-    var nt=document.createElement('div');nt.style.cssText='font-size:12px;color:#9ca3af;font-style:italic;font-family:"DM Sans",sans-serif;max-height:56px;overflow:hidden;line-height:1.5;flex:1;';nt.textContent=ex.note;
-    var eb=document.createElement('button');eb.innerHTML='&#9998;';eb.style.cssText='background:none;border:none;color:#9ca3af;font-size:11px;cursor:pointer;padding:0;flex-shrink:0;';
-    nr.appendChild(nt);nr.appendChild(eb);area.appendChild(nr);
-    eb.onclick=function(){showInput(area,logId,ex.note);};
-  }
-}
-function showInput(area,logId,val){
-  area.innerHTML='';
-  var w=document.createElement('div');w.style.marginTop='6px';
-  var ta=document.createElement('textarea');ta.value=val;ta.maxLength=200;ta.placeholder='What do you want to remember about this one?';
-  ta.style.cssText='width:100%;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px;font-family:"DM Sans",sans-serif;font-size:13px;color:#9ca3af;resize:none;height:70px;box-sizing:border-box;outline:none;';
-  var footer=document.createElement('div');footer.style.cssText='display:flex;justify-content:space-between;align-items:center;margin-top:3px;';
-  var cc=document.createElement('span');cc.style.cssText='font-size:10px;color:#4b5563;font-family:"DM Sans",sans-serif;';cc.textContent=val.length+'/200';
-  var sb=document.createElement('button');sb.textContent='Save Note';sb.style.cssText='background:none;border:none;color:#7c3aed;font-family:"DM Sans",sans-serif;font-size:12px;font-weight:500;cursor:pointer;padding:0;display:'+(val.length>0?'block':'none')+';';
-  footer.appendChild(cc);footer.appendChild(sb);w.appendChild(ta);w.appendChild(footer);area.appendChild(w);ta.focus();ta.selectionStart=ta.value.length;
-  ta.oninput=function(){cc.textContent=ta.value.length+'/200';sb.style.display=ta.value.length>0?'block':'none';};
-  sb.onclick=function(){var n=ta.value.trim();if(n){saveNote(logId,n);renderNoteArea(area,logId);}};
-}
 function updateAchievements(){
   var achieved=[];try{achieved=JSON.parse(localStorage.getItem(ACH_KEY)||'[]');}catch(e){}
   var doc=window.parent.document;
@@ -5094,25 +5123,13 @@ function updateAchievements(){
       var hint=row.querySelector('.ach-hint');
       if(hint){
         var d=new Date(match.earnedAt);var ds=d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
-        hint.textContent='Earned '+ds+' — '+match.desc;hint.style.color='#4b5563';
+        hint.textContent='Earned '+ds+' \u2014 '+match.desc;hint.style.color='#4b5563';
       }
       var hayEl=row.querySelector('.ach-hay');if(hayEl)hayEl.style.opacity='1';
     }
   });
 }
-function init(){
-  var doc=window.parent.document;
-  doc.querySelectorAll('.trail-note-area[data-log-id]').forEach(function(area){
-    var logId=area.getAttribute('data-log-id');if(logId)renderNoteArea(area,logId);
-  });
-  updateAchievements();
-}
-function tryInit(n){
-  var doc=window.parent.document;
-  if(doc.querySelectorAll('.trail-note-area[data-log-id]').length>0){init();}
-  else if(n>0){setTimeout(function(){tryInit(n-1);},250);}
-}
-setTimeout(function(){tryInit(15);},150);
+setTimeout(function(){updateAchievements();},300);
 })();
 </script>""", height=0)
     show_trail_dialog()
