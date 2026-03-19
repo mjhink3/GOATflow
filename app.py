@@ -1,6 +1,7 @@
 import streamlit as st
 import streamlit.components.v1 as _stc
 import os
+from PIL import Image as _PILImage
 import io
 import html
 import re
@@ -20,9 +21,10 @@ from openai import OpenAI
 from pydantic import BaseModel, Field
 from PyPDF2 import PdfReader
 
+_favicon_img = _PILImage.open("static/favicon.png")
 st.set_page_config(
     page_title="GOATflow | WorkGOAT Ecosystem",
-    page_icon="🐐",
+    page_icon=_favicon_img,
     layout="centered",
     initial_sidebar_state="collapsed",
 )
@@ -258,12 +260,13 @@ CUSTOM_CSS = f"""
     .gf-banner-wrap img {{
         width: 100%;
         height: auto;
-        max-height: 160px;
+        max-height: 280px;
         object-fit: contain;
         object-position: center top;
         display: block;
         overflow: visible;
         border-radius: 0 0 10px 10px;
+        margin-bottom: 0 !important;
     }}
 
     .gf-banner-fade {{
@@ -271,7 +274,7 @@ CUSTOM_CSS = f"""
         bottom: 0;
         left: 0;
         width: 100%;
-        height: 12px;
+        height: 2px;
         background: linear-gradient(to bottom, transparent, #08080f);
         pointer-events: none;
         border-radius: 0 0 10px 10px;
@@ -287,9 +290,9 @@ CUSTOM_CSS = f"""
         section[data-testid="stMainBlockContainer"],
         .main .block-container,
         div.block-container {{ padding-top: 0 !important; margin-top: 0 !important; }}
-        .gf-banner-wrap img {{ width: 100% !important; height: auto !important; max-height: 140px !important; object-fit: contain !important; object-position: center top !important; overflow: visible !important; border-radius: 0 0 8px 8px !important; }}
+        .gf-banner-wrap img {{ width: 100% !important; height: auto !important; max-height: 200px !important; object-fit: contain !important; object-position: center top !important; overflow: visible !important; border-radius: 0 0 8px 8px !important; margin-bottom: 0 !important; }}
         .gf-banner-wrap {{ overflow: visible !important; border-radius: 0 0 8px 8px !important; margin-top: 0 !important; margin-bottom: 0 !important; padding-top: 0 !important; }}
-        .gf-banner-fade {{ height: 12px !important; }}
+        .gf-banner-fade {{ height: 2px !important; }}
         .gf-trust-row {{ margin-top: 0 !important; padding-top: 0 !important; }}
         .privacy-shield-inline {{ font-size: 10px !important; max-width: calc(100% - 32px) !important; white-space: nowrap !important; overflow: hidden !important; text-overflow: ellipsis !important; margin-top: 0 !important; display: inline-flex !important; }}
         .trust-badge {{ font-size: 0.85rem !important; margin-top: 0 !important; }}
@@ -656,7 +659,7 @@ CUSTOM_CSS = f"""
             font-size: 0.48rem !important;
         }}
         /* Churn button touchable size */
-        .stButton > button {{ min-height: 64px !important; font-size: 15px !important; }}
+        .stButton > button {{ min-height: 72px !important; font-size: 15px !important; }}
     }}
 
     /* ── Custom icon utility classes ── */
@@ -891,14 +894,14 @@ CUSTOM_CSS = f"""
         font-weight: 800 !important;
         font-family: 'Syne', sans-serif !important;
         letter-spacing: 0.03em !important;
-        min-height: 64px !important;
+        min-height: 72px !important;
         height: auto !important;
         line-height: 1.4 !important;
         transition: box-shadow 0.2s, transform 0.1s !important;
         display: inline-flex !important;
         align-items: center !important;
         justify-content: center !important;
-        gap: 8px !important;
+        gap: 10px !important;
     }}
 
     .stButton > button:hover {{
@@ -1377,7 +1380,7 @@ CUSTOM_CSS = f"""
     .gf-banner-wrap img {{
         width: 100% !important;
         height: auto !important;
-        max-height: 150px !important;
+        max-height: 280px !important;
         object-fit: contain !important;
         object-position: center top !important;
         display: block !important;
@@ -1392,12 +1395,12 @@ CUSTOM_CSS = f"""
         margin-bottom: 0 !important;
     }}
 
-    /* Tighten gap: banner → Stateless badge */
+    /* Tight gap: banner → content (1px gap) */
     .gf-banner-wrap img {{
         margin-bottom: 0 !important;
     }}
     .gf-trust-row {{
-        margin-top: -4px !important;
+        margin-top: 1px !important;
         padding-top: 0 !important;
         line-height: 1 !important;
     }}
@@ -2314,6 +2317,7 @@ cheese_earned_b64 = load_image_b64("cheese_earned.webp", "cheese_earned_b64_v2")
 hay_bale_b64 = load_image_b64("attached_assets/ChatGPT_Image_Mar_13,_2026,_09_34_11_PM_1773462872978.png", "hay_bale_b64")
 goat_hoof_b64 = load_image_b64("static/icon_hoof_left.webp", "goat_hoof_b64_v2")
 horns_icon_b64 = load_image_b64("static/icon_horns.webp", "horns_icon_b64_v2")
+horns_icon_src = f"data:image/webp;base64,{horns_icon_b64}" if horns_icon_b64 else ""
 banner_b64 = load_image_b64("static/goatflow_main_screen_logo.webp", "banner_b64_v2")
 banner_src = f"data:image/webp;base64,{banner_b64}" if banner_b64 else ""
 goatif_icon_b64 = load_image_b64("static/goatification_icon.webp", "goatif_icon_b64_v2")
@@ -3236,7 +3240,7 @@ with st.sidebar:
                   "color:#6b7280;font-family:'DM Sans',sans-serif;font-size:0.8rem;font-weight:500;"
                   "padding:12px 16px;cursor:pointer;transition:all 0.2s;margin-top:0.5rem;"
                   "display:flex;align-items:center;justify-content:center;gap:10px;")
-    _ic_style = "width:44px;min-width:44px;height:44px;max-height:44px;object-fit:contain;flex-shrink:0;display:inline-block;vertical-align:middle;"
+    _ic_style = "width:66px;min-width:66px;height:66px;max-height:66px;object-fit:contain;flex-shrink:0;display:inline-block;vertical-align:middle;"
     _tut_icon = (f'<img src="{icon_tutorial_src}" style="{_ic_style}">' if icon_tutorial_src
                  else '<span style="font-size:1rem;">❓</span>')
     _ani_icon = (f'<img src="{icon_animal_intro_src}" style="{_ic_style}">' if icon_animal_intro_src
@@ -3334,7 +3338,7 @@ _stc.html("""
           b._gfCancelIcon = true;
           var xi = pd.createElement('img');
           xi.src = '/app/static/icon_cancel.webp';
-          xi.style.cssText = 'width:40px;height:40px;object-fit:contain;vertical-align:middle;margin-right:8px;display:inline-block;flex-shrink:0;';
+          xi.style.cssText = 'width:60px;height:60px;object-fit:contain;vertical-align:middle;margin-right:10px;display:inline-block;flex-shrink:0;';
           b.insertBefore(xi, b.firstChild);
         }
       }
@@ -3353,15 +3357,18 @@ _stc.html("""
         b._gfLogoutIcon = true;
         var li = pd.createElement('img');
         li.src = '/app/static/icon_logout.png';
-        li.style.cssText = 'width:56px;height:56px;object-fit:contain;vertical-align:middle;margin-right:10px;border-radius:2px;display:inline-block;';
+        li.style.cssText = 'width:84px;height:84px;object-fit:contain;vertical-align:middle;margin-right:12px;border-radius:2px;display:inline-block;flex-shrink:0;';
         b.insertBefore(li, b.firstChild);
+        b.style.setProperty('display', 'inline-flex', 'important');
+        b.style.setProperty('align-items', 'center', 'important');
+        b.style.setProperty('justify-content', 'center', 'important');
       }
       // Churn Engine button icon
       if (txt.indexOf('Drop Into Churn Engine') !== -1 && !b._gfChurnIcon) {
         b._gfChurnIcon = true;
         var ci = pd.createElement('img');
         ci.src = '/app/static/icon_churn_engine.png';
-        ci.style.cssText = 'width:44px;height:44px;object-fit:contain;vertical-align:middle;margin-right:8px;border-radius:2px;';
+        ci.style.cssText = 'width:66px;height:66px;object-fit:contain;vertical-align:middle;margin-right:10px;border-radius:2px;flex-shrink:0;';
         b.insertBefore(ci, b.firstChild);
       }
       // Complete? button icon
@@ -3369,7 +3376,7 @@ _stc.html("""
         b._gfCompleteIcon = true;
         var cpi = pd.createElement('img');
         cpi.src = '/app/static/icon_completed.webp';
-        cpi.style.cssText = 'width:40px;height:40px;object-fit:contain;vertical-align:middle;margin-right:8px;display:inline-block;flex-shrink:0;';
+        cpi.style.cssText = 'width:60px;height:60px;object-fit:contain;vertical-align:middle;margin-right:10px;display:inline-block;flex-shrink:0;';
         b.insertBefore(cpi, b.firstChild);
       }
       // Replay Animal Intro click binding
@@ -4277,10 +4284,13 @@ _tour_iife_resolved = (_tour_iife
     .replace(r'\u26A1 Summit Call</span>', "<img src='__SUMMIT_ICON__' style='width:20px;height:20px;object-fit:contain;vertical-align:middle;'> Summit Call</span>")
     .replace(r'\uD83D\uDCCB Standard Track</span>', "<img src='__TRACKS_ICON__' style='width:20px;height:20px;object-fit:contain;vertical-align:middle;'> Standard Track</span>")
     .replace(r'\u26A1 Summit Calls vs. Standard Tracks', 'Summit Calls vs. Standard Tracks')
+    .replace(r'\uD83E\uDD8C GOAT Horns', '<img src="__HORNS_ICON__" style="width:28px;height:28px;object-fit:contain;vertical-align:middle;margin-right:2px;"> GOAT Horns')
+    .replace(r'\uD83D\uDC10 Grab it by the horns.', '<img src="__HORNS_ICON__" style="width:28px;height:28px;object-fit:contain;vertical-align:middle;margin-right:2px;"> Grab it by the horns.')
     .replace('__HAY_ICON__', icon_hay_stack_src)
     .replace('__CHEESE_ICON__', icon_cheese_src)
     .replace('__SUMMIT_ICON__', icon_summit_src)
-    .replace('__TRACKS_ICON__', icon_tracks_src))
+    .replace('__TRACKS_ICON__', icon_tracks_src)
+    .replace('__HORNS_ICON__', horns_icon_src))
 _tour_iife_json      = _json.dumps(_tour_iife_resolved)
 _slideshow_iife_json = _json.dumps(_slideshow_iife)
 _fab_iife_json       = _json.dumps(_fab_iife)

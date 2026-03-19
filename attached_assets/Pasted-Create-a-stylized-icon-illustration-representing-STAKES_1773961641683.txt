@@ -1,0 +1,138 @@
+Create a stylized icon illustration 
+representing STAKES — a daily morning 
+commitment feature in a productivity 
+app called GOATflow.
+
+CONCEPT:
+A wooden stake or post driven firmly 
+into the ground at a slight angle —
+the visual of something planted, 
+immovable, and committed to.
+The stake has a small scroll or 
+parchment rolled around it near 
+the top — the day's commitment, 
+nailed to the stake like a declaration.
+The scroll has a small red wax seal 
+with a hoof print stamp on it.
+
+This communicates: 
+A promise made. A contract signed.
+Something driven into the ground 
+that is not moving until it is honored.
+
+THE STAKE:
+Wooden post, rough-hewn texture,
+driven into rocky terrain at 
+a slight diagonal angle —
+suggesting it was planted with 
+force and intention, not placed gently.
+The wood grain is visible — 
+this is not decorative, 
+this is structural.
+Color: warm wood brown with 
+dark outline — same illustration 
+weight as rest of GOATflow icon set.
+A small gold/amber nail or pin 
+secures the scroll to the stake —
+the same gold (#f59e0b) used 
+throughout the GOATflow brand.
+
+THE SCROLL:
+Small rolled parchment wrapped 
+around the upper portion of the stake.
+Warm cream/ivory color — 
+same warmth as the GOATflow 
+mascot's fur (#f0ece0).
+The scroll is partially unrolled —
+one edge curling outward slightly,
+suggesting it was just signed 
+and freshly committed to.
+A small red wax seal at the 
+bottom edge of the scroll 
+with a tiny hoof print stamped 
+into it — the GOATflow signature mark.
+The scroll itself is blank — 
+it represents the user's commitment,
+whatever they have chosen to stake.
+
+ATMOSPHERE:
+Black background #000000.
+A warm amber/gold radial glow 
+(#f59e0b at 20% opacity) 
+behind the stake — 
+the glow of something 
+that matters, something 
+with consequences attached.
+This is the warmest, 
+most grounded icon in the set —
+Stakes is not about energy or power,
+it is about accountability and weight.
+Two or three small white 
+4-point sparkle stars 
+near the scroll — 
+the quiet satisfaction of 
+a commitment made.
+A very subtle ground line 
+at the base of the stake —
+just enough terrain texture 
+to suggest the stake is 
+driven into something real.
+
+VISUAL STYLE:
+Match the warm cartoon side 
+of the GOATflow icon set —
+same family as the Hay bale, 
+Fresh Cheese, and Trail Notes icons.
+Bold dark outlines throughout.
+Flat cartoon with subtle shading.
+Black background.
+Same illustration weight as rest of set.
+The scroll and stake together 
+should feel like a game item —
+like something you would find 
+in an RPG quest log, 
+a binding contract from 
+a fantasy merchant,
+the physical representation 
+of a promise that has 
+real in-game consequences.
+
+COMPOSITION:
+Square format.
+Stake centered, driven into 
+ground at bottom of frame,
+filling approximately 60% 
+of frame height.
+The stake angles 5-10 degrees 
+to the right — planted with 
+intention, not perfectly vertical.
+Scroll wrapped around upper third 
+of the stake, partially unfurled.
+Gold glow behind the stake center.
+Sparkle stars in upper corners.
+Ground texture at very bottom edge.
+
+SIZE PERFORMANCE:
+At large size: a wooden stake 
+driven into rocky ground with 
+a sealed scroll attached — 
+reads as commitment, contract,
+accountability, weight.
+At 22px stat card size: 
+a vertical stake shape with 
+a small rectangle attached —
+reads as a marker or flag,
+immediately distinct from 
+every other stat icon.
+Paired with STAKE label:
+instantly understood as 
+the daily commitment tracker.
+
+WHAT IT COMMUNICATES:
+You planted something today.
+It is in the ground.
+It is not moving until 
+you honor it.
+That is the Stake.
+
+Do not include text or labels.
