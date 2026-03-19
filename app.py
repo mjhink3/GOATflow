@@ -21,7 +21,7 @@ from openai import OpenAI
 from pydantic import BaseModel, Field
 from PyPDF2 import PdfReader
 
-_favicon_img = _PILImage.open("static/favicon.png")
+_favicon_img = _PILImage.open("static/favicon.webp")
 st.set_page_config(
     page_title="GOATflow | WorkGOAT Ecosystem",
     page_icon=_favicon_img,
