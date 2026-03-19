@@ -909,6 +909,14 @@ CUSTOM_CSS = f"""
         box-shadow: 0 0 16px rgba(124, 58, 237, 0.5);
     }}
 
+    /* ── Sidebar buttons — compact, consistent ── */
+    [data-testid="stSidebar"] .stButton > button {{
+        min-height: 44px !important;
+        padding: 8px 14px !important;
+        font-size: 0.85rem !important;
+        gap: 8px !important;
+    }}
+
     .btn-secondary {{
         background: transparent !important;
         border: 1px solid #7c3aed !important;
@@ -2348,6 +2356,8 @@ icon_logout_b64 = load_image_b64("static/icon_logout.png", "icon_logout_b64_v1")
 icon_logout_src = f"data:image/png;base64,{icon_logout_b64}" if icon_logout_b64 else ""
 icon_precision_b64 = load_image_b64("static/icon_precision.png", "icon_precision_b64_v1")
 icon_precision_src = f"data:image/png;base64,{icon_precision_b64}" if icon_precision_b64 else ""
+icon_stakes_b64 = load_image_b64("static/icon_stats.png", "icon_stakes_b64_v1")
+icon_stakes_src = f"data:image/png;base64,{icon_stakes_b64}" if icon_stakes_b64 else ""
 icon_stats_b64 = load_image_b64("static/icon_stats.png", "icon_stats_b64_v1")
 icon_stats_src = f"data:image/png;base64,{icon_stats_b64}" if icon_stats_b64 else ""
 icon_track_sieve_b64 = load_image_b64("static/icon_track_sieve.png", "icon_track_sieve_b64_v1")
@@ -3164,7 +3174,8 @@ with st.sidebar:
             if(btn.textContent&&btn.textContent.includes('Lock In My Horns')){{
                 var p=btn.querySelector('p');
                 if(p&&!p.querySelector('img.gf-horn-btn-icon')){{
-                    p.innerHTML=p.innerHTML.replace(/🐐\\s*/,'<img class="gf-horn-btn-icon" src="'+SRC+'" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;margin-right:4px;position:relative;top:-1px;">');
+                    p.style.lineHeight='1';p.style.display='flex';p.style.alignItems='center';
+                    p.innerHTML=p.innerHTML.replace(/🐐\\s*/,'<img class="gf-horn-btn-icon" src="'+SRC+'" style="width:28px;height:28px;min-height:28px;object-fit:contain;flex-shrink:0;margin-right:6px;">');
                 }}
             }}
         }});
@@ -3198,9 +3209,9 @@ with st.sidebar:
     if(!tb){{setTimeout(inject,300);return;}}
     if(tb.querySelector('img[data-gf-trail]'))return;
     var img=pd.createElement('img');img.src=src;img.setAttribute('data-gf-trail','1');
-    img.style.cssText='width:18px;height:18px;object-fit:contain;vertical-align:middle;margin-right:6px;flex-shrink:0;';
+    img.style.cssText='width:28px;height:28px;min-height:28px;object-fit:contain;flex-shrink:0;margin-right:6px;';
     var p=tb.querySelector('p');
-    if(p){{p.style.display='flex';p.style.alignItems='center';p.insertBefore(img,p.firstChild);}}
+    if(p){{p.style.lineHeight='1';p.style.display='flex';p.style.alignItems='center';p.insertBefore(img,p.firstChild);}}
     else{{tb.style.display='flex';tb.style.alignItems='center';tb.insertBefore(img,tb.firstChild);}}
   }}
   inject();
@@ -3240,7 +3251,7 @@ with st.sidebar:
                   "color:#6b7280;font-family:'DM Sans',sans-serif;font-size:0.8rem;font-weight:500;"
                   "padding:12px 16px;cursor:pointer;transition:all 0.2s;margin-top:0.5rem;"
                   "display:flex;align-items:center;justify-content:center;gap:10px;")
-    _ic_style = "width:66px;min-width:66px;height:66px;max-height:66px;object-fit:contain;flex-shrink:0;display:inline-block;vertical-align:middle;"
+    _ic_style = "width:28px;min-width:28px;height:28px;max-height:28px;object-fit:contain;flex-shrink:0;display:inline-block;vertical-align:middle;"
     _tut_icon = (f'<img src="{icon_tutorial_src}" style="{_ic_style}">' if icon_tutorial_src
                  else '<span style="font-size:1rem;">❓</span>')
     _ani_icon = (f'<img src="{icon_animal_intro_src}" style="{_ic_style}">' if icon_animal_intro_src
@@ -3279,6 +3290,12 @@ _stc.html("""
       '  border: none !important;',
       '  border-radius: 8px !important;',
       '  letter-spacing: 0.03em !important;',
+      '}',
+      '[data-testid="stSidebar"] .stButton > button {',
+      '  min-height: 44px !important;',
+      '  padding: 8px 14px !important;',
+      '  font-size: 0.85rem !important;',
+      '  gap: 8px !important;',
       '}'
     ].join('\\n');
     pd.head.appendChild(s);
@@ -3357,7 +3374,7 @@ _stc.html("""
         b._gfLogoutIcon = true;
         var li = pd.createElement('img');
         li.src = '/app/static/icon_logout.png';
-        li.style.cssText = 'width:84px;height:84px;object-fit:contain;vertical-align:middle;margin-right:12px;border-radius:2px;display:inline-block;flex-shrink:0;';
+        li.style.cssText = 'width:28px;height:28px;object-fit:contain;vertical-align:middle;margin-right:8px;border-radius:2px;display:inline-block;flex-shrink:0;';
         b.insertBefore(li, b.firstChild);
         b.style.setProperty('display', 'inline-flex', 'important');
         b.style.setProperty('align-items', 'center', 'important');
@@ -5266,6 +5283,32 @@ hay_balance = player.get("hay", 0)
 cheese_total = player.get("fresh_cheese", 0)
 hay_pct = min(int((hay_balance / HAY_TO_CHEESE) * 100), 100)
 
+# ── Stakes % — today's track completion rate ──
+try:
+    _sk_conn = get_db()
+    with _sk_conn.cursor() as _sk_cur:
+        _sk_cur.execute(
+            "SELECT COUNT(*), COUNT(resolved_at) FROM operational_log WHERE user_id=%s AND logged_at::date=CURRENT_DATE",
+            (current_user_id,)
+        )
+        _sk_row = _sk_cur.fetchone()
+    _sk_total = int(_sk_row[0]) if _sk_row else 0
+    _sk_done  = int(_sk_row[1]) if _sk_row else 0
+except Exception:
+    _sk_total, _sk_done = 0, 0
+if _sk_total == 0:
+    stakes_pct_display = "—"
+    stakes_pct_color   = "#9ca3af"
+    stakes_sublabel    = "No tracks today yet"
+else:
+    _sk_pct = int(round((_sk_done / _sk_total) * 100))
+    stakes_pct_display = f"{_sk_pct}%"
+    stakes_pct_color   = "#22c55e" if _sk_pct >= 70 else ("#f59e0b" if _sk_pct >= 40 else "#ef4444")
+    stakes_sublabel    = f"today: {_sk_done}/{_sk_total} tracks"
+
+_stakes_icon_html = (f'<img src="{icon_stakes_src}" style="width:56px;height:56px;object-fit:contain;" class="goatflow-icon" onerror="this.style.display=\'none\'">'
+                     if icon_stakes_src else "")
+
 _clip_sublabel_html = f'<div class="stat-sub" style="color:{clip_rate_sublabel_color};">{clip_rate_sublabel}</div>'
 st.markdown(f'''
 <div class="stats-row">
@@ -5303,6 +5346,11 @@ st.markdown(f'''
         <div class="stat-value" style="color:#a78bfa;"><img src="{icon_gait_src}" style="width:56px;height:56px;object-fit:contain;" class="goatflow-icon" onerror="this.style.display='none'"> {"—" if gait_streak == 0 else gait_streak}</div>
         <div class="stat-label">GAIT</div>
         <div class="stat-sub">{"Complete a Track today" if gait_streak == 0 else f"{gait_streak} day{'' if gait_streak == 1 else 's'} in a row"}</div>
+    </div>
+    <div class="stat-box" title="Percentage of today's tracks that have been completed. Keep your daily stakes high.">
+        <div class="stat-value" style="color:{stakes_pct_color};">{_stakes_icon_html} {stakes_pct_display}</div>
+        <div class="stat-label">STAKES %</div>
+        <div class="stat-sub">{stakes_sublabel}</div>
     </div>
     <div class="stat-box" id="gf-precision-card" title="Percentage of timed Tracks completed within their estimate.">
         <div class="stat-value" id="gf-precision-val" style="color:#9ca3af;">{("<img src='" + icon_precision_src + "' style='width:56px;height:56px;object-fit:contain;' class='goatflow-icon'>&#8202;") if icon_precision_src else ""}—</div>
