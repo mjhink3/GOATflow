@@ -2467,7 +2467,7 @@ icon_logout_b64 = load_image_b64("static/icon_logout.png", "icon_logout_b64_v1")
 icon_logout_src = f"data:image/png;base64,{icon_logout_b64}" if icon_logout_b64 else ""
 icon_precision_b64 = load_image_b64("static/icon_precision.png", "icon_precision_b64_v1")
 icon_precision_src = f"data:image/png;base64,{icon_precision_b64}" if icon_precision_b64 else ""
-icon_stakes_b64 = load_image_b64("static/icon_stats.png", "icon_stakes_b64_v1")
+icon_stakes_b64 = load_image_b64("static/icon_stakes.png", "icon_stakes_b64_v2")
 icon_stakes_src = f"data:image/png;base64,{icon_stakes_b64}" if icon_stakes_b64 else ""
 icon_stats_b64 = load_image_b64("static/icon_stats.png", "icon_stats_b64_v1")
 icon_stats_src = f"data:image/png;base64,{icon_stats_b64}" if icon_stats_b64 else ""
@@ -3581,7 +3581,7 @@ _stc.html("""
         b._gfLogoutIcon = true;
         var li = pd.createElement('img');
         li.src = '/app/static/icon_logout.png';
-        li.style.cssText = 'width:28px;height:28px;object-fit:contain;vertical-align:middle;margin-right:8px;border-radius:2px;display:inline-block;flex-shrink:0;';
+        li.style.cssText = 'width:40px;height:40px;object-fit:contain;vertical-align:middle;margin-right:8px;border-radius:2px;display:inline-block;flex-shrink:0;';
         b.insertBefore(li, b.firstChild);
         b.style.setProperty('display', 'inline-flex', 'important');
         b.style.setProperty('align-items', 'center', 'important');
