@@ -1738,17 +1738,23 @@ def validate_invite_code(code: str) -> tuple:
         conn.close()
 
 
-def consume_invite_code(code: str, username: str):
+def consume_invite_code(code: str, username: str) -> bool:
+    """Atomically claim the invite code. Returns True if claimed, False if already taken (race)."""
     conn = get_db()
     try:
         with conn.cursor() as cur:
             cur.execute(
-                "UPDATE invites SET used_by_username=%s, used_at=NOW(), is_active=FALSE WHERE code=%s",
+                """UPDATE invites SET used_by_username=%s, used_at=NOW(), is_active=FALSE
+                   WHERE code=%s AND is_active=TRUE AND used_by_username IS NULL
+                   RETURNING code""",
                 (username.lower(), code.strip())
             )
+            claimed = cur.fetchone() is not None
             conn.commit()
+            return claimed
     except Exception:
         conn.rollback()
+        return False
     finally:
         conn.close()
 
@@ -1761,6 +1767,22 @@ def list_invites():
             return [dict(r) for r in cur.fetchall()]
     except Exception:
         return []
+    finally:
+        conn.close()
+
+
+def release_invite_code(code: str):
+    """Release a previously claimed code back to active if user creation failed."""
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE invites SET used_by_username=NULL, used_at=NULL, is_active=TRUE WHERE code=%s",
+                (code.strip(),)
+            )
+            conn.commit()
+    except Exception:
+        conn.rollback()
     finally:
         conn.close()
 
@@ -2994,15 +3016,19 @@ if not user_info:
                     if not _inv_valid:
                         st.error(_inv_err)
                     else:
-                        user, err = create_user(signup_username, signup_password, signup_display)
-                        if err:
-                            st.error(err)
+                        _claimed = consume_invite_code(signup_invite.strip(), signup_username.strip().lower())
+                        if not _claimed:
+                            st.error("This invite code was just claimed by someone else. Please request a new one.")
                         else:
-                            consume_invite_code(signup_invite.strip(), user["username"])
-                            st.session_state["auth_user_id"] = user["id"]
-                            st.session_state["auth_user_name"] = user["username"]
-                            st.session_state["auth_display_name"] = user["display_name"]
-                            st.rerun()
+                            user, err = create_user(signup_username, signup_password, signup_display)
+                            if err:
+                                release_invite_code(signup_invite.strip())
+                                st.error(err)
+                            else:
+                                st.session_state["auth_user_id"] = user["id"]
+                                st.session_state["auth_user_name"] = user["username"]
+                                st.session_state["auth_display_name"] = user["display_name"]
+                                st.rerun()
 
     st.markdown(f'''
     <div class="global-footer">
@@ -3345,7 +3371,7 @@ with st.sidebar:
 
     # ── Admin Panel (invite manager) ────────────────────────────────────────
     _admin_username = os.environ.get("ADMIN_USERNAME", "").strip().lower()
-    if _admin_username and current_user_name.lower() == _admin_username:
+    if _admin_username and user_info["name"].lower() == _admin_username:
         st.markdown("---")
         with st.expander("🛡️ Admin — Invite Manager", expanded=False):
             st.markdown(
@@ -3365,8 +3391,12 @@ with st.sidebar:
                 if _gen_err:
                     st.error(f"Error: {_gen_err}")
                 else:
-                    st.success("New invite code generated:")
-                    st.code(_new_code, language=None)
+                    st.session_state["admin_last_invite"] = _new_code
+            if st.session_state.get("admin_last_invite"):
+                st.success("New invite code — copy it now:")
+                st.code(st.session_state["admin_last_invite"], language=None)
+                if st.button("Done — dismiss", key="admin_invite_dismiss", use_container_width=True):
+                    st.session_state.pop("admin_last_invite", None)
                     st.rerun()
 
             st.markdown(
