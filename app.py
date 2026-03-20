@@ -75,6 +75,36 @@ WHITE = "#F5F5F5"
 DARK_SURFACE = "#0D0D1A"
 
 XP_TIERS = {"Micro": 100, "Standard": 500, "High-Leverage": 1500, "GOAT": 5000}
+
+GF_QUOTES = [
+    "You're not just climbing \u2014 you're GOAAATing to the top. Keep sieving.",
+    "Discipline is the Hay. Stack it daily. The Fresh Cheese finds those who graze with purpose.",
+    "The summit doesn't care how you feel today. Move anyway. Aaaa-lways.",
+    "Every Track logged is a step the herd didn't take. You're built different.",
+    "Aaaa-ttitude is everything. Show up, drop intel, dominate the pasture.",
+    "The pasture is wide, but the summit belongs to those who log it.",
+    "Winners don't wait for perfect conditions. They track it and move. Aaaa.",
+    "Your GAIT streak is proof that momentum is real. Don't let it die today.",
+    "Most goats graze. You GOAT. There's a difference.",
+    "Aaaa-mbition without action is just bleating. Drop the intel. Move.",
+    "The best time to log a Track was yesterday. The second best time is right now.",
+    "Elite isn't a status. It's a daily decision. Make it again today.",
+    "The herd follows comfort. You follow the summit. That's the GOATflow way.",
+    "Your Fresh Cheese doesn't earn itself. Sieve the intel. Close the loop.",
+    "Aaaa-chieve what others only dream of. One Track at a time.",
+    "Strong Horns. Clean Pasture. High Stakes. That's how legends operate.",
+    "Quitting isn't even in the playbook. Log it, complete it, repeat. Aaaa.",
+    "Every elite Clip Rate started with a single Track. Keep clipping.",
+    "The difference between a goat and a GOAT? You show up and sieve. Aaaa.",
+    "Precision isn't perfection \u2014 it's consistency. Stay on estimate.",
+    "Today's Hay is tomorrow's Fresh Cheese. Stack it up, champion.",
+    "Your operation doesn't scale on vibes. It scales on Tracks completed.",
+    "The pasture waits for no one. Work now. Reflect at the summit.",
+    "Aaaa-lways be closing Tracks. That's the only move that matters.",
+    "Not one great operator in history said they wished they'd logged fewer Tracks.",
+    "You came here to build something. The Track Sieve is your weapon. Use it.",
+    "Setbacks are just detours on the climb. Log the lesson. Keep GOAAATing.",
+]
 BASE_LEVEL_XP = 5000
 LEVEL_GROWTH = 0.20
 
@@ -661,6 +691,8 @@ CUSTOM_CSS = f"""
         }}
         /* Churn button touchable size */
         .stButton > button {{ min-height: 72px !important; font-size: 15px !important; }}
+        .gf-quote-box {{ grid-column: span 2 !important; }}
+        .gf-quote-text {{ font-size: 0.68rem !important; }}
     }}
 
     /* ── Custom icon utility classes ── */
@@ -880,6 +912,35 @@ CUSTOM_CSS = f"""
         overflow: hidden;
         text-overflow: ellipsis;
         max-width: 100%;
+    }}
+
+    .gf-quote-box {{
+        background: {CARD_BG};
+        border: 1px solid #4c1d95;
+        border-radius: 10px;
+        padding: 0.65rem 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        min-width: 0;
+        overflow: hidden;
+    }}
+
+    .gf-quote-mark {{
+        font-size: 1.6rem;
+        line-height: 1;
+        color: #7c3aed;
+        flex-shrink: 0;
+        font-family: Georgia, serif;
+    }}
+
+    .gf-quote-text {{
+        font-family: 'Syne', sans-serif;
+        font-weight: 700;
+        font-size: 0.78rem;
+        color: {WHITE};
+        letter-spacing: 0.01em;
+        line-height: 1.35;
     }}
 
     .stButton > button,
@@ -3581,7 +3642,7 @@ _stc.html("""
         b._gfLogoutIcon = true;
         var li = pd.createElement('img');
         li.src = '/app/static/icon_logout.png';
-        li.style.cssText = 'width:40px;height:40px;object-fit:contain;vertical-align:middle;margin-right:8px;border-radius:2px;display:inline-block;flex-shrink:0;';
+        li.style.cssText = 'width:56px;height:56px;object-fit:contain;vertical-align:middle;margin-right:8px;border-radius:2px;display:inline-block;flex-shrink:0;';
         b.insertBefore(li, b.firstChild);
         b.style.setProperty('display', 'inline-flex', 'important');
         b.style.setProperty('align-items', 'center', 'important');
@@ -4819,6 +4880,7 @@ _banner_img_tag = (
     if logo_src else
     '<div style="height:90px;background:#1a0a2e;display:flex;align-items:center;justify-content:center;color:#6100ff;font-size:1.5rem;font-weight:900;">🐐 GOATflow</div>'
 )
+_sieve_icon_tag = f'<img src="{icon_track_sieve_src}" style="width:28px;height:28px;object-fit:contain;vertical-align:middle;margin-right:6px;" class="goatflow-icon">' if icon_track_sieve_src else "📊"
 st.markdown(f'''
 <div class="gf-banner-wrap">
     {_banner_img_tag}
@@ -4830,10 +4892,8 @@ st.markdown(f'''
     </span>
     <span class="privacy-shield-inline">🛡️ Stateless Processing Active: Source files purged after analysis</span>
 </div>
+<div id="gf-sieve-anchor" class="churn-label">{_sieve_icon_tag} The Track Sieve \u2014 Drop Intel</div>
 ''', unsafe_allow_html=True)
-
-_sieve_icon_tag = f'<img src="{icon_track_sieve_src}" style="width:28px;height:28px;object-fit:contain;vertical-align:middle;margin-right:6px;" class="goatflow-icon">' if icon_track_sieve_src else "📊"
-st.markdown(f'<div id="gf-sieve-anchor" class="churn-label">{_sieve_icon_tag} The Track Sieve — Drop Intel</div>', unsafe_allow_html=True)
 
 # ── Track Sieve one-time tooltip ──────────────────────────────────────────────
 st.markdown("""
@@ -5517,6 +5577,10 @@ _stakes_icon_html = (f'<img src="{icon_stakes_src}" style="width:56px;height:56p
                      if icon_stakes_src else "")
 
 _clip_sublabel_html = f'<div class="stat-sub" style="color:{clip_rate_sublabel_color};">{clip_rate_sublabel}</div>'
+
+if "gf_daily_quote" not in st.session_state:
+    st.session_state["gf_daily_quote"] = random.choice(GF_QUOTES)
+_session_quote = st.session_state["gf_daily_quote"]
 st.markdown(f'''
 <div class="stats-row">
     <div class="stat-box">
@@ -5563,6 +5627,10 @@ st.markdown(f'''
         <div class="stat-value" id="gf-precision-val" style="color:#9ca3af;">{("<img src='" + icon_precision_src + "' style='width:56px;height:56px;object-fit:contain;' class='goatflow-icon'>&#8202;") if icon_precision_src else ""}—</div>
         <div class="stat-label">PRECISION</div>
         <div class="stat-sub" id="gf-precision-sub">5 timed Tracks to unlock</div>
+    </div>
+    <div class="gf-quote-box" style="grid-column:span 6;">
+        <span class="gf-quote-mark">&#10077;</span>
+        <span class="gf-quote-text">{_session_quote}</span>
     </div>
 </div>
 ''', unsafe_allow_html=True)
