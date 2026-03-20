@@ -50,3 +50,6 @@ externalPort = 8080
 
 [userenv.production]
 PROD_DATABASE_URL = "postgresql://postgres:X%2B6.VXUC9%21y_%256n@db.mazdcgqpewlxkqlswakc.supabase.co:5432/postgres?sslmode=require"
+
+[userenv.shared]
+ADMIN_USERNAME = "ob_testuser"

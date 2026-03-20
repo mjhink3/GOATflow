@@ -10,6 +10,7 @@ import math
 import random
 import hashlib
 import secrets
+import uuid
 import json as _json
 import urllib.parse
 import threading
@@ -1638,6 +1639,18 @@ def ensure_schema():
                 if not cur.fetchone():
                     cur.execute(f"ALTER TABLE operational_log ADD COLUMN {_ocol} {_otype} DEFAULT {_odef}")
 
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS invites (
+                    id SERIAL PRIMARY KEY,
+                    code TEXT NOT NULL UNIQUE,
+                    note TEXT,
+                    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    used_by_username TEXT,
+                    used_at TIMESTAMP
+                )
+            """)
+
             conn.commit()
     finally:
         conn.close()
@@ -1684,6 +1697,82 @@ def authenticate_user(username: str, password: str):
             return {"id": user["id"], "username": user["username"], "display_name": user["display_name"]}, None
     except Exception as e:
         return None, str(e)
+    finally:
+        conn.close()
+
+
+def generate_invite_code(note: str = "") -> tuple:
+    code = "GF-" + uuid.uuid4().hex[:10].upper()
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO invites (code, note) VALUES (%s, %s)",
+                (code, note.strip() or None)
+            )
+            conn.commit()
+        return code, None
+    except Exception as e:
+        conn.rollback()
+        return "", str(e)
+    finally:
+        conn.close()
+
+
+def validate_invite_code(code: str) -> tuple:
+    conn = get_db()
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT * FROM invites WHERE code = %s", (code.strip(),))
+            inv = cur.fetchone()
+        if not inv:
+            return False, "Invalid invite code. Please check and try again."
+        if not inv["is_active"]:
+            return False, "This invite code has been deactivated."
+        if inv["used_by_username"]:
+            return False, "This invite code has already been used."
+        return True, None
+    except Exception as e:
+        return False, str(e)
+    finally:
+        conn.close()
+
+
+def consume_invite_code(code: str, username: str):
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE invites SET used_by_username=%s, used_at=NOW(), is_active=FALSE WHERE code=%s",
+                (username.lower(), code.strip())
+            )
+            conn.commit()
+    except Exception:
+        conn.rollback()
+    finally:
+        conn.close()
+
+
+def list_invites():
+    conn = get_db()
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT * FROM invites ORDER BY created_at DESC")
+            return [dict(r) for r in cur.fetchall()]
+    except Exception:
+        return []
+    finally:
+        conn.close()
+
+
+def deactivate_invite(code: str):
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE invites SET is_active=FALSE WHERE code=%s", (code,))
+            conn.commit()
+    except Exception:
+        conn.rollback()
     finally:
         conn.close()
 
@@ -2876,14 +2965,23 @@ if not user_info:
                         st.rerun()
 
     with signup_tab:
+        st.markdown(
+            '<div style="font-size:0.72rem;color:#6b7280;margin-bottom:0.6rem;text-align:center;">'
+            '🔒 GOATflow is invite-only. You need an invite code to create an account.'
+            '</div>',
+            unsafe_allow_html=True
+        )
         with st.form("signup_form"):
+            signup_invite = st.text_input("Invite Code", key="signup_invite", placeholder="Enter your invite code (e.g. GF-XXXXXXXXXX)")
             signup_display = st.text_input("Display Name", key="signup_display", placeholder="How should we call you?")
             signup_username = st.text_input("Goatname", key="signup_username", placeholder="Choose a unique goatname")
             signup_password = st.text_input("Paaassword", type="password", key="signup_password", placeholder="Choose a paaassword (min 6 characters)")
             signup_confirm = st.text_input("Confirm Paaassword", type="password", key="signup_confirm", placeholder="Re-enter your paaassword")
             signup_submitted = st.form_submit_button("🐐 Create Account", use_container_width=True)
             if signup_submitted:
-                if not signup_display or not signup_username or not signup_password:
+                if not signup_invite.strip():
+                    st.error("An invite code is required to create an account.")
+                elif not signup_display or not signup_username or not signup_password:
                     st.error("All fields are required.")
                 elif len(signup_password) < 6:
                     st.error("Paaassword must be at least 6 characters.")
@@ -2892,14 +2990,19 @@ if not user_info:
                 elif len(signup_username) < 3:
                     st.error("Goatname must be at least 3 characters.")
                 else:
-                    user, err = create_user(signup_username, signup_password, signup_display)
-                    if err:
-                        st.error(err)
+                    _inv_valid, _inv_err = validate_invite_code(signup_invite.strip())
+                    if not _inv_valid:
+                        st.error(_inv_err)
                     else:
-                        st.session_state["auth_user_id"] = user["id"]
-                        st.session_state["auth_user_name"] = user["username"]
-                        st.session_state["auth_display_name"] = user["display_name"]
-                        st.rerun()
+                        user, err = create_user(signup_username, signup_password, signup_display)
+                        if err:
+                            st.error(err)
+                        else:
+                            consume_invite_code(signup_invite.strip(), user["username"])
+                            st.session_state["auth_user_id"] = user["id"]
+                            st.session_state["auth_user_name"] = user["username"]
+                            st.session_state["auth_display_name"] = user["display_name"]
+                            st.rerun()
 
     st.markdown(f'''
     <div class="global-footer">
@@ -3239,6 +3342,80 @@ with st.sidebar:
         </div>
     </div>
     ''', unsafe_allow_html=True)
+
+    # ── Admin Panel (invite manager) ────────────────────────────────────────
+    _admin_username = os.environ.get("ADMIN_USERNAME", "").strip().lower()
+    if _admin_username and current_user_name.lower() == _admin_username:
+        st.markdown("---")
+        with st.expander("🛡️ Admin — Invite Manager", expanded=False):
+            st.markdown(
+                f'<div style="font-size:0.68rem;color:{SILVER};margin-bottom:0.6rem;">'
+                'Generate single-use invite codes and manage existing ones.'
+                '</div>',
+                unsafe_allow_html=True
+            )
+            _invite_note = st.text_input(
+                "Label (optional)",
+                key="admin_invite_note",
+                placeholder='e.g. "For John Smith"',
+                label_visibility="visible"
+            )
+            if st.button("Generate Invite Code", use_container_width=True, key="admin_gen_invite"):
+                _new_code, _gen_err = generate_invite_code(_invite_note)
+                if _gen_err:
+                    st.error(f"Error: {_gen_err}")
+                else:
+                    st.success("New invite code generated:")
+                    st.code(_new_code, language=None)
+                    st.rerun()
+
+            st.markdown(
+                f'<div style="font-size:0.72rem;font-weight:700;color:{WHITE};margin:0.8rem 0 0.4rem 0;">All Codes</div>',
+                unsafe_allow_html=True
+            )
+            _all_invites = list_invites()
+            if not _all_invites:
+                st.markdown(
+                    f'<div style="font-size:0.65rem;color:{SILVER};font-style:italic;">No invite codes yet.</div>',
+                    unsafe_allow_html=True
+                )
+            else:
+                for _inv in _all_invites:
+                    _inv_code = _inv["code"]
+                    _inv_note = _inv.get("note") or ""
+                    _inv_active = _inv["is_active"]
+                    _inv_used_by = _inv.get("used_by_username")
+                    _inv_used_at = _inv.get("used_at")
+                    if _inv_used_by:
+                        _inv_status = f"Claimed by <b>{_inv_used_by}</b>"
+                        if _inv_used_at:
+                            _inv_status += f" on {_inv_used_at.strftime('%b %d, %Y')}"
+                        _inv_status_color = "#22c55e"
+                    elif not _inv_active:
+                        _inv_status = "Deactivated"
+                        _inv_status_color = "#6b7280"
+                    else:
+                        _inv_status = "Pending"
+                        _inv_status_color = "#f59e0b"
+                    _inv_created = _inv.get("created_at")
+                    _inv_created_str = _inv_created.strftime("%b %d, %Y") if _inv_created else ""
+                    _inv_label_html = f' <span style="color:#6b7280;">— {html.escape(_inv_note)}</span>' if _inv_note else ""
+                    _inv_created_html = f' <span style="color:#6b7280;">&bull; created {_inv_created_str}</span>' if _inv_created_str else ""
+                    st.markdown(
+                        f'<div style="background:{CARD_BG};border:1px solid {BORDER};border-radius:6px;padding:7px 10px;margin-bottom:6px;">'
+                        f'<div style="font-family:monospace;font-size:0.72rem;color:{WHITE};margin-bottom:2px;">'
+                        f'{html.escape(_inv_code)}{_inv_label_html}'
+                        f'</div>'
+                        f'<div style="font-size:0.6rem;color:{_inv_status_color};">'
+                        f'{_inv_status}{_inv_created_html}'
+                        f'</div>'
+                        f'</div>',
+                        unsafe_allow_html=True
+                    )
+                    if _inv_active and not _inv_used_by:
+                        if st.button("Deactivate", key=f"deact_{_inv_code}", use_container_width=True):
+                            deactivate_invite(_inv_code)
+                            st.rerun()
 
     st.markdown("---")
     if st.button("Logout", use_container_width=True, key="logout_btn"):
