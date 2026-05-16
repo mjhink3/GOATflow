@@ -2427,7 +2427,7 @@ IMPORTANT: Return ONLY a valid JSON object matching this exact schema — no mar
             ))
 
     response = client.models.generate_content(
-        model="gemini-2.0-flash",
+        model="gemini-2.5-flash",
         contents=contents
     )
     raw = response.text.strip()
