@@ -18,7 +18,8 @@ import http.server
 import time
 import psycopg2
 import psycopg2.extras
-from openai import OpenAI
+from google import genai as genai
+from google.genai import types as _genai_types
 from pydantic import BaseModel, Field
 from PyPDF2 import PdfReader
 
@@ -2285,12 +2286,11 @@ class ChurnOutput(BaseModel):
     signals: list[Signal] = Field(description="Re-sorted list of all tasks by operational weight descending")
 
 
-def get_openai_client():
-    base_url = os.environ.get("AI_INTEGRATIONS_OPENAI_BASE_URL")
-    api_key = os.environ.get("AI_INTEGRATIONS_OPENAI_API_KEY")
-    if not base_url or not api_key:
-        raise RuntimeError("OpenAI integration is not configured.")
-    return OpenAI(api_key=api_key, base_url=base_url)
+def get_gemini_client():
+    api_key = os.environ.get("GEMINI_API_KEY")
+    if not api_key:
+        raise RuntimeError("GEMINI_API_KEY is not configured.")
+    return genai.Client(api_key=api_key)
 
 
 SYSTEM_PROMPT_BASE = """You are the GOATflow Churn Engine — the tactical input layer for the WorkGOAT Ecosystem.
@@ -2366,7 +2366,7 @@ IMPORTANT: These Horns override default ranking logic. If a Horn says a category
 
 
 def run_churn_engine(existing_signals: list[dict], files_data: list[dict], extra_text: str, directives_text: str = "") -> ChurnOutput:
-    client = get_openai_client()
+    client = get_gemini_client()
 
     existing_desc = ""
     if existing_signals:
@@ -2387,26 +2387,66 @@ def run_churn_engine(existing_signals: list[dict], files_data: list[dict], extra
 
     new_input = "\n\n".join(new_input_parts) if new_input_parts else "(no text input)"
 
-    user_content = []
-    user_content.append({"type": "text", "text": f"{existing_desc}\n\nNEW INPUT:\n{new_input}\n\nMerge, classify as Routine Grazing or Summit Call, re-prioritize, and return the full sorted Track list."})
+    system_prompt = build_system_prompt(directives_text)
+
+    json_schema = """{
+  "signals": [
+    {
+      "task_name": "string",
+      "why": "string (one sentence)",
+      "xp_reward": "Micro | Standard | High-Leverage | GOAT",
+      "operational_weight": 0.0-10.0,
+      "directive_applied": true | false,
+      "bleat_type": "Routine Grazing | Summit Call",
+      "horn_applied_name": "string (empty if none)",
+      "category": "communication | administrative | creative | financial | personal | health | technical | planning | operational | other"
+    }
+  ]
+}"""
+
+    text_prompt = f"""{system_prompt}
+
+{existing_desc}
+
+NEW INPUT:
+{new_input}
+
+Merge, classify as Routine Grazing or Summit Call, re-prioritize, and return the full sorted Track list.
+
+IMPORTANT: Return ONLY a valid JSON object matching this exact schema — no markdown fences, no explanation, nothing else:
+{json_schema}"""
+
+    contents = [text_prompt]
 
     for fd in files_data:
         if fd["type"] == "image":
-            user_content.append({"type": "text", "text": f"[IMAGE: {fd['name']}] — Extract tasks from this image."})
-            user_content.append({"type": "image_url", "image_url": {"url": f"data:{fd['mime']};base64,{fd['b64']}"}})
+            contents.append(f"[IMAGE: {fd['name']}] — Extract all actionable tasks from this image.")
+            contents.append(_genai_types.Part.from_bytes(
+                data=base64.b64decode(fd["b64"]),
+                mime_type=fd["mime"]
+            ))
 
-    system_prompt = build_system_prompt(directives_text)
-
-    response = client.beta.chat.completions.parse(
-        model="gpt-4o-mini",
-        messages=[
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_content},
-        ],
-        response_format=ChurnOutput,
+    response = client.models.generate_content(
+        model="gemini-1.5-flash",
+        contents=contents
     )
-    parsed = response.choices[0].message.parsed
-    if parsed is None:
+    raw = response.text.strip()
+
+    if raw.startswith("```"):
+        raw = raw.split("```")[1]
+        if raw.startswith("json"):
+            raw = raw[4:]
+        raw = raw.strip()
+    if raw.endswith("```"):
+        raw = raw[:-3].strip()
+
+    try:
+        data = _json.loads(raw)
+    except Exception as e:
+        raise RuntimeError(f"Churn Engine returned invalid JSON: {e}\nRaw: {raw[:500]}")
+
+    parsed = ChurnOutput(**data)
+    if not parsed.signals:
         raise RuntimeError("Analysis could not be completed.")
     return parsed
 
