@@ -2320,7 +2320,8 @@ Rules:
 - Sort by operational_weight descending.
 - xp_reward (CCR tier) must be exactly one of: Micro, Standard, High-Leverage, GOAT
 - bleat_type must be exactly one of: Routine Grazing, Summit Call
-- Summit Calls should generally have operational_weight >= 7
+- operational_weight MUST be a number between 0.0 and 10.0 (not 0.0–1.0). Examples: a critical production outage = 9.5, an overdue invoice = 7.2, booking a dentist = 2.1. Never return values below 1.0 unless the task is truly negligible.
+- Summit Calls should generally have operational_weight >= 7.0
 - For directive_applied: set to true ONLY if a GOAT Horn directly influenced this task's priority or ranking. If no horns exist, always set to false.
 - For horn_applied_name: set to the exact text of the Horn that governed this task's ranking. Empty string if no horn applied.
 - For category: assign exactly one of: communication, administrative, creative, financial, personal, health, technical, planning, operational, other. This is a hidden internal tag not shown to the user. Use your best judgment based on the task content."""
@@ -2395,7 +2396,7 @@ def run_churn_engine(existing_signals: list[dict], files_data: list[dict], extra
       "task_name": "string",
       "why": "string (one sentence)",
       "xp_reward": "Micro | Standard | High-Leverage | GOAT",
-      "operational_weight": 0.0-10.0,
+      "operational_weight": 7.5,
       "directive_applied": true | false,
       "bleat_type": "Routine Grazing | Summit Call",
       "horn_applied_name": "string (empty if none)",
@@ -2448,6 +2449,12 @@ IMPORTANT: Return ONLY a valid JSON object matching this exact schema — no mar
     parsed = ChurnOutput(**data)
     if not parsed.signals:
         raise RuntimeError("Analysis could not be completed.")
+
+    # Safety net: if Gemini returned 0–1 scale instead of 0–10, rescale
+    if parsed.signals and all(s.operational_weight <= 1.0 for s in parsed.signals):
+        for s in parsed.signals:
+            s.operational_weight = round(s.operational_weight * 10, 1)
+
     return parsed
 
 
