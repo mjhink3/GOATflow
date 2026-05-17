@@ -3571,21 +3571,27 @@ with st.sidebar:
                      "just_dropped", "just_purged", "fresh_cheese_pending", "just_earned_fresh_cheese"]:
             st.session_state.pop(key, None)
         st.rerun()
-    _btn_style = ("width:100%;background:transparent;border:1px solid #374151;border-radius:8px;"
-                  "color:#6b7280;font-family:'DM Sans',sans-serif;font-size:0.8rem;font-weight:500;"
-                  "padding:12px 16px;cursor:pointer;transition:all 0.2s;margin-top:0.5rem;"
-                  "display:flex;align-items:center;justify-content:center;gap:10px;")
-    _ic_style = "width:28px;min-width:28px;height:28px;max-height:28px;object-fit:contain;flex-shrink:0;display:inline-block;vertical-align:middle;"
-    _tut_icon = (f'<img src="{icon_tutorial_src}" style="{_ic_style}">' if icon_tutorial_src
-                 else '<span style="font-size:1rem;">❓</span>')
-    _ani_icon = (f'<img src="{icon_animal_intro_src}" style="{_ic_style}">' if icon_animal_intro_src
-                 else '<span style="font-size:1rem;">🎪</span>')
-    st.markdown(
-        f'<button data-gf-id="replay-tutorial" style="{_btn_style}">'
-        f'{_tut_icon}<span>Replay Tutorial</span></button>'
-        f'<button data-gf-id="replay-animal" style="{_btn_style}">'
-        f'{_ani_icon}<span>Replay Animal Intro</span></button>',
-        unsafe_allow_html=True
+    if st.button("❓  Replay Tutorial", use_container_width=True, key="replay_tutorial_btn"):
+        st.session_state["_gf_trigger_tour"] = True
+    if st.button("🎪  Replay Animal Intro", use_container_width=True, key="replay_animal_btn"):
+        st.session_state["_gf_trigger_slideshow"] = True
+
+# ── Replay triggers (fired via session state from st.button clicks above) ──────
+if st.session_state.pop("_gf_trigger_tour", False):
+    _stc.html(
+        "<script>var pw=window.parent;"
+        "setTimeout(function(){"
+        "if(typeof pw.gfStartTour==='function')pw.gfStartTour();"
+        "},400);</script>",
+        height=0
+    )
+if st.session_state.pop("_gf_trigger_slideshow", False):
+    _stc.html(
+        "<script>var pw=window.parent;"
+        "setTimeout(function(){"
+        "if(typeof pw.gfReplaySlideshow==='function')pw.gfReplaySlideshow();"
+        "},400);</script>",
+        height=0
     )
 
 # ── Force sidebar closed + inject late button/stat CSS after Streamlit emotion ─
@@ -3721,22 +3727,6 @@ _stc.html(
         cpi.src = _GF_COMPLETE_SRC;
         cpi.style.cssText = 'width:60px;height:60px;object-fit:contain;vertical-align:middle;margin-right:10px;display:inline-block;flex-shrink:0;';
         b.insertBefore(cpi, b.firstChild);
-      }
-      // Replay Animal Intro click binding
-      if (txt.indexOf('Replay Animal Intro') !== -1 && !b._gfAnimalBound) {
-        b._gfAnimalBound = true;
-        b.addEventListener('click', function(e) {
-          e.stopPropagation();
-          if (typeof pw.gfReplaySlideshow === 'function') pw.gfReplaySlideshow();
-        });
-      }
-      // Replay Tutorial click binding
-      if (txt.indexOf('Replay Tutorial') !== -1 && !b._gfReplayBound) {
-        b._gfReplayBound = true;
-        b.addEventListener('click', function(e) {
-          e.stopPropagation();
-          if (typeof pw.gfStartTour === 'function') pw.gfStartTour();
-        });
       }
     });
   }
@@ -3943,70 +3933,6 @@ _tour_iife = r"""
       pw.location.reload();
     }
   };
-  // Bind Replay Tutorial button via data-gf-id attribute (Streamlit strips onclick attrs).
-  function _bindReplayBtn() {
-    var btn = pd.querySelector('[data-gf-id="replay-tutorial"]');
-    if (!btn) {
-      // Fallback: walk text nodes
-      var walker = pd.createTreeWalker(pd.body, 4);
-      var node;
-      while ((node = walker.nextNode())) {
-        if (node.nodeValue && node.nodeValue.indexOf('Replay Tutorial') !== -1) {
-          var t = node.parentElement;
-          while (t && t.tagName === 'SPAN') t = t.parentElement;
-          if (t && t.tagName === 'BUTTON') { btn = t; break; }
-        }
-      }
-    }
-    if (btn && !btn._gfReplayBound) {
-      btn._gfReplayBound = true;
-      btn.style.cursor = 'pointer';
-      btn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        if (typeof pw.gfStartTour === 'function') pw.gfStartTour();
-      });
-      return true;
-    }
-    return false;
-  }
-  if (!_bindReplayBtn()) {
-    var _rbTimer = pw.setInterval(function() {
-      if (_bindReplayBtn()) pw.clearInterval(_rbTimer);
-    }, 600);
-    pw.setTimeout(function() { pw.clearInterval(_rbTimer); }, 30000);
-  }
-
-  // Bind Replay Animal Intro button via data-gf-id attribute.
-  function _bindAnimalIntroBtn() {
-    var btn = pd.querySelector('[data-gf-id="replay-animal"]');
-    if (!btn) {
-      var walker = pd.createTreeWalker(pd.body, 4);
-      var node;
-      while ((node = walker.nextNode())) {
-        if (node.nodeValue && node.nodeValue.indexOf('Replay Animal Intro') !== -1) {
-          var t = node.parentElement;
-          while (t && t.tagName === 'SPAN') t = t.parentElement;
-          if (t && t.tagName === 'BUTTON') { btn = t; break; }
-        }
-      }
-    }
-    if (btn && !btn._gfAnimalBound) {
-      btn._gfAnimalBound = true;
-      btn.style.cursor = 'pointer';
-      btn.addEventListener('click', function(e) {
-        e.stopPropagation();
-        if (typeof pw.gfReplaySlideshow === 'function') pw.gfReplaySlideshow();
-      });
-      return true;
-    }
-    return false;
-  }
-  if (!_bindAnimalIntroBtn()) {
-    var _abTimer = pw.setInterval(function() {
-      if (_bindAnimalIntroBtn()) pw.clearInterval(_abTimer);
-    }, 600);
-    pw.setTimeout(function() { pw.clearInterval(_abTimer); }, 30000);
-  }
   // Auto-start is handled by slideshow; gfStartTour() is called from there.
 })();
 """
