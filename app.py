@@ -4449,8 +4449,11 @@ _fab_iife = r"""(function() {
       var setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
       setter.call(ta, newVal);
     } catch(e) { ta.value = newVal; }
-    ta.dispatchEvent(new Event('input', { bubbles: true }));
-    ta.dispatchEvent(new Event('change', { bubbles: true }));
+    try { ta.dispatchEvent(new InputEvent('input', { bubbles: true, cancelable: true })); } catch(e) {}
+    try { ta.dispatchEvent(new Event('input', { bubbles: true })); } catch(e) {}
+    try { ta.dispatchEvent(new Event('change', { bubbles: true })); } catch(e) {}
+    // Persist transcript so the time modal can re-inject it if needed
+    try { sessionStorage.setItem('gf_voice_transcript', ta.value); } catch(e) {}
   }
 
   function setIdle() {
@@ -5110,16 +5113,23 @@ var selectedTime=null;
 var listenerAttached=false;
 
 function injectTimeText(choice){
-  if(!choice||choice==='Open ended') return;
   var pd=window.parent.document;
-  var ta=pd.querySelector('[data-testid="stTextArea"] textarea');
+  var ta=pd.querySelector('[data-testid="stTextArea"] textarea')||pd.querySelector('.stTextArea textarea')||pd.querySelector('textarea');
   if(!ta) return;
-  var ctx='\n\n[User has '+choice+' available. Prioritize to fit within that window. Summit Calls first regardless of time.]';
+  // Re-inject voice transcript if textarea was cleared by a React re-render
+  var current=ta.value||'';
+  if(!current.trim()){
+    try{ var saved=sessionStorage.getItem('gf_voice_transcript'); if(saved&&saved.trim()) current=saved; }catch(e){}
+  }
+  var ctx=(!choice||choice==='Open ended')?'':'\n\n[User has '+choice+' available. Prioritize to fit within that window. Summit Calls first regardless of time.]';
+  var newVal=(current.trim()?current.trim():'')+ctx;
   try{
     var setter=Object.getOwnPropertyDescriptor(window.parent.HTMLTextAreaElement.prototype,'value').set;
-    setter.call(ta, ta.value+ctx);
-    ta.dispatchEvent(new Event('input',{bubbles:true}));
-  }catch(e){}
+    setter.call(ta, newVal);
+  }catch(e){ ta.value=newVal; }
+  try{ ta.dispatchEvent(new window.parent.InputEvent('input',{bubbles:true,cancelable:true})); }catch(e){}
+  try{ ta.dispatchEvent(new window.parent.Event('input',{bubbles:true})); }catch(e){}
+  try{ ta.dispatchEvent(new window.parent.Event('change',{bubbles:true})); }catch(e){}
 }
 
 function showModal(dropBtn){
@@ -5179,7 +5189,7 @@ function showModal(dropBtn){
     sessionStorage.setItem(DONE_KEY,'1');
     overlay.remove();
     injectTimeText(selectedTime.label);
-    setTimeout(function(){ dropBtn.click(); },200);
+    dropBtn.click();
   });
 
   var skipLink=pd.createElement('div');
@@ -5189,7 +5199,8 @@ function showModal(dropBtn){
     e.preventDefault();
     sessionStorage.setItem(DONE_KEY,'1');
     overlay.remove();
-    setTimeout(function(){ dropBtn.click(); },50);
+    injectTimeText(null);
+    dropBtn.click();
   });
 
   card.appendChild(goat);
