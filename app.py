@@ -1542,6 +1542,9 @@ def get_db():
     for attempt in range(5):
         try:
             db_url = os.environ.get("PROD_DATABASE_URL") or os.environ["DATABASE_URL"]
+            import re as _re
+            _masked = _re.sub(r':([^@]+)@', lambda m: ':' + m.group(1)[:4] + '***@', db_url)
+            print(f"DEBUG DB URL: {_masked}")
             return psycopg2.connect(db_url)
         except Exception as e:
             last_err = e
