@@ -2545,7 +2545,7 @@ setTimeout(function() {
 _GF_COMPLETION_ANIM_JS = """
 (function(){
   var pw=window.parent,pd=pw.document;
-  var LINES=["Sieved. \uD83D\uDC10","That's what I thought.","Another one bites the dust.","The pasture grows.","Clean. Next.","GOAATing.","Efficient. Very efficient.","That Track never stood a chance.","The goat delivers.","Logged. Timestamped. Yours.","Small win. Real win.","The record shows you showed up.","One less thing between you and the summit."];
+  var LINES=["Sieved.","That's what I thought.","Another one bites the dust.","The pasture grows.","Clean. Next.","GOAATing.","Efficient. Very efficient.","That Track never stood a chance.","The goat delivers.","Logged. Timestamped. Yours.","Small win. Real win.","The record shows you showed up.","One less thing between you and the summit."];
   var line=LINES[Math.floor(Math.random()*LINES.length)];
   if(!pd.getElementById('gf-ca-style')){
     var cs=pd.createElement('style');cs.id='gf-ca-style';
@@ -2560,7 +2560,7 @@ _GF_COMPLETION_ANIM_JS = """
     var pop=pd.createElement('div');
     pop.id='gf-ca-mascot';
     pop.style.cssText='position:fixed;top:50%;left:50%;z-index:99999;pointer-events:none;animation:gfPopIn 200ms ease-out forwards;text-align:center;';
-    var imgH=_CA_MASCOT?'<img src="'+_CA_MASCOT+'" style="width:120px;height:120px;object-fit:contain;display:block;margin:0 auto 8px;">':'<div style="font-size:56px;line-height:1;margin-bottom:8px;">\uD83D\uDC10</div>';
+    var imgH=_CA_MASCOT?'<img src="'+_CA_MASCOT+'" style="width:120px;height:120px;object-fit:contain;display:block;margin:0 auto 8px;">':'<div style="font-size:56px;line-height:1;margin-bottom:8px;">&#x1F410;</div>';
     pop.innerHTML=imgH+'<div style="font-family:Syne,sans-serif;font-size:16px;font-weight:700;color:#fff;text-shadow:0 2px 12px rgba(0,0,0,0.9);background:rgba(10,10,15,0.88);padding:8px 16px;border-radius:8px;max-width:280px;">'+line+'</div>';
     pd.body.appendChild(pop);
   },300);
@@ -2579,7 +2579,7 @@ _GF_COMPLETION_ANIM_JS = """
   },2000);
   setTimeout(function(){
     var msg;
-    if(_CA_CHEESE){msg='Fresh Cheese earned. The pasture remembers everything. \uD83E\uDDC0';}
+    if(_CA_CHEESE){msg='Fresh Cheese earned. The pasture remembers everything.';}
     else if(_CA_TIER==='Summit Call'){msg='Summit Call cleared. That was the one that mattered today.';}
     else{msg='+'+_CA_HAY+' Hay. The record shows you showed up.';}
     var t=pd.createElement('div');
@@ -3680,24 +3680,24 @@ with st.sidebar:
 
 # ── Replay triggers ─────────────────────────────────────────────────────────────
 if st.session_state.pop("_gf_trigger_tour", False):
-    _stc.html(
-        "<script>(function(){"
-        "var pw=window.parent,n=0;"
-        "var t=setInterval(function(){"
-        "if(typeof pw.gfStartTour==='function'){clearInterval(t);pw.gfStartTour();}"
-        "else if(++n>15)clearInterval(t);"
-        "},200);})();</script>",
-        height=0
+    _rn = random.randint(0, 0xFFFFFF)
+    st.markdown(
+        f"<script>/*gf-tour-{_rn}*/(function(){{"
+        "var n=0,t=setInterval(function(){{"
+        "if(typeof window.gfStartTour==='function'){{clearInterval(t);window.gfStartTour();}}"
+        "else if(++n>20){{clearInterval(t);}}"
+        "}},200);}})();</script>",
+        unsafe_allow_html=True
     )
 if st.session_state.pop("_gf_trigger_slideshow", False):
-    _stc.html(
-        "<script>(function(){"
-        "var pw=window.parent,n=0;"
-        "var t=setInterval(function(){"
-        "if(typeof pw.gfReplaySlideshow==='function'){clearInterval(t);pw.gfReplaySlideshow();}"
-        "else if(++n>15)clearInterval(t);"
-        "},200);})();</script>",
-        height=0
+    _rn = random.randint(0, 0xFFFFFF)
+    st.markdown(
+        f"<script>/*gf-ss-{_rn}*/(function(){{"
+        "var n=0,t=setInterval(function(){{"
+        "if(typeof window.gfReplaySlideshow==='function'){{clearInterval(t);window.gfReplaySlideshow();}}"
+        "else if(++n>20){{clearInterval(t);}}"
+        "}},200);}})();</script>",
+        unsafe_allow_html=True
     )
 
 # ── Inject late button/stat CSS after Streamlit emotion ────────────────────────
