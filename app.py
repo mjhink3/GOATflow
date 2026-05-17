@@ -4625,6 +4625,41 @@ _tour_iife_json      = _json.dumps(_tour_iife_resolved)
 _slideshow_iife_json = _json.dumps(_slideshow_iife)
 _fab_iife_json       = _json.dumps(_fab_iife)
 
+# Button-listener IIFE injected into parent document context (not iframe context).
+# Runs as window = Streamlit main page, so gfStartTour / gfReplaySlideshow are
+# directly accessible as window.X (defined by the tour / slideshow IIFEs on pw
+# which equals window when the app is a top-level page).
+_btn_listener_iife = r"""(function() {
+  var _pw = window.parent;
+  function tryStart(type) {
+    if (type === 'tour') {
+      if (typeof window.gfStartTour === 'function') { window.gfStartTour(); return; }
+      try { if (typeof _pw.gfStartTour === 'function') { _pw.gfStartTour(); } } catch(e) {}
+    }
+    if (type === 'ss') {
+      if (typeof window.gfReplaySlideshow === 'function') { window.gfReplaySlideshow(); return; }
+      try { if (typeof _pw.gfReplaySlideshow === 'function') { _pw.gfReplaySlideshow(); } } catch(e) {}
+    }
+  }
+  function attachListeners() {
+    document.querySelectorAll('[data-testid="stButton"] button').forEach(function(btn) {
+      if (btn._gfRL) return;
+      var txt = (btn.textContent || '').replace(/\s+/g, ' ').trim();
+      if (txt.indexOf('Replay Tutorial') !== -1) {
+        btn._gfRL = true;
+        btn.addEventListener('click', function() { setTimeout(function(){ tryStart('tour'); }, 800); });
+      }
+      if (txt.indexOf('Replay Animal') !== -1) {
+        btn._gfRL = true;
+        btn.addEventListener('click', function() { setTimeout(function(){ tryStart('ss'); }, 800); });
+      }
+    });
+  }
+  attachListeners();
+  setInterval(attachListeners, 1500);
+})();"""
+_btn_listener_iife_json = _json.dumps(_btn_listener_iife)
+
 _ob_iframe_html = f"""<!DOCTYPE html><html><body style="margin:0;padding:0;background:transparent;">
 <script>
 (function() {{
@@ -4688,32 +4723,16 @@ _ob_iframe_html = f"""<!DOCTYPE html><html><body style="margin:0;padding:0;backg
   fabEl.textContent = {_fab_iife_json};
   pd.body.appendChild(fabEl);
 
-  // 7. Intercept sidebar replay button clicks directly in the parent document.
-  // This runs entirely client-side — no Python round-trip, no flag iframes.
-  // 800 ms delay lets Streamlit finish its rerun before the overlay opens.
-  (function() {{
-    function tryStart(type) {{
-      if (type === 'tour' && typeof pw.gfStartTour === 'function') pw.gfStartTour();
-      if (type === 'ss'   && typeof pw.gfReplaySlideshow === 'function') pw.gfReplaySlideshow();
-    }}
-    function attachListeners() {{
-      var btns = pd.querySelectorAll('[data-testid="stButton"] button, [data-testid="baseButton-secondary"]');
-      btns.forEach(function(btn) {{
-        if (btn._gfRL) return;
-        var txt = (btn.textContent || btn.innerText || '').replace(/\s+/g,' ').trim();
-        if (txt.indexOf('Replay Tutorial') !== -1) {{
-          btn._gfRL = true;
-          btn.addEventListener('click', function() {{ setTimeout(function(){{tryStart('tour');}}, 800); }});
-        }}
-        if (txt.indexOf('Replay Animal') !== -1) {{
-          btn._gfRL = true;
-          btn.addEventListener('click', function() {{ setTimeout(function(){{tryStart('ss');}}, 800); }});
-        }}
-      }});
-    }}
-    attachListeners();
-    setInterval(attachListeners, 1500);
-  }})();
+  // 7. Inject button-listener script into parent document context (idempotent).
+  // Running in the parent page's own JS context means document.querySelector,
+  // window.gfStartTour, and window.gfReplaySlideshow are all native — no
+  // cross-document iframe concerns.
+  if (!pd.getElementById('gf-btn-listeners')) {{
+    var blEl = pd.createElement('script');
+    blEl.id = 'gf-btn-listeners';
+    blEl.textContent = {_btn_listener_iife_json};
+    pd.body.appendChild(blEl);
+  }}
 }})();
 </script>
 </body></html>"""
