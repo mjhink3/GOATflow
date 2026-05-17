@@ -689,8 +689,14 @@ CUSTOM_CSS = f"""
             min-height: 80px !important;
         }}
         .stat-value {{
-            font-size: 1.15rem !important;
+            font-size: clamp(0.8rem, 4vw, 1.0rem) !important;
             gap: 4px !important;
+            white-space: nowrap !important;
+            min-width: 0 !important;
+        }}
+        .stat-box .goatflow-icon {{
+            width: 26px !important;
+            height: 26px !important;
         }}
         .stat-label {{
             font-size: 0.5rem !important;
@@ -887,20 +893,23 @@ CUSTOM_CSS = f"""
     }}
 
     .stat-value {{
-        font-size: 1.35rem;
+        font-size: clamp(0.85rem, 3vw, 1.1rem);
         font-weight: 800;
         color: {WHITE};
         font-family: 'Syne', sans-serif;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 6px;
+        gap: 5px;
         flex-wrap: nowrap;
+        min-width: 0;
+        white-space: nowrap;
     }}
 
     .stat-box .goatflow-icon {{
-        width: 40px !important;
-        height: 40px !important;
+        width: 32px !important;
+        height: 32px !important;
+        flex-shrink: 0 !important;
     }}
 
     .stat-label {{
