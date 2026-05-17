@@ -1542,9 +1542,6 @@ def get_db():
     for attempt in range(5):
         try:
             db_url = os.environ.get("PROD_DATABASE_URL") or os.environ["DATABASE_URL"]
-            import re as _re
-            _masked = _re.sub(r':([^@]+)@', lambda m: ':' + m.group(1)[:4] + '***@', db_url)
-            print(f"DEBUG DB URL: {_masked}")
             return psycopg2.connect(db_url)
         except Exception as e:
             last_err = e
@@ -3592,7 +3589,9 @@ with st.sidebar:
     )
 
 # ── Force sidebar closed + inject late button/stat CSS after Streamlit emotion ─
-_stc.html("""
+_stc.html(
+    f'<script>var _GF_CANCEL_SRC="{icon_cancel_src}";var _GF_LOGOUT_SRC="{icon_logout_src}";var _GF_CHURN_SRC="{icon_churn_engine_src}";var _GF_COMPLETE_SRC="{icon_completed_src}";</script>'
+    + """
 <script>
 (function() {
   var pw = window.parent;
@@ -3681,7 +3680,7 @@ _stc.html("""
         if (!b._gfCancelIcon) {
           b._gfCancelIcon = true;
           var xi = pd.createElement('img');
-          xi.src = '/app/static/icon_cancel.webp';
+          xi.src = _GF_CANCEL_SRC;
           xi.style.cssText = 'width:60px;height:60px;object-fit:contain;vertical-align:middle;margin-right:10px;display:inline-block;flex-shrink:0;';
           b.insertBefore(xi, b.firstChild);
         }
@@ -3700,7 +3699,7 @@ _stc.html("""
       if (txt.indexOf('Logout') !== -1 && !b._gfLogoutIcon) {
         b._gfLogoutIcon = true;
         var li = pd.createElement('img');
-        li.src = '/app/static/icon_logout.png';
+        li.src = _GF_LOGOUT_SRC;
         li.style.cssText = 'width:56px;height:56px;object-fit:contain;vertical-align:middle;margin-right:8px;border-radius:2px;display:inline-block;flex-shrink:0;';
         b.insertBefore(li, b.firstChild);
         b.style.setProperty('display', 'inline-flex', 'important');
@@ -3711,7 +3710,7 @@ _stc.html("""
       if (txt.indexOf('Drop Into Churn Engine') !== -1 && !b._gfChurnIcon) {
         b._gfChurnIcon = true;
         var ci = pd.createElement('img');
-        ci.src = '/app/static/icon_churn_engine.png';
+        ci.src = _GF_CHURN_SRC;
         ci.style.cssText = 'width:66px;height:66px;object-fit:contain;vertical-align:middle;margin-right:10px;border-radius:2px;flex-shrink:0;';
         b.insertBefore(ci, b.firstChild);
       }
@@ -3719,7 +3718,7 @@ _stc.html("""
       if (txt.indexOf('Complete?') !== -1 && !b._gfCompleteIcon) {
         b._gfCompleteIcon = true;
         var cpi = pd.createElement('img');
-        cpi.src = '/app/static/icon_completed.webp';
+        cpi.src = _GF_COMPLETE_SRC;
         cpi.style.cssText = 'width:60px;height:60px;object-fit:contain;vertical-align:middle;margin-right:10px;display:inline-block;flex-shrink:0;';
         b.insertBefore(cpi, b.firstChild);
       }
