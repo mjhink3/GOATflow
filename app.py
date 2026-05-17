@@ -3633,7 +3633,8 @@ def __sb_content():
     if st.button("Logout", use_container_width=True, key="logout_btn"):
         for key in ["auth_user_id", "auth_user_name", "auth_display_name",
                      "incognito_signals", "incognito_mode", "just_completed_task",
-                     "just_dropped", "just_purged", "fresh_cheese_pending", "just_earned_fresh_cheese"]:
+                     "just_dropped", "just_purged", "fresh_cheese_pending", "just_earned_fresh_cheese",
+                     "sidebar_open"]:
             st.session_state.pop(key, None)
         st.rerun()
     if st.button("❓  Replay Tutorial", use_container_width=True, key="replay_tutorial_btn"):
@@ -3674,7 +3675,7 @@ if st.session_state.pop("_gf_trigger_slideshow", False):
 
 # ── Force sidebar closed + inject late button/stat CSS after Streamlit emotion ─
 _stc.html(
-    f'<script>var _GF_CANCEL_SRC="{icon_cancel_src}";var _GF_LOGOUT_SRC="{icon_logout_src}";var _GF_CHURN_SRC="{icon_churn_engine_src}";var _GF_COMPLETE_SRC="{icon_completed_src}";var _GF_HOOF_LEFT_SRC="{_hoof_left_url}";var _GF_HOOF_RIGHT_SRC="{_hoof_right_url}";</script>'
+    f'<script>var _GF_CANCEL_SRC="{icon_cancel_src}";var _GF_LOGOUT_SRC="{icon_logout_src}";var _GF_CHURN_SRC="{icon_churn_engine_src}";var _GF_COMPLETE_SRC="{icon_completed_src}";var _GF_HOOF_LEFT_SRC="{_hoof_left_url}";var _GF_HOOF_RIGHT_SRC="{_hoof_right_url}";var _GF_SIDEBAR_OPEN={"true" if st.session_state.get("sidebar_open", False) else "false"};</script>'
     + """
 <script>
 (function() {
@@ -3711,7 +3712,8 @@ _stc.html(
     pd.head.appendChild(s);
   }
 
-  // 2. Close sidebar — always starts closed on login/render
+  // 2. Close sidebar — starts closed unless Python session state says it should be open
+  var _gfSidebarShouldBeOpen = (typeof _GF_SIDEBAR_OPEN !== 'undefined') && !!_GF_SIDEBAR_OPEN;
   var _gfSidebarLocked = false;
   function isSidebarOpen() {
     var sb = pd.querySelector('[data-testid="stSidebar"]');
@@ -3727,8 +3729,10 @@ _stc.html(
     );
     if (btn) btn.click();
   }
-  // Reset per-render so logout→login re-locks sidebar
-  pw._gfSidebarUserOpened = false;
+  // If sidebar_open is True in session state (e.g. user had it open on login page),
+  // treat it as user-opened so the observer won't force it closed.
+  // Otherwise reset per-render so logout→login re-locks sidebar.
+  pw._gfSidebarUserOpened = _gfSidebarShouldBeOpen;
   if (pw._gfSbObserver) { pw._gfSbObserver.disconnect(); pw._gfSbObserver = null; }
   pw._gfSbObserver = new MutationObserver(function() {
     if (!pw._gfSidebarUserOpened && isSidebarOpen()) { closeSidebar(); }
@@ -3743,10 +3747,13 @@ _stc.html(
   }, { capture: true });
   setTimeout(function() { if (pw._gfSbObserver) { pw._gfSbObserver.disconnect(); pw._gfSbObserver = null; } }, 5000);
   injectStyles();
-  setTimeout(closeSidebar, 100);
-  setTimeout(closeSidebar, 400);
-  setTimeout(closeSidebar, 900);
-  setTimeout(closeSidebar, 2000);
+  // Only force-close on render if session state says sidebar should be closed
+  if (!_gfSidebarShouldBeOpen) {
+    setTimeout(closeSidebar, 100);
+    setTimeout(closeSidebar, 400);
+    setTimeout(closeSidebar, 900);
+    setTimeout(closeSidebar, 2000);
+  }
   // Re-inject styles after Streamlit re-renders
   setTimeout(injectStyles, 800);
   setTimeout(injectStyles, 2000);
