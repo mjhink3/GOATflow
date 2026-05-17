@@ -3681,18 +3681,22 @@ with st.sidebar:
 # ── Replay triggers ─────────────────────────────────────────────────────────────
 if st.session_state.pop("_gf_trigger_tour", False):
     _stc.html(
-        "<script>var pw=window.parent;"
-        "setTimeout(function(){"
-        "if(typeof pw.gfStartTour==='function')pw.gfStartTour();"
-        "},400);</script>",
+        "<script>(function(){"
+        "var pw=window.parent,n=0;"
+        "var t=setInterval(function(){"
+        "if(typeof pw.gfStartTour==='function'){clearInterval(t);pw.gfStartTour();}"
+        "else if(++n>15)clearInterval(t);"
+        "},200);})();</script>",
         height=0
     )
 if st.session_state.pop("_gf_trigger_slideshow", False):
     _stc.html(
-        "<script>var pw=window.parent;"
-        "setTimeout(function(){"
-        "if(typeof pw.gfReplaySlideshow==='function')pw.gfReplaySlideshow();"
-        "},400);</script>",
+        "<script>(function(){"
+        "var pw=window.parent,n=0;"
+        "var t=setInterval(function(){"
+        "if(typeof pw.gfReplaySlideshow==='function'){clearInterval(t);pw.gfReplaySlideshow();}"
+        "else if(++n>15)clearInterval(t);"
+        "},200);})();</script>",
         height=0
     )
 
