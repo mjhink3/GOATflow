@@ -4091,7 +4091,7 @@ _slideshow_iife = r"""
     bamWrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;justify-content:center;width:100%;padding:0 28px;box-sizing:border-box;text-align:center;max-width:480px;margin:0 auto;';
 
     var bamLogo = pd.createElement('img');
-    bamLogo.src = '/app/static/goatflow_logo_nobg.webp';
+    bamLogo.src = './static/goatflow_logo_nobg.webp';
     bamLogo.style.cssText = 'width:180px;max-width:60vw;height:auto;opacity:0;transition:opacity 0.6s;animation:gfFloatBAM 3s ease-in-out infinite;display:block;margin:0 auto;';
     if (!pd.getElementById('gf-bam-float-kf')) {
       var kf = pd.createElement('style');
@@ -4115,7 +4115,7 @@ _slideshow_iife = r"""
     var l4 = makeLine('Let\u2019s go. \uD83D\uDC10', 'font-family:"Syne",sans-serif;font-weight:700;font-size:18px;color:#f59e0b;', 24);
 
     var startBtn = pd.createElement('button');
-    startBtn.textContent = 'Let\u2019s Start';
+    startBtn.textContent = 'Let\u2019s go. \uD83D\uDC10';
     startBtn.style.cssText = 'margin-top:28px;background:#7c3aed;color:#fff;border:none;border-radius:8px;padding:14px 40px;font-family:"Syne",sans-serif;font-weight:700;font-size:16px;cursor:pointer;opacity:0;transition:opacity 0.4s;';
     startBtn.onclick = function() { finishSlideshow(false); };
     bamWrap.appendChild(startBtn);
@@ -4210,7 +4210,7 @@ _slideshow_iife = r"""
             slideTimer = setTimeout(function() {
               if (done) return;
               if (idx + 1 < ANIMALS.length) {
-                imgEl.src = '/app/static/onboarding/animal_' + ANIMALS[idx+1].key + '.webp';
+                imgEl.src = './static/onboarding/animal_' + ANIMALS[idx+1].key + '.webp';
                 showSlide(idx + 1);
               } else {
                 showLogo();
@@ -4222,7 +4222,7 @@ _slideshow_iife = r"""
     }
 
     // Preload image then animate
-    var nextSrc = '/app/static/onboarding/animal_' + animal.key + '.webp';
+    var nextSrc = './static/onboarding/animal_' + animal.key + '.webp';
     if (imgEl.src.endsWith(nextSrc.split('/').pop()) && imgEl.complete) {
       startAnim();
     } else {
@@ -4330,7 +4330,7 @@ _slideshow_iife = r"""
   var firstImg = new pw.Image();
   firstImg.onload = function() { showSlide(0); };
   firstImg.onerror = function() { showSlide(0); };
-  firstImg.src = '/app/static/onboarding/animal_bull.webp';
+  firstImg.src = './static/onboarding/animal_bull.webp';
   } // end runSlideshow()
 
   pw.gfReplaySlideshow = function() {
