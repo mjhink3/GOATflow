@@ -5,3 +5,6 @@ enableStaticServing = true
 
 [client]
 showErrorDetails = true
+
+[ui]
+hideTopBar = true
