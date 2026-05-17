@@ -3727,16 +3727,16 @@ _stc.html(
         b.style.setProperty('background', '#7f1d1d', 'important');
         b.style.setProperty('color', '#fca5a5', 'important');
         b.style.setProperty('border', '1px solid #ef4444', 'important');
-        b.style.setProperty('min-height', '40px', 'important');
-        b.style.setProperty('max-height', '44px', 'important');
-        b.style.setProperty('padding', '4px 6px', 'important');
-        b.style.setProperty('font-size', '0.7rem', 'important');
+        b.style.setProperty('min-height', '48px', 'important');
+        b.style.setProperty('max-height', '54px', 'important');
+        b.style.setProperty('padding', '6px 10px', 'important');
+        b.style.setProperty('font-size', '0.75rem', 'important');
         b.style.setProperty('font-weight', '700', 'important');
         if (!b._gfCancelIcon) {
           b._gfCancelIcon = true;
           var xi = pd.createElement('img');
           xi.src = _GF_CANCEL_SRC;
-          xi.style.cssText = 'width:20px;height:20px;object-fit:contain;vertical-align:middle;margin-right:4px;display:inline-block;flex-shrink:0;';
+          xi.style.cssText = 'width:36px;height:36px;object-fit:contain;vertical-align:middle;margin-right:6px;display:inline-block;flex-shrink:0;';
           b.insertBefore(xi, b.firstChild);
         }
       }
