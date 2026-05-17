@@ -1,6 +1,15 @@
 import streamlit as st
 import streamlit.components.v1 as _stc
 import os
+
+# Port detection: use 5000 in Replit, 8501 on Streamlit Community Cloud.
+# config.toml has no hardcoded port so Community Cloud uses its default (8501).
+# Replit's workflow command (--server.port 5000) overrides config for local dev.
+if os.environ.get("REPL_ID"):
+    port = 5000   # Replit environment
+else:
+    port = 8501   # Streamlit Community Cloud / production
+
 from PIL import Image as _PILImage
 import io
 import html
