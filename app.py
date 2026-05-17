@@ -3035,74 +3035,76 @@ if "sidebar_open" not in st.session_state:
 if not user_info:
     with st.sidebar:
         if st.session_state.get("sidebar_open", False):
-            _lsb_cc, _ = st.columns([1, 6])
+            _lsb_cc, _ = st.columns([3, 20])
             with _lsb_cc:
                 if goat_hoof_b64:
-                    st.image("static/icon_hoof_left.webp", width=44)
-                if st.button("", key="gf_close_sidebar_login", help="Close menu"):
+                    _lh_pil = _PILImage.open(io.BytesIO(base64.b64decode(goat_hoof_b64)))
+                    st.image(_lh_pil, width=44)
+                if st.button("◀", key="gf_close_sidebar_login"):
                     st.session_state.sidebar_open = False
                     st.rerun()
-        sidebar_logo_html = (
-            f'<img src="{logo_src}" alt="GOATflow" style="height:130px;object-fit:contain;">'
-            if logo_src else
-            '<div style="font-size:1.4rem;font-weight:900;font-family:Syne,sans-serif;color:#6100ff;">GOATflow</div>'
-        )
-        st.markdown(f'''
-        <div style="text-align:center;padding:0.6rem 0 0.4rem 0;">
-            {sidebar_logo_html}
-        </div>
-        <div style="text-align:center;font-family:Syne,sans-serif;font-size:0.72rem;color:#9ca3af;padding-bottom:1rem;border-bottom:1px solid #1f2937;letter-spacing:0.04em;">
-            Grab life by the horns.<br>Leave the bull behind.
-        </div>
-        ''', unsafe_allow_html=True)
-
-        st.markdown('''
-        <div style="padding:0.9rem 0 0.5rem 0;border-bottom:1px solid #1f2937;">
-            <div style="font-family:Syne,sans-serif;font-size:0.65rem;font-weight:700;color:#6100ff;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.5rem;">About GOATflow</div>
-            <div style="font-family:DM Sans,sans-serif;font-size:0.72rem;color:#d1d5db;line-height:1.55;">
-                GOATflow is the AI-powered operational intelligence layer of the <strong style="color:#a78bfa;">WorkGOAT Ecosystem</strong> — built for founders, operators, and high-performers who need to cut the bull and move fast.
+            sidebar_logo_html = (
+                f'<img src="{logo_src}" alt="GOATflow" style="height:130px;object-fit:contain;">'
+                if logo_src else
+                '<div style="font-size:1.4rem;font-weight:900;font-family:Syne,sans-serif;color:#6100ff;">GOATflow</div>'
+            )
+            st.markdown(f'''
+            <div style="text-align:center;padding:0.6rem 0 0.4rem 0;">
+                {sidebar_logo_html}
             </div>
-        </div>
-        ''', unsafe_allow_html=True)
+            <div style="text-align:center;font-family:Syne,sans-serif;font-size:0.72rem;color:#9ca3af;padding-bottom:1rem;border-bottom:1px solid #1f2937;letter-spacing:0.04em;">
+                Grab life by the horns.<br>Leave the bull behind.
+            </div>
+            ''', unsafe_allow_html=True)
 
-        st.markdown('''
-        <div style="padding:0.9rem 0 0.5rem 0;border-bottom:1px solid #1f2937;">
-            <div style="font-family:Syne,sans-serif;font-size:0.65rem;font-weight:700;color:#6100ff;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.6rem;">Quick FAQ</div>
-            <div style="font-family:DM Sans,sans-serif;font-size:0.72rem;color:#d1d5db;line-height:1.55;display:flex;flex-direction:column;gap:0.65rem;">
-                <div>
-                    <div style="color:#a78bfa;font-weight:600;margin-bottom:0.15rem;">What is GOATflow?</div>
-                    <div>An AI task intelligence dashboard. Drop files, voice memos, or text — the AI classifies, prioritises, and stacks your signals by operational weight.</div>
-                </div>
-                <div>
-                    <div style="color:#a78bfa;font-weight:600;margin-bottom:0.15rem;">How do I get access?</div>
-                    <div>GOATflow is invite-only. Request an invite at <a href="https://workgoat.vip" target="_blank" rel="noopener noreferrer" style="color:#6100ff;">workgoat.vip</a>.</div>
-                </div>
-                <div>
-                    <div style="color:#a78bfa;font-weight:600;margin-bottom:0.15rem;">What is the WorkGOAT Ecosystem?</div>
-                    <div>A suite of productivity and intelligence tools built around one goal: helping operators become the GOAT at what they do.</div>
+            st.markdown('''
+            <div style="padding:0.9rem 0 0.5rem 0;border-bottom:1px solid #1f2937;">
+                <div style="font-family:Syne,sans-serif;font-size:0.65rem;font-weight:700;color:#6100ff;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.5rem;">About GOATflow</div>
+                <div style="font-family:DM Sans,sans-serif;font-size:0.72rem;color:#d1d5db;line-height:1.55;">
+                    GOATflow is the AI-powered operational intelligence layer of the <strong style="color:#a78bfa;">WorkGOAT Ecosystem</strong> — built for founders, operators, and high-performers who need to cut the bull and move fast.
                 </div>
             </div>
-        </div>
-        ''', unsafe_allow_html=True)
+            ''', unsafe_allow_html=True)
 
-        st.markdown('''
-        <div style="padding:0.9rem 0 0;text-align:center;">
-            <a href="https://workgoat.vip" target="_blank" rel="noopener noreferrer"
-               style="display:inline-block;background:#6100ff;color:#fff;font-family:Syne,sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.04em;text-decoration:none;padding:0.45rem 1.1rem;border-radius:6px;transition:background 200ms;">
-                Visit workgoat.vip
-            </a>
-            <div style="font-family:DM Sans,sans-serif;font-size:0.6rem;color:#6b7280;margin-top:0.7rem;">
-                &copy; WorkGOAT Ecosystem
+            st.markdown('''
+            <div style="padding:0.9rem 0 0.5rem 0;border-bottom:1px solid #1f2937;">
+                <div style="font-family:Syne,sans-serif;font-size:0.65rem;font-weight:700;color:#6100ff;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.6rem;">Quick FAQ</div>
+                <div style="font-family:DM Sans,sans-serif;font-size:0.72rem;color:#d1d5db;line-height:1.55;display:flex;flex-direction:column;gap:0.65rem;">
+                    <div>
+                        <div style="color:#a78bfa;font-weight:600;margin-bottom:0.15rem;">What is GOATflow?</div>
+                        <div>An AI task intelligence dashboard. Drop files, voice memos, or text — the AI classifies, prioritises, and stacks your signals by operational weight.</div>
+                    </div>
+                    <div>
+                        <div style="color:#a78bfa;font-weight:600;margin-bottom:0.15rem;">How do I get access?</div>
+                        <div>GOATflow is invite-only. Request an invite at <a href="https://workgoat.vip" target="_blank" rel="noopener noreferrer" style="color:#6100ff;">workgoat.vip</a>.</div>
+                    </div>
+                    <div>
+                        <div style="color:#a78bfa;font-weight:600;margin-bottom:0.15rem;">What is the WorkGOAT Ecosystem?</div>
+                        <div>A suite of productivity and intelligence tools built around one goal: helping operators become the GOAT at what they do.</div>
+                    </div>
+                </div>
             </div>
-        </div>
-        ''', unsafe_allow_html=True)
+            ''', unsafe_allow_html=True)
+
+            st.markdown('''
+            <div style="padding:0.9rem 0 0;text-align:center;">
+                <a href="https://workgoat.vip" target="_blank" rel="noopener noreferrer"
+                   style="display:inline-block;background:#6100ff;color:#fff;font-family:Syne,sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.04em;text-decoration:none;padding:0.45rem 1.1rem;border-radius:6px;transition:background 200ms;">
+                    Visit workgoat.vip
+                </a>
+                <div style="font-family:DM Sans,sans-serif;font-size:0.6rem;color:#6b7280;margin-top:0.7rem;">
+                    &copy; WorkGOAT Ecosystem
+                </div>
+            </div>
+            ''', unsafe_allow_html=True)
 
     if not st.session_state.get("sidebar_open", False):
-        _lsb_oc, _ = st.columns([1, 20])
+        _lsb_oc, _ = st.columns([3, 20])
         with _lsb_oc:
             if goat_hoof_right_b64:
-                st.image("static/goatflow_navigation_hoof_right.webp", width=44)
-            if st.button("", key="gf_open_sidebar_login", help="Open menu"):
+                _rh_pil = _PILImage.open(io.BytesIO(base64.b64decode(goat_hoof_right_b64)))
+                st.image(_rh_pil, width=44)
+            if st.button("▶", key="gf_open_sidebar_login"):
                 st.session_state.sidebar_open = True
                 st.rerun()
 
@@ -3321,7 +3323,7 @@ def __sb_content():
         if goat_hoof_b64:
             _lh_pil = _PILImage.open(io.BytesIO(base64.b64decode(goat_hoof_b64)))
             st.image(_lh_pil, width=44)
-        if st.button("◀ Close", key="gf_close_sidebar"):
+        if st.button("◀", key="gf_close_sidebar"):
             st.session_state.sidebar_open = False
             st.rerun()
     sidebar_logo = f'<img src="{logo_src}" alt="GOATflow" style="height:150px;object-fit:contain;">' if logo_src else '<div style="font-size:1.2rem;font-weight:900;color:#6100ff;">🐐 GOATflow</div>'
@@ -3637,7 +3639,7 @@ if not st.session_state.get("sidebar_open", False):
         if goat_hoof_right_b64:
             _rh_pil = _PILImage.open(io.BytesIO(base64.b64decode(goat_hoof_right_b64)))
             st.image(_rh_pil, width=44)
-        if st.button("▶ Menu", key="gf_open_sidebar"):
+        if st.button("▶", key="gf_open_sidebar"):
             st.session_state.sidebar_open = True
             st.rerun()
 
