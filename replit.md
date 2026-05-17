@@ -41,6 +41,7 @@ The application is built using Streamlit (Python) with a centered, single-page l
 - **GOAT Horns Panel:** A sidebar panel for users to define and manage up to 10 "Horns" (directives/rules) that guide AI processing.
 - **Dashboard Stats:** Includes "Active Tracks," "Summit Calls," "Completed," "Hay," "Fresh Cheese," "Active Horns," and a "CLIP RATE" (tasks completed vs. generated).
 - **Ascension Profile:** Users progress through ranks ("The Kid" to "The GOAT") with associated visual cues (e.g., Crown Avatar).
+- **Hoof Overlay (sidebar toggle):** The custom right-hoof overlay button (`#gf-hoof-open`) is injected at the top of `app.py` and runs on every page load. The global `syncHoofOverlay()` function checks for `[data-testid="stSidebar"]` before showing the button — if no sidebar element exists in the DOM (e.g. the login page, which has no sidebar content), the overlay stays hidden. This guard runs on every sync call (timers + MutationObserver), making the behavior deterministic. The native Streamlit `collapsedControl` button remains hidden via CSS on all pages.
 
 ## External Dependencies
 - **Streamlit:** Primary web application framework.

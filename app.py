@@ -40,6 +40,58 @@ st.set_page_config(
     initial_sidebar_state="auto",
 )
 
+# ── Hoof open button — injected at top so it persists on every re-render ─────
+st.markdown("""
+<style>
+[data-testid="collapsedControl"],
+[data-testid="collapsedControl"] button,
+[data-testid="stSidebarNavToggleButton"],
+[data-testid="stSidebarNavToggleButton"] button {
+    visibility: hidden !important;
+    pointer-events: none !important;
+}
+</style>
+""", unsafe_allow_html=True)
+_stc.html("""
+<script>
+(function(){
+  var pd = window.parent.document;
+  function createHoofOverlay() {
+    if (pd.getElementById('gf-hoof-open')) return;
+    var img = pd.createElement('img');
+    img.id = 'gf-hoof-open';
+    img.src = '/app/static/goatflow_navigation_hoof_right.webp';
+    img.style.cssText = 'position:fixed;top:8px;left:8px;z-index:999999;width:52px;height:52px;cursor:pointer;mix-blend-mode:multiply;object-fit:contain;transition:opacity 0.2s;';
+    img.addEventListener('mouseenter', function(){ img.style.opacity='0.75'; });
+    img.addEventListener('mouseleave', function(){ img.style.opacity='1'; });
+    img.addEventListener('click', function(){
+      var toggle =
+        pd.querySelector('[data-testid="collapsedControl"]') ||
+        pd.querySelector('[data-testid="stSidebarNavToggleButton"]') ||
+        pd.querySelector('button[aria-label="open sidebar"]') ||
+        pd.querySelector('button[aria-label="Open sidebar"]');
+      if (toggle) toggle.click();
+    });
+    pd.body.appendChild(img);
+  }
+  function syncHoofOverlay() {
+    var overlay = pd.getElementById('gf-hoof-open');
+    if (!overlay) { createHoofOverlay(); return; }
+    var hasSidebar = !!pd.querySelector('[data-testid="stSidebar"]');
+    if (!hasSidebar) { overlay.style.display = 'none'; return; }
+    var sidebarOpen = !!pd.querySelector('[data-testid="stSidebarCollapseButton"]');
+    overlay.style.display = sidebarOpen ? 'none' : 'block';
+  }
+  setTimeout(createHoofOverlay, 300);
+  setTimeout(syncHoofOverlay, 900);
+  setTimeout(syncHoofOverlay, 2500);
+  var _obs = new MutationObserver(syncHoofOverlay);
+  _obs.observe(pd.body, { childList: true, subtree: false });
+})();
+</script>
+""", height=0)
+
+
 # ── Keep-alive health server ────────────────────────────────────────────────
 # Runs in a background daemon thread so the process stays warm between requests.
 # Accessible at port 8080 for external uptime monitors.
