@@ -3678,9 +3678,17 @@ def __sb_content():
 with st.sidebar:
     __sb_content()
 
-# ── Replay triggers (passed as JS booleans into _ob_iframe_html) ─────────────────
+# ── Replay triggers ──────────────────────────────────────────────────────────────
+# Pop flags; set a tiny signal on window.parent via a fresh _stc.html() iframe.
+# The persistent setInterval inside _ob_iframe_html picks up the signal within 300 ms.
 _gf_do_tour_replay = st.session_state.pop("_gf_trigger_tour", False)
 _gf_do_ss_replay   = st.session_state.pop("_gf_trigger_slideshow", False)
+if _gf_do_tour_replay:
+    _rn = random.randint(0, 0xFFFFFF)
+    _stc.html(f"<script>/*gt{_rn}*/window.parent._gfRT=1;</script>", height=0)
+if _gf_do_ss_replay:
+    _rn = random.randint(0, 0xFFFFFF)
+    _stc.html(f"<script>/*gs{_rn}*/window.parent._gfRS=1;</script>", height=0)
 
 # ── Inject late button/stat CSS after Streamlit emotion ────────────────────────
 _stc.html(
@@ -4622,9 +4630,6 @@ _tour_iife_json      = _json.dumps(_tour_iife_resolved)
 _slideshow_iife_json = _json.dumps(_slideshow_iife)
 _fab_iife_json       = _json.dumps(_fab_iife)
 
-_gf_replay_tour_js = "true" if _gf_do_tour_replay else "false"
-_gf_replay_ss_js   = "true" if _gf_do_ss_replay else "false"
-
 _ob_iframe_html = f"""<!DOCTYPE html><html><body style="margin:0;padding:0;background:transparent;">
 <script>
 (function() {{
@@ -4688,9 +4693,11 @@ _ob_iframe_html = f"""<!DOCTYPE html><html><body style="margin:0;padding:0;backg
   fabEl.textContent = {_fab_iife_json};
   pd.body.appendChild(fabEl);
 
-  // 7. Sidebar replay triggers — fired synchronously after functions are defined above
-  if ({_gf_replay_tour_js}) {{ pw.gfStartTour(); }}
-  if ({_gf_replay_ss_js}) {{ pw.gfReplaySlideshow(); }}
+  // 7. Poll pw for replay signals set by the sidebar replay buttons
+  setInterval(function() {{
+    if (pw._gfRT) {{ pw._gfRT = 0; if (typeof pw.gfStartTour === 'function') pw.gfStartTour(); }}
+    if (pw._gfRS) {{ pw._gfRS = 0; if (typeof pw.gfReplaySlideshow === 'function') pw.gfReplaySlideshow(); }}
+  }}, 300);
 }})();
 </script>
 </body></html>"""
