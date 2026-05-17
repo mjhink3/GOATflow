@@ -3679,16 +3679,11 @@ with st.sidebar:
     __sb_content()
 
 # ── Replay triggers ──────────────────────────────────────────────────────────────
-# Pop flags; set a tiny signal on window.parent via a fresh _stc.html() iframe.
-# The persistent setInterval inside _ob_iframe_html picks up the signal within 300 ms.
-_gf_do_tour_replay = st.session_state.pop("_gf_trigger_tour", False)
-_gf_do_ss_replay   = st.session_state.pop("_gf_trigger_slideshow", False)
-if _gf_do_tour_replay:
-    _rn = random.randint(0, 0xFFFFFF)
-    _stc.html(f"<script>/*gt{_rn}*/window.parent._gfRT=1;</script>", height=0)
-if _gf_do_ss_replay:
-    _rn = random.randint(0, 0xFFFFFF)
-    _stc.html(f"<script>/*gs{_rn}*/window.parent._gfRS=1;</script>", height=0)
+# Session state flags are popped here (buttons still set them so Streamlit
+# registers the click), but the actual JS trigger is handled entirely
+# client-side via the button-click interceptor in _ob_iframe_html step 7.
+st.session_state.pop("_gf_trigger_tour", None)
+st.session_state.pop("_gf_trigger_slideshow", None)
 
 # ── Inject late button/stat CSS after Streamlit emotion ────────────────────────
 _stc.html(
@@ -4693,11 +4688,32 @@ _ob_iframe_html = f"""<!DOCTYPE html><html><body style="margin:0;padding:0;backg
   fabEl.textContent = {_fab_iife_json};
   pd.body.appendChild(fabEl);
 
-  // 7. Poll pw for replay signals set by the sidebar replay buttons
-  setInterval(function() {{
-    if (pw._gfRT) {{ pw._gfRT = 0; if (typeof pw.gfStartTour === 'function') pw.gfStartTour(); }}
-    if (pw._gfRS) {{ pw._gfRS = 0; if (typeof pw.gfReplaySlideshow === 'function') pw.gfReplaySlideshow(); }}
-  }}, 300);
+  // 7. Intercept sidebar replay button clicks directly in the parent document.
+  // This runs entirely client-side — no Python round-trip, no flag iframes.
+  // 800 ms delay lets Streamlit finish its rerun before the overlay opens.
+  (function() {{
+    function tryStart(type) {{
+      if (type === 'tour' && typeof pw.gfStartTour === 'function') pw.gfStartTour();
+      if (type === 'ss'   && typeof pw.gfReplaySlideshow === 'function') pw.gfReplaySlideshow();
+    }}
+    function attachListeners() {{
+      var btns = pd.querySelectorAll('[data-testid="stButton"] button, [data-testid="baseButton-secondary"]');
+      btns.forEach(function(btn) {{
+        if (btn._gfRL) return;
+        var txt = (btn.textContent || btn.innerText || '').replace(/\s+/g,' ').trim();
+        if (txt.indexOf('Replay Tutorial') !== -1) {{
+          btn._gfRL = true;
+          btn.addEventListener('click', function() {{ setTimeout(function(){{tryStart('tour');}}, 800); }});
+        }}
+        if (txt.indexOf('Replay Animal') !== -1) {{
+          btn._gfRL = true;
+          btn.addEventListener('click', function() {{ setTimeout(function(){{tryStart('ss');}}, 800); }});
+        }}
+      }});
+    }}
+    attachListeners();
+    setInterval(attachListeners, 1500);
+  }})();
 }})();
 </script>
 </body></html>"""
