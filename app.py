@@ -42,11 +42,13 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-#MainMenu {visibility: hidden;}
-header {visibility: hidden;}
-footer {visibility: hidden;}
-.stDeployButton {display: none;}
-[data-testid="stToolbar"] {display: none;}
+#MainMenu {display: none !important;}
+[data-testid="stDecoration"] {display: none !important;}
+[data-testid="stToolbar"] {display: none !important;}
+[data-testid="stDeployButton"] {display: none !important;}
+.stDeployButton {display: none !important;}
+footer {visibility: hidden !important;}
+footer * {visibility: hidden !important;}
 </style>
 """, unsafe_allow_html=True)
 
