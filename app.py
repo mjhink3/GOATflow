@@ -3126,6 +3126,17 @@ if not user_info:
     </div>
     ''', unsafe_allow_html=True)
 
+    st.markdown('''
+    <div style="text-align:center;margin:0.25rem 0 1.4rem 0;">
+        <a href="https://workgoat.vip" target="_blank" rel="noopener noreferrer"
+           style="display:inline-flex;align-items:center;gap:0.45rem;background:#6100ff;color:#fff;font-family:Syne,sans-serif;font-size:0.82rem;font-weight:700;letter-spacing:0.04em;text-decoration:none;padding:0.55rem 1.4rem;border-radius:8px;box-shadow:0 0 18px rgba(97,0,255,0.35);transition:background 200ms,box-shadow 200ms;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+            Visit workgoat.vip
+        </a>
+        <div style="font-family:DM Sans,sans-serif;font-size:0.65rem;color:#6b7280;margin-top:0.55rem;letter-spacing:0.02em;">Part of the WorkGOAT Ecosystem</div>
+    </div>
+    ''', unsafe_allow_html=True)
+
     login_tab, signup_tab = st.tabs(["Login", "Create Account"])
 
     with login_tab:
