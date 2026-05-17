@@ -3243,11 +3243,12 @@ _sb_weekly_bars_html = _build_weekly_bar_html(_sb_weekly)
 def __sb_content():
     if not st.session_state.get("sidebar_open", False):
         return
-    _cc, _ = st.columns([1, 6])
+    _cc, _ = st.columns([3, 20])
     with _cc:
         if goat_hoof_b64:
-            st.image("static/icon_hoof_left.webp", width=44)
-        if st.button("", key="gf_close_sidebar", help="Close menu"):
+            _lh_pil = _PILImage.open(io.BytesIO(base64.b64decode(goat_hoof_b64)))
+            st.image(_lh_pil, width=44)
+        if st.button("◀ Close", key="gf_close_sidebar"):
             st.session_state.sidebar_open = False
             st.rerun()
     sidebar_logo = f'<img src="{logo_src}" alt="GOATflow" style="height:150px;object-fit:contain;">' if logo_src else '<div style="font-size:1.2rem;font-weight:900;color:#6100ff;">🐐 GOATflow</div>'
@@ -3558,11 +3559,12 @@ with st.sidebar:
     __sb_content()
 
 if not st.session_state.get("sidebar_open", False):
-    _oc, _ = st.columns([1, 20])
+    _oc, _ = st.columns([3, 20])
     with _oc:
         if goat_hoof_right_b64:
-            st.image("static/goatflow_navigation_hoof_right.webp", width=44)
-        if st.button("", key="gf_open_sidebar", help="Open menu"):
+            _rh_pil = _PILImage.open(io.BytesIO(base64.b64decode(goat_hoof_right_b64)))
+            st.image(_rh_pil, width=44)
+        if st.button("▶ Menu", key="gf_open_sidebar"):
             st.session_state.sidebar_open = True
             st.rerun()
 
