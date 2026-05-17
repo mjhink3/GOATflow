@@ -42,13 +42,36 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-#MainMenu {display: none !important;}
-[data-testid="stDecoration"] {display: none !important;}
-[data-testid="stToolbar"] {display: none !important;}
-[data-testid="stDeployButton"] {display: none !important;}
-.stDeployButton {display: none !important;}
-footer {visibility: hidden !important;}
-footer * {visibility: hidden !important;}
+[data-testid="stToolbar"] {
+    visibility: hidden;
+}
+[data-testid="stDecoration"] {
+    visibility: hidden;
+}
+[data-testid="stStatusWidget"] {
+    visibility: hidden;
+}
+#MainMenu {
+    visibility: hidden;
+}
+footer {
+    visibility: hidden;
+}
+.stDeployButton {
+    display: none;
+}
+[data-testid="collapsedControl"] {
+    visibility: visible !important;
+}
+[data-testid="collapsedControl"] * {
+    visibility: visible !important;
+}
+[data-testid="stSidebarNavToggleButton"] {
+    visibility: visible !important;
+}
+[data-testid="stSidebarNavToggleButton"] * {
+    visibility: visible !important;
+}
 </style>
 """, unsafe_allow_html=True)
 
