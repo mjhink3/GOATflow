@@ -3013,9 +3013,9 @@ def get_level_bite_style(level: int) -> str:
     mask = f"radial-gradient(circle at 100% 0%, transparent {r}px, black {r}px)"
     return f"mask-image:{mask};-webkit-mask-image:{mask};"
 
+_hoof_left_url  = f"data:image/webp;base64,{goat_hoof_b64}"       if goat_hoof_b64       else ""
+_hoof_right_url = f"data:image/webp;base64,{goat_hoof_right_b64}" if goat_hoof_right_b64 else _hoof_left_url
 if goat_hoof_b64 or goat_hoof_right_b64:
-    _hoof_left_url  = f"data:image/webp;base64,{goat_hoof_b64}"       if goat_hoof_b64       else ""
-    _hoof_right_url = f"data:image/webp;base64,{goat_hoof_right_b64}" if goat_hoof_right_b64 else _hoof_left_url
     st.markdown(f"""
 <style>
 /* ── Shared base for ALL sidebar toggle buttons ── */
@@ -3631,7 +3631,7 @@ if st.session_state.pop("_gf_trigger_slideshow", False):
 
 # ── Force sidebar closed + inject late button/stat CSS after Streamlit emotion ─
 _stc.html(
-    f'<script>var _GF_CANCEL_SRC="{icon_cancel_src}";var _GF_LOGOUT_SRC="{icon_logout_src}";var _GF_CHURN_SRC="{icon_churn_engine_src}";var _GF_COMPLETE_SRC="{icon_completed_src}";</script>'
+    f'<script>var _GF_CANCEL_SRC="{icon_cancel_src}";var _GF_LOGOUT_SRC="{icon_logout_src}";var _GF_CHURN_SRC="{icon_churn_engine_src}";var _GF_COMPLETE_SRC="{icon_completed_src}";var _GF_HOOF_LEFT_SRC="{_hoof_left_url}";var _GF_HOOF_RIGHT_SRC="{_hoof_right_url}";</script>'
     + """
 <script>
 (function() {
@@ -3770,11 +3770,78 @@ _stc.html(
       }
     });
   }
+  // ── Hoof icon injection for sidebar open/close buttons ──────────────────
+  function injectHoofIcons() {
+    if (!_GF_HOOF_RIGHT_SRC && !_GF_HOOF_LEFT_SRC) return;
+    // RIGHT hoof → open-sidebar button (collapsedControl, outside sidebar)
+    var openSels = [
+      '[data-testid="collapsedControl"] button',
+      '[data-testid="stSidebarNavToggleButton"] button',
+      'button[aria-label="open sidebar"]',
+      'button[aria-label="Open sidebar"]'
+    ];
+    openSels.forEach(function(sel) {
+      pd.querySelectorAll(sel).forEach(function(btn) {
+        if (btn._gfHoofRight) return;
+        btn._gfHoofRight = true;
+        btn.querySelectorAll('svg').forEach(function(s) { s.style.display = 'none'; });
+        var img = pd.createElement('img');
+        img.src = _GF_HOOF_RIGHT_SRC || _GF_HOOF_LEFT_SRC;
+        img.style.cssText = 'width:36px;height:36px;object-fit:contain;display:block;pointer-events:none;mix-blend-mode:multiply;';
+        btn.insertBefore(img, btn.firstChild);
+        btn.style.setProperty('background', 'transparent', 'important');
+        btn.style.setProperty('background-image', 'none', 'important');
+        btn.style.setProperty('min-width', '44px', 'important');
+        btn.style.setProperty('min-height', '44px', 'important');
+        btn.style.setProperty('display', 'flex', 'important');
+        btn.style.setProperty('align-items', 'center', 'important');
+        btn.style.setProperty('justify-content', 'center', 'important');
+        btn.style.setProperty('padding', '4px', 'important');
+        btn.style.setProperty('border', 'none', 'important');
+        btn.style.setProperty('box-shadow', 'none', 'important');
+        btn.style.setProperty('cursor', 'pointer', 'important');
+      });
+    });
+    // LEFT hoof → close-sidebar button (inside sidebar)
+    var closeSels = [
+      '[data-testid="stSidebarCollapseButton"] button',
+      'button[aria-label="close sidebar"]',
+      'button[aria-label="Close sidebar"]'
+    ];
+    closeSels.forEach(function(sel) {
+      pd.querySelectorAll(sel).forEach(function(btn) {
+        if (btn._gfHoofLeft) return;
+        btn._gfHoofLeft = true;
+        btn.querySelectorAll('svg').forEach(function(s) { s.style.display = 'none'; });
+        var img = pd.createElement('img');
+        img.src = _GF_HOOF_LEFT_SRC || _GF_HOOF_RIGHT_SRC;
+        img.style.cssText = 'width:36px;height:36px;object-fit:contain;display:block;pointer-events:none;';
+        btn.insertBefore(img, btn.firstChild);
+        btn.style.setProperty('background', 'transparent', 'important');
+        btn.style.setProperty('background-image', 'none', 'important');
+        btn.style.setProperty('min-width', '44px', 'important');
+        btn.style.setProperty('min-height', '44px', 'important');
+        btn.style.setProperty('display', 'flex', 'important');
+        btn.style.setProperty('align-items', 'center', 'important');
+        btn.style.setProperty('justify-content', 'center', 'important');
+        btn.style.setProperty('padding', '4px', 'important');
+        btn.style.setProperty('border', 'none', 'important');
+        btn.style.setProperty('box-shadow', 'none', 'important');
+        btn.style.setProperty('cursor', 'pointer', 'important');
+      });
+    });
+  }
+
   setTimeout(injectCancelAndLogoutStyles, 600);
   setTimeout(injectCancelAndLogoutStyles, 1400);
   setTimeout(injectCancelAndLogoutStyles, 3000);
   setTimeout(injectCancelAndLogoutStyles, 5000);
   setTimeout(injectCancelAndLogoutStyles, 8000);
+  setTimeout(injectHoofIcons, 400);
+  setTimeout(injectHoofIcons, 1000);
+  setTimeout(injectHoofIcons, 2500);
+  setTimeout(injectHoofIcons, 5000);
+  setTimeout(injectHoofIcons, 9000);
 })();
 </script>
 """, height=0)
