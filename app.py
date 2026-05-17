@@ -2408,6 +2408,8 @@ def run_churn_engine(existing_signals: list[dict], files_data: list[dict], extra
 
     system_prompt = build_system_prompt(directives_text)
 
+    VALID_CATEGORIES = {"communication","administrative","creative","financial","personal","health","technical","planning","operational","other"}
+
     json_schema = """{
   "signals": [
     {
@@ -2418,7 +2420,7 @@ def run_churn_engine(existing_signals: list[dict], files_data: list[dict], extra
       "directive_applied": true | false,
       "bleat_type": "Routine Grazing | Summit Call",
       "horn_applied_name": "string (empty if none)",
-      "category": "communication | administrative | creative | financial | personal | health | technical | planning | operational | other"
+      "category": "EXACTLY one of: communication, administrative, creative, financial, personal, health, technical, planning, operational, other"
     }
   ]
 }"""
@@ -2432,7 +2434,11 @@ NEW INPUT:
 
 Merge, classify as Routine Grazing or Summit Call, re-prioritize, and return the full sorted Track list.
 
-IMPORTANT: Return ONLY a valid JSON object matching this exact schema — no markdown fences, no explanation, nothing else:
+CRITICAL RULES for the JSON you return:
+- Return ONLY a valid JSON object — no markdown fences, no explanation, nothing else.
+- Every string value must be properly quoted with double quotes.
+- The "category" field must be EXACTLY one of these words (lowercase, no spaces, no combinations): communication, administrative, creative, financial, personal, health, technical, planning, operational, other
+- Schema to follow exactly:
 {json_schema}"""
 
     contents = [text_prompt]
@@ -2445,24 +2451,49 @@ IMPORTANT: Return ONLY a valid JSON object matching this exact schema — no mar
                 mime_type=fd["mime"]
             ))
 
-    response = client.models.generate_content(
-        model="gemini-2.5-flash",
-        contents=contents
-    )
-    raw = response.text.strip()
+    def _call_model(prompt_contents):
+        resp = client.models.generate_content(model="gemini-2.5-flash", contents=prompt_contents)
+        txt = resp.text.strip()
+        if txt.startswith("```"):
+            txt = txt.split("```")[1]
+            if txt.startswith("json"):
+                txt = txt[4:]
+            txt = txt.strip()
+        if txt.endswith("```"):
+            txt = txt[:-3].strip()
+        return txt
 
-    if raw.startswith("```"):
-        raw = raw.split("```")[1]
-        if raw.startswith("json"):
-            raw = raw[4:]
-        raw = raw.strip()
-    if raw.endswith("```"):
-        raw = raw[:-3].strip()
+    def _sanitize_raw(txt):
+        import re
+        # Clamp category values to the allowed set
+        def _fix_category(m):
+            val = m.group(1).lower().strip()
+            for allowed in VALID_CATEGORIES:
+                if allowed in val:
+                    return f'"category": "{allowed}"'
+            return f'"category": "other"'
+        txt = re.sub(r'"category"\s*:\s*"([^"]*)"', _fix_category, txt)
+        return txt
+
+    raw = _call_model(contents)
+    raw = _sanitize_raw(raw)
 
     try:
         data = _json.loads(raw)
-    except Exception as e:
-        raise RuntimeError(f"Churn Engine returned invalid JSON: {e}\nRaw: {raw[:500]}")
+    except Exception as first_err:
+        # Retry: send the broken response back and ask the model to fix it
+        try:
+            fix_prompt = (
+                f"The following is malformed JSON. Fix it so it is valid JSON only — "
+                f"no markdown, no explanation. The 'category' field must be exactly one of: "
+                f"communication, administrative, creative, financial, personal, health, technical, planning, operational, other.\n\n"
+                f"BROKEN JSON:\n{raw}\n\nReturn only the corrected JSON."
+            )
+            raw2 = _call_model([fix_prompt])
+            raw2 = _sanitize_raw(raw2)
+            data = _json.loads(raw2)
+        except Exception as e:
+            raise RuntimeError(f"Churn Engine returned invalid JSON: {first_err}\nRaw: {raw[:500]}")
 
     parsed = ChurnOutput(**data)
     if not parsed.signals:
