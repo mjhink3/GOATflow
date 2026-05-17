@@ -3018,17 +3018,19 @@ _hoof_right_url = f"data:image/webp;base64,{goat_hoof_right_b64}" if goat_hoof_r
 if goat_hoof_b64 or goat_hoof_right_b64:
     st.markdown(f"""
 <style>
-/* ── Shared base for ALL sidebar toggle buttons ── */
-[data-testid="stSidebarCollapseButton"] button,
+/* ── Hide the native open-sidebar arrow — replaced by our overlay button ── */
+[data-testid="collapsedControl"],
 [data-testid="collapsedControl"] button,
-[data-testid="collapsedControl"] > button,
-button[aria-label="Open sidebar"],
-button[aria-label="open sidebar"],
-button[aria-label="Close sidebar"],
-button[aria-label="close sidebar"],
-[data-testid="stSidebarNavToggleButton"] button,
 [data-testid="stSidebarNavToggleButton"],
-[data-testid="collapsedControl"] {{
+[data-testid="stSidebarNavToggleButton"] button {{
+    visibility: hidden !important;
+}}
+
+/* ── LEFT hoof — close/collapse button (inside open sidebar) ── */
+[data-testid="stSidebarCollapseButton"] button,
+button[aria-label="Close sidebar"],
+button[aria-label="close sidebar"] {{
+    background-image: url('{_hoof_left_url}') !important;
     background-size: 80% !important;
     background-repeat: no-repeat !important;
     background-position: center !important;
@@ -3038,49 +3040,17 @@ button[aria-label="close sidebar"],
     min-width: 44px !important;
     min-height: 44px !important;
     border-radius: 8px !important;
-    transition: opacity 0.2s ease !important;
     cursor: pointer !important;
+    transition: opacity 0.2s ease !important;
 }}
-
-/* ── LEFT hoof — close/collapse (sidebar already open) ── */
-[data-testid="stSidebarCollapseButton"] button,
-button[aria-label="Close sidebar"],
-button[aria-label="close sidebar"] {{
-    background-image: url('{_hoof_left_url}') !important;
-    mix-blend-mode: normal !important;
-}}
-
-/* ── RIGHT hoof — open/expand (sidebar collapsed, pointing right = come in) ── */
-[data-testid="collapsedControl"] button,
-[data-testid="collapsedControl"] > button,
-[data-testid="collapsedControl"],
-[data-testid="stSidebarNavToggleButton"] button,
-[data-testid="stSidebarNavToggleButton"],
-button[aria-label="Open sidebar"],
-button[aria-label="open sidebar"] {{
-    background-image: url('{_hoof_right_url}') !important;
-    mix-blend-mode: multiply !important;
-}}
-
-/* ── Hover: subtle dim on both ── */
 [data-testid="stSidebarCollapseButton"] button:hover,
-[data-testid="collapsedControl"] button:hover,
-[data-testid="collapsedControl"]:hover,
-button[aria-label="Open sidebar"]:hover,
-button[aria-label="open sidebar"]:hover,
 button[aria-label="Close sidebar"]:hover {{
     opacity: 0.7 !important;
     background-color: transparent !important;
 }}
-
-/* ── Hide default SVG arrows on all toggle buttons ── */
 [data-testid="stSidebarCollapseButton"] button svg,
-[data-testid="collapsedControl"] button svg,
-[data-testid="collapsedControl"] svg,
-[data-testid="stSidebarNavToggleButton"] svg,
-button[aria-label="Open sidebar"] svg,
-button[aria-label="open sidebar"] svg,
-button[aria-label="Close sidebar"] svg {{
+button[aria-label="Close sidebar"] svg,
+button[aria-label="close sidebar"] svg {{
     display: none !important;
 }}
 </style>
@@ -3770,66 +3740,32 @@ _stc.html(
       }
     });
   }
-  // ── Hoof icon injection for sidebar open/close buttons ──────────────────
-  function injectHoofIcons() {
+  // ── Fixed overlay hoof button — replaces hidden collapsedControl ─────────
+  function injectHoofOverlay() {
     if (!_GF_HOOF_RIGHT_SRC && !_GF_HOOF_LEFT_SRC) return;
-    // RIGHT hoof → open-sidebar button (collapsedControl, outside sidebar)
-    var openSels = [
-      '[data-testid="collapsedControl"] button',
-      '[data-testid="stSidebarNavToggleButton"] button',
-      'button[aria-label="open sidebar"]',
-      'button[aria-label="Open sidebar"]'
-    ];
-    openSels.forEach(function(sel) {
-      pd.querySelectorAll(sel).forEach(function(btn) {
-        if (btn._gfHoofRight) return;
-        btn._gfHoofRight = true;
-        btn.querySelectorAll('svg').forEach(function(s) { s.style.display = 'none'; });
-        var img = pd.createElement('img');
-        img.src = _GF_HOOF_RIGHT_SRC || _GF_HOOF_LEFT_SRC;
-        img.style.cssText = 'width:36px;height:36px;object-fit:contain;display:block;pointer-events:none;mix-blend-mode:multiply;';
-        btn.insertBefore(img, btn.firstChild);
-        btn.style.setProperty('background', 'transparent', 'important');
-        btn.style.setProperty('background-image', 'none', 'important');
-        btn.style.setProperty('min-width', '44px', 'important');
-        btn.style.setProperty('min-height', '44px', 'important');
-        btn.style.setProperty('display', 'flex', 'important');
-        btn.style.setProperty('align-items', 'center', 'important');
-        btn.style.setProperty('justify-content', 'center', 'important');
-        btn.style.setProperty('padding', '4px', 'important');
-        btn.style.setProperty('border', 'none', 'important');
-        btn.style.setProperty('box-shadow', 'none', 'important');
-        btn.style.setProperty('cursor', 'pointer', 'important');
-      });
+    var sidebarOpen = !!pd.querySelector('[data-testid="stSidebarCollapseButton"]');
+    var existing = pd.getElementById('gf-hoof-open');
+    if (sidebarOpen) {
+      // Sidebar is open — hide our overlay, the CSS left hoof handles close
+      if (existing) existing.style.display = 'none';
+      return;
+    }
+    // Sidebar is closed — show or create our overlay
+    if (existing) { existing.style.display = 'block'; return; }
+    var overlay = pd.createElement('img');
+    overlay.id = 'gf-hoof-open';
+    overlay.src = _GF_HOOF_RIGHT_SRC || _GF_HOOF_LEFT_SRC;
+    overlay.style.cssText = 'position:fixed;top:8px;left:8px;z-index:999999;width:48px;height:48px;cursor:pointer;mix-blend-mode:multiply;object-fit:contain;transition:opacity 0.2s;';
+    overlay.addEventListener('mouseenter', function() { overlay.style.opacity = '0.75'; });
+    overlay.addEventListener('mouseleave', function() { overlay.style.opacity = '1'; });
+    overlay.addEventListener('click', function() {
+      var toggle = pd.querySelector('[data-testid="collapsedControl"]') ||
+                   pd.querySelector('[data-testid="stSidebarNavToggleButton"]') ||
+                   pd.querySelector('button[aria-label="open sidebar"]') ||
+                   pd.querySelector('button[aria-label="Open sidebar"]');
+      if (toggle) toggle.click();
     });
-    // LEFT hoof → close-sidebar button (inside sidebar)
-    var closeSels = [
-      '[data-testid="stSidebarCollapseButton"] button',
-      'button[aria-label="close sidebar"]',
-      'button[aria-label="Close sidebar"]'
-    ];
-    closeSels.forEach(function(sel) {
-      pd.querySelectorAll(sel).forEach(function(btn) {
-        if (btn._gfHoofLeft) return;
-        btn._gfHoofLeft = true;
-        btn.querySelectorAll('svg').forEach(function(s) { s.style.display = 'none'; });
-        var img = pd.createElement('img');
-        img.src = _GF_HOOF_LEFT_SRC || _GF_HOOF_RIGHT_SRC;
-        img.style.cssText = 'width:36px;height:36px;object-fit:contain;display:block;pointer-events:none;';
-        btn.insertBefore(img, btn.firstChild);
-        btn.style.setProperty('background', 'transparent', 'important');
-        btn.style.setProperty('background-image', 'none', 'important');
-        btn.style.setProperty('min-width', '44px', 'important');
-        btn.style.setProperty('min-height', '44px', 'important');
-        btn.style.setProperty('display', 'flex', 'important');
-        btn.style.setProperty('align-items', 'center', 'important');
-        btn.style.setProperty('justify-content', 'center', 'important');
-        btn.style.setProperty('padding', '4px', 'important');
-        btn.style.setProperty('border', 'none', 'important');
-        btn.style.setProperty('box-shadow', 'none', 'important');
-        btn.style.setProperty('cursor', 'pointer', 'important');
-      });
-    });
+    pd.body.appendChild(overlay);
   }
 
   setTimeout(injectCancelAndLogoutStyles, 600);
@@ -3837,11 +3773,13 @@ _stc.html(
   setTimeout(injectCancelAndLogoutStyles, 3000);
   setTimeout(injectCancelAndLogoutStyles, 5000);
   setTimeout(injectCancelAndLogoutStyles, 8000);
-  setTimeout(injectHoofIcons, 400);
-  setTimeout(injectHoofIcons, 1000);
-  setTimeout(injectHoofIcons, 2500);
-  setTimeout(injectHoofIcons, 5000);
-  setTimeout(injectHoofIcons, 9000);
+  setTimeout(injectHoofOverlay, 500);
+  setTimeout(injectHoofOverlay, 1200);
+  setTimeout(injectHoofOverlay, 3000);
+  setTimeout(injectHoofOverlay, 6000);
+  // Re-check after sidebar state changes
+  var _gfHoofObserver = new MutationObserver(function() { injectHoofOverlay(); });
+  _gfHoofObserver.observe(pd.body, { childList: true, subtree: true });
 })();
 </script>
 """, height=0)
