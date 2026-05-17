@@ -2561,6 +2561,7 @@ celeb_task_completed_b64 = get_celeb_b64("task_completed")
 cheese_earned_b64 = load_image_b64("cheese_earned.webp", "cheese_earned_b64_v2")
 hay_bale_b64 = load_image_b64("attached_assets/ChatGPT_Image_Mar_13,_2026,_09_34_11_PM_1773462872978.png", "hay_bale_b64")
 goat_hoof_b64 = load_image_b64("static/icon_hoof_left.webp", "goat_hoof_b64_v2")
+goat_hoof_right_b64 = load_image_b64("static/goatflow_navigation_hoof_right.webp", "goat_hoof_right_b64_v1")
 horns_icon_b64 = load_image_b64("static/icon_horns.webp", "horns_icon_b64_v2")
 horns_icon_src = f"data:image/webp;base64,{horns_icon_b64}" if horns_icon_b64 else ""
 banner_b64 = load_image_b64("static/goatflow_main_screen_logo.webp", "banner_b64_v2")
@@ -3012,11 +3013,12 @@ def get_level_bite_style(level: int) -> str:
     mask = f"radial-gradient(circle at 100% 0%, transparent {r}px, black {r}px)"
     return f"mask-image:{mask};-webkit-mask-image:{mask};"
 
-if goat_hoof_b64:
-    _hoof_url = f"data:image/webp;base64,{goat_hoof_b64}"
+if goat_hoof_b64 or goat_hoof_right_b64:
+    _hoof_left_url  = f"data:image/webp;base64,{goat_hoof_b64}"       if goat_hoof_b64       else ""
+    _hoof_right_url = f"data:image/webp;base64,{goat_hoof_right_b64}" if goat_hoof_right_b64 else _hoof_left_url
     st.markdown(f"""
 <style>
-/* Replace ALL sidebar toggle arrows (interior collapse + exterior expand) with goat hoof */
+/* ── Shared base for ALL sidebar toggle buttons ── */
 [data-testid="stSidebarCollapseButton"] button,
 [data-testid="collapsedControl"] button,
 [data-testid="collapsedControl"] > button,
@@ -3027,27 +3029,51 @@ button[aria-label="close sidebar"],
 [data-testid="stSidebarNavToggleButton"] button,
 [data-testid="stSidebarNavToggleButton"],
 [data-testid="collapsedControl"] {{
-    background-image: url('{_hoof_url}') !important;
     background-size: 80% !important;
     background-repeat: no-repeat !important;
     background-position: center !important;
     background-color: transparent !important;
     border: none !important;
     box-shadow: none !important;
-    min-width: 38px !important;
-    min-height: 38px !important;
+    min-width: 44px !important;
+    min-height: 44px !important;
     border-radius: 8px !important;
     transition: opacity 0.2s ease !important;
     cursor: pointer !important;
 }}
+
+/* ── LEFT hoof — close/collapse (sidebar already open) ── */
+[data-testid="stSidebarCollapseButton"] button,
+button[aria-label="Close sidebar"],
+button[aria-label="close sidebar"] {{
+    background-image: url('{_hoof_left_url}') !important;
+    mix-blend-mode: normal !important;
+}}
+
+/* ── RIGHT hoof — open/expand (sidebar collapsed, pointing right = come in) ── */
+[data-testid="collapsedControl"] button,
+[data-testid="collapsedControl"] > button,
+[data-testid="collapsedControl"],
+[data-testid="stSidebarNavToggleButton"] button,
+[data-testid="stSidebarNavToggleButton"],
+button[aria-label="Open sidebar"],
+button[aria-label="open sidebar"] {{
+    background-image: url('{_hoof_right_url}') !important;
+    mix-blend-mode: multiply !important;
+}}
+
+/* ── Hover: subtle dim on both ── */
 [data-testid="stSidebarCollapseButton"] button:hover,
 [data-testid="collapsedControl"] button:hover,
 [data-testid="collapsedControl"]:hover,
 button[aria-label="Open sidebar"]:hover,
-button[aria-label="open sidebar"]:hover {{
+button[aria-label="open sidebar"]:hover,
+button[aria-label="Close sidebar"]:hover {{
     opacity: 0.7 !important;
     background-color: transparent !important;
 }}
+
+/* ── Hide default SVG arrows on all toggle buttons ── */
 [data-testid="stSidebarCollapseButton"] button svg,
 [data-testid="collapsedControl"] button svg,
 [data-testid="collapsedControl"] svg,
