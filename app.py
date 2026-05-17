@@ -3678,27 +3678,9 @@ def __sb_content():
 with st.sidebar:
     __sb_content()
 
-# ── Replay triggers ─────────────────────────────────────────────────────────────
-if st.session_state.pop("_gf_trigger_tour", False):
-    _rn = random.randint(0, 0xFFFFFF)
-    st.markdown(
-        f"<script>/*gf-tour-{_rn}*/(function(){{"
-        "var n=0,t=setInterval(function(){{"
-        "if(typeof window.gfStartTour==='function'){{clearInterval(t);window.gfStartTour();}}"
-        "else if(++n>20){{clearInterval(t);}}"
-        "}},200);}})();</script>",
-        unsafe_allow_html=True
-    )
-if st.session_state.pop("_gf_trigger_slideshow", False):
-    _rn = random.randint(0, 0xFFFFFF)
-    st.markdown(
-        f"<script>/*gf-ss-{_rn}*/(function(){{"
-        "var n=0,t=setInterval(function(){{"
-        "if(typeof window.gfReplaySlideshow==='function'){{clearInterval(t);window.gfReplaySlideshow();}}"
-        "else if(++n>20){{clearInterval(t);}}"
-        "}},200);}})();</script>",
-        unsafe_allow_html=True
-    )
+# ── Replay triggers (passed as JS booleans into _ob_iframe_html) ─────────────────
+_gf_do_tour_replay = st.session_state.pop("_gf_trigger_tour", False)
+_gf_do_ss_replay   = st.session_state.pop("_gf_trigger_slideshow", False)
 
 # ── Inject late button/stat CSS after Streamlit emotion ────────────────────────
 _stc.html(
@@ -4640,6 +4622,9 @@ _tour_iife_json      = _json.dumps(_tour_iife_resolved)
 _slideshow_iife_json = _json.dumps(_slideshow_iife)
 _fab_iife_json       = _json.dumps(_fab_iife)
 
+_gf_replay_tour_js = "true" if _gf_do_tour_replay else "false"
+_gf_replay_ss_js   = "true" if _gf_do_ss_replay else "false"
+
 _ob_iframe_html = f"""<!DOCTYPE html><html><body style="margin:0;padding:0;background:transparent;">
 <script>
 (function() {{
@@ -4702,6 +4687,10 @@ _ob_iframe_html = f"""<!DOCTYPE html><html><body style="margin:0;padding:0;backg
   var fabEl = pd.createElement('script');
   fabEl.textContent = {_fab_iife_json};
   pd.body.appendChild(fabEl);
+
+  // 7. Sidebar replay triggers — fired synchronously after functions are defined above
+  if ({_gf_replay_tour_js}) {{ pw.gfStartTour(); }}
+  if ({_gf_replay_ss_js}) {{ pw.gfReplaySlideshow(); }}
 }})();
 </script>
 </body></html>"""
