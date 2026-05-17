@@ -3029,84 +3029,76 @@ def get_tier_celeb_b64(tier: str) -> str:
 
 user_info = get_current_user()
 
-if "sidebar_open" not in st.session_state:
-    st.session_state.sidebar_open = False
+st.markdown("""
+<style>
+[data-testid="collapsedControl"] {
+    color: #7c3aed !important;
+    background: rgba(124,58,237,0.15) !important;
+    border-radius: 0 6px 6px 0 !important;
+    border: 1px solid rgba(124,58,237,0.4) !important;
+}
+[data-testid="collapsedControl"]:hover {
+    background: rgba(124,58,237,0.35) !important;
+}
+</style>
+""", unsafe_allow_html=True)
 
 if not user_info:
     with st.sidebar:
-        if st.session_state.get("sidebar_open", False):
-            _lsb_cc, _ = st.columns([3, 20])
-            with _lsb_cc:
-                if goat_hoof_b64:
-                    _lh_pil = _PILImage.open(io.BytesIO(base64.b64decode(goat_hoof_b64)))
-                    st.image(_lh_pil, width=44)
-                if st.button("◀", key="gf_close_sidebar_login"):
-                    st.session_state.sidebar_open = False
-                    st.rerun()
-            sidebar_logo_html = (
-                f'<img src="{logo_src}" alt="GOATflow" style="height:130px;object-fit:contain;">'
-                if logo_src else
-                '<div style="font-size:1.4rem;font-weight:900;font-family:Syne,sans-serif;color:#6100ff;">GOATflow</div>'
-            )
-            st.markdown(f'''
-            <div style="text-align:center;padding:0.6rem 0 0.4rem 0;">
-                {sidebar_logo_html}
-            </div>
-            <div style="text-align:center;font-family:Syne,sans-serif;font-size:0.72rem;color:#9ca3af;padding-bottom:1rem;border-bottom:1px solid #1f2937;letter-spacing:0.04em;">
-                Grab life by the horns.<br>Leave the bull behind.
-            </div>
-            ''', unsafe_allow_html=True)
+        sidebar_logo_html = (
+            f'<img src="{logo_src}" alt="GOATflow" style="height:130px;object-fit:contain;">'
+            if logo_src else
+            '<div style="font-size:1.4rem;font-weight:900;font-family:Syne,sans-serif;color:#6100ff;">GOATflow</div>'
+        )
+        st.markdown(f'''
+        <div style="text-align:center;padding:0.6rem 0 0.4rem 0;">
+            {sidebar_logo_html}
+        </div>
+        <div style="text-align:center;font-family:Syne,sans-serif;font-size:0.72rem;color:#9ca3af;padding-bottom:1rem;border-bottom:1px solid #1f2937;letter-spacing:0.04em;">
+            Grab life by the horns.<br>Leave the bull behind.
+        </div>
+        ''', unsafe_allow_html=True)
 
-            st.markdown('''
-            <div style="padding:0.9rem 0 0.5rem 0;border-bottom:1px solid #1f2937;">
-                <div style="font-family:Syne,sans-serif;font-size:0.65rem;font-weight:700;color:#6100ff;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.5rem;">About GOATflow</div>
-                <div style="font-family:DM Sans,sans-serif;font-size:0.72rem;color:#d1d5db;line-height:1.55;">
-                    GOATflow is the AI-powered operational intelligence layer of the <strong style="color:#a78bfa;">WorkGOAT Ecosystem</strong> — built for founders, operators, and high-performers who need to cut the bull and move fast.
+        st.markdown('''
+        <div style="padding:0.9rem 0 0.5rem 0;border-bottom:1px solid #1f2937;">
+            <div style="font-family:Syne,sans-serif;font-size:0.65rem;font-weight:700;color:#6100ff;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.5rem;">About GOATflow</div>
+            <div style="font-family:DM Sans,sans-serif;font-size:0.72rem;color:#d1d5db;line-height:1.55;">
+                GOATflow is the AI-powered operational intelligence layer of the <strong style="color:#a78bfa;">WorkGOAT Ecosystem</strong> — built for founders, operators, and high-performers who need to cut the bull and move fast.
+            </div>
+        </div>
+        ''', unsafe_allow_html=True)
+
+        st.markdown('''
+        <div style="padding:0.9rem 0 0.5rem 0;border-bottom:1px solid #1f2937;">
+            <div style="font-family:Syne,sans-serif;font-size:0.65rem;font-weight:700;color:#6100ff;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.6rem;">Quick FAQ</div>
+            <div style="font-family:DM Sans,sans-serif;font-size:0.72rem;color:#d1d5db;line-height:1.55;display:flex;flex-direction:column;gap:0.65rem;">
+                <div>
+                    <div style="color:#a78bfa;font-weight:600;margin-bottom:0.15rem;">What is GOATflow?</div>
+                    <div>An AI task intelligence dashboard. Drop files, voice memos, or text — the AI classifies, prioritises, and stacks your signals by operational weight.</div>
+                </div>
+                <div>
+                    <div style="color:#a78bfa;font-weight:600;margin-bottom:0.15rem;">How do I get access?</div>
+                    <div>GOATflow is invite-only. Request an invite at <a href="https://workgoat.vip" target="_blank" rel="noopener noreferrer" style="color:#6100ff;">workgoat.vip</a>.</div>
+                </div>
+                <div>
+                    <div style="color:#a78bfa;font-weight:600;margin-bottom:0.15rem;">What is the WorkGOAT Ecosystem?</div>
+                    <div>A suite of productivity and intelligence tools built around one goal: helping operators become the GOAT at what they do.</div>
                 </div>
             </div>
-            ''', unsafe_allow_html=True)
+        </div>
+        ''', unsafe_allow_html=True)
 
-            st.markdown('''
-            <div style="padding:0.9rem 0 0.5rem 0;border-bottom:1px solid #1f2937;">
-                <div style="font-family:Syne,sans-serif;font-size:0.65rem;font-weight:700;color:#6100ff;letter-spacing:0.08em;text-transform:uppercase;margin-bottom:0.6rem;">Quick FAQ</div>
-                <div style="font-family:DM Sans,sans-serif;font-size:0.72rem;color:#d1d5db;line-height:1.55;display:flex;flex-direction:column;gap:0.65rem;">
-                    <div>
-                        <div style="color:#a78bfa;font-weight:600;margin-bottom:0.15rem;">What is GOATflow?</div>
-                        <div>An AI task intelligence dashboard. Drop files, voice memos, or text — the AI classifies, prioritises, and stacks your signals by operational weight.</div>
-                    </div>
-                    <div>
-                        <div style="color:#a78bfa;font-weight:600;margin-bottom:0.15rem;">How do I get access?</div>
-                        <div>GOATflow is invite-only. Request an invite at <a href="https://workgoat.vip" target="_blank" rel="noopener noreferrer" style="color:#6100ff;">workgoat.vip</a>.</div>
-                    </div>
-                    <div>
-                        <div style="color:#a78bfa;font-weight:600;margin-bottom:0.15rem;">What is the WorkGOAT Ecosystem?</div>
-                        <div>A suite of productivity and intelligence tools built around one goal: helping operators become the GOAT at what they do.</div>
-                    </div>
-                </div>
+        st.markdown('''
+        <div style="padding:0.9rem 0 0;text-align:center;">
+            <a href="https://workgoat.vip" target="_blank" rel="noopener noreferrer"
+               style="display:inline-block;background:#6100ff;color:#fff;font-family:Syne,sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.04em;text-decoration:none;padding:0.45rem 1.1rem;border-radius:6px;transition:background 200ms;">
+                Visit workgoat.vip
+            </a>
+            <div style="font-family:DM Sans,sans-serif;font-size:0.6rem;color:#6b7280;margin-top:0.7rem;">
+                &copy; WorkGOAT Ecosystem
             </div>
-            ''', unsafe_allow_html=True)
-
-            st.markdown('''
-            <div style="padding:0.9rem 0 0;text-align:center;">
-                <a href="https://workgoat.vip" target="_blank" rel="noopener noreferrer"
-                   style="display:inline-block;background:#6100ff;color:#fff;font-family:Syne,sans-serif;font-size:0.72rem;font-weight:700;letter-spacing:0.04em;text-decoration:none;padding:0.45rem 1.1rem;border-radius:6px;transition:background 200ms;">
-                    Visit workgoat.vip
-                </a>
-                <div style="font-family:DM Sans,sans-serif;font-size:0.6rem;color:#6b7280;margin-top:0.7rem;">
-                    &copy; WorkGOAT Ecosystem
-                </div>
-            </div>
-            ''', unsafe_allow_html=True)
-
-    if not st.session_state.get("sidebar_open", False):
-        _lsb_oc, _ = st.columns([3, 20])
-        with _lsb_oc:
-            if goat_hoof_right_b64:
-                _rh_pil = _PILImage.open(io.BytesIO(base64.b64decode(goat_hoof_right_b64)))
-                st.image(_rh_pil, width=44)
-            if st.button("▶", key="gf_open_sidebar_login"):
-                st.session_state.sidebar_open = True
-                st.rerun()
+        </div>
+        ''', unsafe_allow_html=True)
 
     _stc.html("""<script>
 (function(){
@@ -3327,16 +3319,6 @@ def _build_weekly_bar_html(weekly_list: list) -> str:
 _sb_weekly_bars_html = _build_weekly_bar_html(_sb_weekly)
 
 def __sb_content():
-    if not st.session_state.get("sidebar_open", False):
-        return
-    _cc, _ = st.columns([3, 20])
-    with _cc:
-        if goat_hoof_b64:
-            _lh_pil = _PILImage.open(io.BytesIO(base64.b64decode(goat_hoof_b64)))
-            st.image(_lh_pil, width=44)
-        if st.button("◀", key="gf_close_sidebar"):
-            st.session_state.sidebar_open = False
-            st.rerun()
     sidebar_logo = f'<img src="{logo_src}" alt="GOATflow" style="height:150px;object-fit:contain;">' if logo_src else '<div style="font-size:1.2rem;font-weight:900;color:#6100ff;">🐐 GOATflow</div>'
     st.markdown(f'''
     <div style="text-align:center;padding:0.5rem 0 0.2rem 0;">
@@ -3633,8 +3615,7 @@ def __sb_content():
     if st.button("Logout", use_container_width=True, key="logout_btn"):
         for key in ["auth_user_id", "auth_user_name", "auth_display_name",
                      "incognito_signals", "incognito_mode", "just_completed_task",
-                     "just_dropped", "just_purged", "fresh_cheese_pending", "just_earned_fresh_cheese",
-                     "sidebar_open"]:
+                     "just_dropped", "just_purged", "fresh_cheese_pending", "just_earned_fresh_cheese"]:
             st.session_state.pop(key, None)
         st.rerun()
     if st.button("❓  Replay Tutorial", use_container_width=True, key="replay_tutorial_btn"):
@@ -3645,17 +3626,7 @@ def __sb_content():
 with st.sidebar:
     __sb_content()
 
-if not st.session_state.get("sidebar_open", False):
-    _oc, _ = st.columns([3, 20])
-    with _oc:
-        if goat_hoof_right_b64:
-            _rh_pil = _PILImage.open(io.BytesIO(base64.b64decode(goat_hoof_right_b64)))
-            st.image(_rh_pil, width=44)
-        if st.button("▶", key="gf_open_sidebar"):
-            st.session_state.sidebar_open = True
-            st.rerun()
-
-# ── Replay triggers (fired via session state from st.button clicks above) ──────
+# ── Replay triggers ─────────────────────────────────────────────────────────────
 if st.session_state.pop("_gf_trigger_tour", False):
     _stc.html(
         "<script>var pw=window.parent;"
@@ -3673,9 +3644,9 @@ if st.session_state.pop("_gf_trigger_slideshow", False):
         height=0
     )
 
-# ── Force sidebar closed + inject late button/stat CSS after Streamlit emotion ─
+# ── Inject late button/stat CSS after Streamlit emotion ────────────────────────
 _stc.html(
-    f'<script>var _GF_CANCEL_SRC="{icon_cancel_src}";var _GF_LOGOUT_SRC="{icon_logout_src}";var _GF_CHURN_SRC="{icon_churn_engine_src}";var _GF_COMPLETE_SRC="{icon_completed_src}";var _GF_HOOF_LEFT_SRC="{_hoof_left_url}";var _GF_HOOF_RIGHT_SRC="{_hoof_right_url}";var _GF_SIDEBAR_OPEN={"true" if st.session_state.get("sidebar_open", False) else "false"};</script>'
+    f'<script>var _GF_CANCEL_SRC="{icon_cancel_src}";var _GF_LOGOUT_SRC="{icon_logout_src}";var _GF_CHURN_SRC="{icon_churn_engine_src}";var _GF_COMPLETE_SRC="{icon_completed_src}";var _GF_HOOF_LEFT_SRC="{_hoof_left_url}";var _GF_HOOF_RIGHT_SRC="{_hoof_right_url}";</script>'
     + """
 <script>
 (function() {
@@ -3712,48 +3683,7 @@ _stc.html(
     pd.head.appendChild(s);
   }
 
-  // 2. Close sidebar — starts closed unless Python session state says it should be open
-  var _gfSidebarShouldBeOpen = (typeof _GF_SIDEBAR_OPEN !== 'undefined') && !!_GF_SIDEBAR_OPEN;
-  var _gfSidebarLocked = false;
-  function isSidebarOpen() {
-    var sb = pd.querySelector('[data-testid="stSidebar"]');
-    if (!sb) return false;
-    return sb.getBoundingClientRect().left > -200;
-  }
-  function closeSidebar() {
-    if (!isSidebarOpen()) return;
-    var btn = pd.querySelector(
-      'button[aria-label="Close sidebar"], ' +
-      '[data-testid="stSidebarNavToggleButton"] button, ' +
-      '[data-testid="collapsedControl"] button'
-    );
-    if (btn) btn.click();
-  }
-  // If sidebar_open is True in session state (e.g. user had it open on login page),
-  // treat it as user-opened so the observer won't force it closed.
-  // Otherwise reset per-render so logout→login re-locks sidebar.
-  pw._gfSidebarUserOpened = _gfSidebarShouldBeOpen;
-  if (pw._gfSbObserver) { pw._gfSbObserver.disconnect(); pw._gfSbObserver = null; }
-  pw._gfSbObserver = new MutationObserver(function() {
-    if (!pw._gfSidebarUserOpened && isSidebarOpen()) { closeSidebar(); }
-  });
-  pw._gfSbObserver.observe(pd.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class','style'] });
-  pd.addEventListener('click', function(e) {
-    var t = e.target;
-    if (t && (t.getAttribute('aria-label') === 'open sidebar' || t.getAttribute('aria-label') === 'Close sidebar' || t.closest('[data-testid="stSidebarNavToggleButton"]') || t.closest('[data-testid="collapsedControl"]'))) {
-      pw._gfSidebarUserOpened = true;
-      if (pw._gfSbObserver) { pw._gfSbObserver.disconnect(); pw._gfSbObserver = null; }
-    }
-  }, { capture: true });
-  setTimeout(function() { if (pw._gfSbObserver) { pw._gfSbObserver.disconnect(); pw._gfSbObserver = null; } }, 5000);
   injectStyles();
-  // Only force-close on render if session state says sidebar should be closed
-  if (!_gfSidebarShouldBeOpen) {
-    setTimeout(closeSidebar, 100);
-    setTimeout(closeSidebar, 400);
-    setTimeout(closeSidebar, 900);
-    setTimeout(closeSidebar, 2000);
-  }
   // Re-inject styles after Streamlit re-renders
   setTimeout(injectStyles, 800);
   setTimeout(injectStyles, 2000);
