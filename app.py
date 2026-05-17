@@ -37,57 +37,8 @@ st.set_page_config(
     page_title="GOATflow | WorkGOAT Ecosystem",
     page_icon=_favicon_img,
     layout="centered",
-    initial_sidebar_state="collapsed",
+    initial_sidebar_state="auto",
 )
-
-# ── Hoof open button — injected at top so it persists on every re-render ─────
-st.markdown("""
-<style>
-[data-testid="collapsedControl"],
-[data-testid="collapsedControl"] button,
-[data-testid="stSidebarNavToggleButton"],
-[data-testid="stSidebarNavToggleButton"] button {
-    visibility: hidden !important;
-    pointer-events: none !important;
-}
-</style>
-""", unsafe_allow_html=True)
-_stc.html("""
-<script>
-(function(){
-  var pd = window.parent.document;
-  function createHoofOverlay() {
-    if (pd.getElementById('gf-hoof-open')) return;
-    var img = pd.createElement('img');
-    img.id = 'gf-hoof-open';
-    img.src = '/app/static/goatflow_navigation_hoof_right.webp';
-    img.style.cssText = 'position:fixed;top:8px;left:8px;z-index:999999;width:52px;height:52px;cursor:pointer;mix-blend-mode:multiply;object-fit:contain;transition:opacity 0.2s;';
-    img.addEventListener('mouseenter', function(){ img.style.opacity='0.75'; });
-    img.addEventListener('mouseleave', function(){ img.style.opacity='1'; });
-    img.addEventListener('click', function(){
-      var toggle =
-        pd.querySelector('[data-testid="collapsedControl"]') ||
-        pd.querySelector('[data-testid="stSidebarNavToggleButton"]') ||
-        pd.querySelector('button[aria-label="open sidebar"]') ||
-        pd.querySelector('button[aria-label="Open sidebar"]');
-      if (toggle) toggle.click();
-    });
-    pd.body.appendChild(img);
-  }
-  function syncHoofOverlay() {
-    var overlay = pd.getElementById('gf-hoof-open');
-    if (!overlay) { createHoofOverlay(); return; }
-    var sidebarOpen = !!pd.querySelector('[data-testid="stSidebarCollapseButton"]');
-    overlay.style.display = sidebarOpen ? 'none' : 'block';
-  }
-  setTimeout(createHoofOverlay, 300);
-  setTimeout(syncHoofOverlay, 900);
-  setTimeout(syncHoofOverlay, 2500);
-  var _obs = new MutationObserver(syncHoofOverlay);
-  _obs.observe(pd.body, { childList: true, subtree: false });
-})();
-</script>
-""", height=0)
 
 # ── Keep-alive health server ────────────────────────────────────────────────
 # Runs in a background daemon thread so the process stays warm between requests.
@@ -3064,46 +3015,6 @@ def get_level_bite_style(level: int) -> str:
 
 _hoof_left_url  = f"data:image/webp;base64,{goat_hoof_b64}"       if goat_hoof_b64       else ""
 _hoof_right_url = f"data:image/webp;base64,{goat_hoof_right_b64}" if goat_hoof_right_b64 else _hoof_left_url
-if goat_hoof_b64 or goat_hoof_right_b64:
-    st.markdown(f"""
-<style>
-/* ── Hide the native open-sidebar arrow — replaced by our overlay button ── */
-[data-testid="collapsedControl"],
-[data-testid="collapsedControl"] button,
-[data-testid="stSidebarNavToggleButton"],
-[data-testid="stSidebarNavToggleButton"] button {{
-    visibility: hidden !important;
-}}
-
-/* ── LEFT hoof — close/collapse button (inside open sidebar) ── */
-[data-testid="stSidebarCollapseButton"] button,
-button[aria-label="Close sidebar"],
-button[aria-label="close sidebar"] {{
-    background-image: url('{_hoof_left_url}') !important;
-    background-size: 80% !important;
-    background-repeat: no-repeat !important;
-    background-position: center !important;
-    background-color: transparent !important;
-    border: none !important;
-    box-shadow: none !important;
-    min-width: 44px !important;
-    min-height: 44px !important;
-    border-radius: 8px !important;
-    cursor: pointer !important;
-    transition: opacity 0.2s ease !important;
-}}
-[data-testid="stSidebarCollapseButton"] button:hover,
-button[aria-label="Close sidebar"]:hover {{
-    opacity: 0.7 !important;
-    background-color: transparent !important;
-}}
-[data-testid="stSidebarCollapseButton"] button svg,
-button[aria-label="Close sidebar"] svg,
-button[aria-label="close sidebar"] svg {{
-    display: none !important;
-}}
-</style>
-""", unsafe_allow_html=True)
 
 def get_tier_celeb_b64(tier: str) -> str:
     tier_map = {
@@ -3267,6 +3178,12 @@ if not user_info:
 current_user_id = user_info["id"]
 current_user_name = user_info["display_name"]
 
+if "sidebar_open" not in st.session_state:
+    st.session_state.sidebar_open = False
+
+saved_horns_text = get_horns(current_user_id)
+current_horns = parse_horns(saved_horns_text)
+
 QUICK_SCRIPTS = [
     {"label": "Staffing Crunch", "text": "IF staffing < 85% THEN set all Logistics tasks to Priority 1."},
     {"label": "Legal First", "text": "ALWAYS prioritize tasks with legal deadlines over general admin."},
@@ -3323,7 +3240,16 @@ def _build_weekly_bar_html(weekly_list: list) -> str:
 
 _sb_weekly_bars_html = _build_weekly_bar_html(_sb_weekly)
 
-with st.sidebar:
+def __sb_content():
+    if not st.session_state.get("sidebar_open", False):
+        return
+    _cc, _ = st.columns([1, 6])
+    with _cc:
+        if goat_hoof_b64:
+            st.image("static/icon_hoof_left.webp", width=44)
+        if st.button("", key="gf_close_sidebar", help="Close menu"):
+            st.session_state.sidebar_open = False
+            st.rerun()
     sidebar_logo = f'<img src="{logo_src}" alt="GOATflow" style="height:150px;object-fit:contain;">' if logo_src else '<div style="font-size:1.2rem;font-weight:900;color:#6100ff;">🐐 GOATflow</div>'
     st.markdown(f'''
     <div style="text-align:center;padding:0.5rem 0 0.2rem 0;">
@@ -3407,8 +3333,6 @@ with st.sidebar:
     </div>''', unsafe_allow_html=True)
 
     st.markdown("---")
-    saved_horns_text = get_horns(current_user_id)
-    current_horns = parse_horns(saved_horns_text)
     _horn_count = len(current_horns)
     _horns_sidebar_img = f'<img src="data:image/png;base64,{horns_icon_b64}" alt="Horns" style="width:80px;height:80px;object-fit:contain;display:block;margin:0 auto 0.3rem auto;">' if horns_icon_b64 else ''
     st.markdown(
@@ -3630,6 +3554,18 @@ with st.sidebar:
     if st.button("🎪  Replay Animal Intro", use_container_width=True, key="replay_animal_btn"):
         st.session_state["_gf_trigger_slideshow"] = True
 
+with st.sidebar:
+    __sb_content()
+
+if not st.session_state.get("sidebar_open", False):
+    _oc, _ = st.columns([1, 20])
+    with _oc:
+        if goat_hoof_right_b64:
+            st.image("static/goatflow_navigation_hoof_right.webp", width=44)
+        if st.button("", key="gf_open_sidebar", help="Open menu"):
+            st.session_state.sidebar_open = True
+            st.rerun()
+
 # ── Replay triggers (fired via session state from st.button clicks above) ──────
 if st.session_state.pop("_gf_trigger_tour", False):
     _stc.html(
@@ -3789,46 +3725,11 @@ _stc.html(
       }
     });
   }
-  // ── Fixed overlay hoof button — replaces hidden collapsedControl ─────────
-  function injectHoofOverlay() {
-    if (!_GF_HOOF_RIGHT_SRC && !_GF_HOOF_LEFT_SRC) return;
-    var sidebarOpen = !!pd.querySelector('[data-testid="stSidebarCollapseButton"]');
-    var existing = pd.getElementById('gf-hoof-open');
-    if (sidebarOpen) {
-      // Sidebar is open — hide our overlay, the CSS left hoof handles close
-      if (existing) existing.style.display = 'none';
-      return;
-    }
-    // Sidebar is closed — show or create our overlay
-    if (existing) { existing.style.display = 'block'; return; }
-    var overlay = pd.createElement('img');
-    overlay.id = 'gf-hoof-open';
-    overlay.src = _GF_HOOF_RIGHT_SRC || _GF_HOOF_LEFT_SRC;
-    overlay.style.cssText = 'position:fixed;top:8px;left:8px;z-index:999999;width:48px;height:48px;cursor:pointer;mix-blend-mode:multiply;object-fit:contain;transition:opacity 0.2s;';
-    overlay.addEventListener('mouseenter', function() { overlay.style.opacity = '0.75'; });
-    overlay.addEventListener('mouseleave', function() { overlay.style.opacity = '1'; });
-    overlay.addEventListener('click', function() {
-      var toggle = pd.querySelector('[data-testid="collapsedControl"]') ||
-                   pd.querySelector('[data-testid="stSidebarNavToggleButton"]') ||
-                   pd.querySelector('button[aria-label="open sidebar"]') ||
-                   pd.querySelector('button[aria-label="Open sidebar"]');
-      if (toggle) toggle.click();
-    });
-    pd.body.appendChild(overlay);
-  }
-
   setTimeout(injectCancelAndLogoutStyles, 600);
   setTimeout(injectCancelAndLogoutStyles, 1400);
   setTimeout(injectCancelAndLogoutStyles, 3000);
   setTimeout(injectCancelAndLogoutStyles, 5000);
   setTimeout(injectCancelAndLogoutStyles, 8000);
-  setTimeout(injectHoofOverlay, 500);
-  setTimeout(injectHoofOverlay, 1200);
-  setTimeout(injectHoofOverlay, 3000);
-  setTimeout(injectHoofOverlay, 6000);
-  // Re-check after sidebar state changes
-  var _gfHoofObserver = new MutationObserver(function() { injectHoofOverlay(); });
-  _gfHoofObserver.observe(pd.body, { childList: true, subtree: true });
 })();
 </script>
 """, height=0)
