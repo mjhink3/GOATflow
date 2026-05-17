@@ -40,6 +40,16 @@ st.set_page_config(
     initial_sidebar_state="collapsed",
 )
 
+st.markdown("""
+<style>
+#MainMenu {visibility: hidden;}
+header {visibility: hidden;}
+footer {visibility: hidden;}
+.stDeployButton {display: none;}
+[data-testid="stToolbar"] {display: none;}
+</style>
+""", unsafe_allow_html=True)
+
 # ── Keep-alive health server ────────────────────────────────────────────────
 # Runs in a background daemon thread so the process stays warm between requests.
 # Accessible at port 8080 for external uptime monitors.
