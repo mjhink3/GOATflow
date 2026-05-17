@@ -37,7 +37,7 @@ st.set_page_config(
     page_title="GOATflow | WorkGOAT Ecosystem",
     page_icon=_favicon_img,
     layout="centered",
-    initial_sidebar_state="auto",
+    initial_sidebar_state="collapsed",
 )
 
 # ── Keep-alive health server ────────────────────────────────────────────────
