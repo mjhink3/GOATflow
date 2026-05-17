@@ -2542,6 +2542,58 @@ setTimeout(function() {
 </script>
 """
 
+_GF_COMPLETION_ANIM_JS = """
+(function(){
+  var pw=window.parent,pd=pw.document;
+  var LINES=["Sieved. \uD83D\uDC10","That's what I thought.","Another one bites the dust.","The pasture grows.","Clean. Next.","GOAATing.","Efficient. Very efficient.","That Track never stood a chance.","The goat delivers.","Logged. Timestamped. Yours.","Small win. Real win.","The record shows you showed up.","One less thing between you and the summit."];
+  var line=LINES[Math.floor(Math.random()*LINES.length)];
+  if(!pd.getElementById('gf-ca-style')){
+    var cs=pd.createElement('style');cs.id='gf-ca-style';
+    cs.textContent='@keyframes gfFlash{0%{opacity:1}100%{opacity:0}}@keyframes gfPopIn{0%{transform:translate(-50%,-50%) scale(0.5);opacity:0}100%{transform:translate(-50%,-50%) scale(1);opacity:1}}@keyframes gfPopOut{0%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-50%) scale(0.85)}}@keyframes gfToastIn{0%{opacity:0;transform:translateX(-50%) translateY(10px)}100%{opacity:1;transform:translateX(-50%) translateY(0)}}@keyframes gfToastOut{0%{opacity:1}100%{opacity:0}}';
+    pd.head.appendChild(cs);
+  }
+  var fl=pd.createElement('div');
+  fl.style.cssText='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(74,222,128,0.3);z-index:99997;pointer-events:none;animation:gfFlash 300ms ease-out forwards;';
+  pd.body.appendChild(fl);
+  setTimeout(function(){if(fl.parentNode)fl.parentNode.removeChild(fl);},400);
+  setTimeout(function(){
+    var pop=pd.createElement('div');
+    pop.id='gf-ca-mascot';
+    pop.style.cssText='position:fixed;top:50%;left:50%;z-index:99999;pointer-events:none;animation:gfPopIn 200ms ease-out forwards;text-align:center;';
+    var imgH=_CA_MASCOT?'<img src="'+_CA_MASCOT+'" style="width:120px;height:120px;object-fit:contain;display:block;margin:0 auto 8px;">':'<div style="font-size:56px;line-height:1;margin-bottom:8px;">\uD83D\uDC10</div>';
+    pop.innerHTML=imgH+'<div style="font-family:Syne,sans-serif;font-size:16px;font-weight:700;color:#fff;text-shadow:0 2px 12px rgba(0,0,0,0.9);background:rgba(10,10,15,0.88);padding:8px 16px;border-radius:8px;max-width:280px;">'+line+'</div>';
+    pd.body.appendChild(pop);
+  },300);
+  setTimeout(function(){
+    var pop=pd.getElementById('gf-ca-mascot');
+    if(pop){pop.style.animation='gfPopOut 200ms ease-in forwards';setTimeout(function(){if(pop.parentNode)pop.parentNode.removeChild(pop);},200);}
+  },2000);
+  setTimeout(function(){
+    pd.querySelectorAll('[data-testid="stMarkdownContainer"]').forEach(function(el){
+      if(el.textContent&&el.textContent.indexOf('Hay')>-1&&el.textContent.length<200){
+        el.style.transition='box-shadow 200ms ease';
+        el.style.boxShadow='0 0 20px #4ade80';
+        setTimeout(function(){el.style.boxShadow='';el.style.transition='';},500);
+      }
+    });
+  },2000);
+  setTimeout(function(){
+    var msg;
+    if(_CA_CHEESE){msg='Fresh Cheese earned. The pasture remembers everything. \uD83E\uDDC0';}
+    else if(_CA_TIER==='Summit Call'){msg='Summit Call cleared. That was the one that mattered today.';}
+    else{msg='+'+_CA_HAY+' Hay. The record shows you showed up.';}
+    var t=pd.createElement('div');
+    t.id='gf-ca-toast';
+    t.style.cssText='position:fixed;bottom:80px;left:50%;transform:translateX(-50%);z-index:99999;background:rgba(74,222,128,0.1);border:1px solid #4ade80;border-radius:8px;padding:10px 20px;font-family:"DM Sans",sans-serif;font-size:13px;color:#4ade80;text-align:center;max-width:320px;pointer-events:none;animation:gfToastIn 300ms ease-out forwards;';
+    t.textContent=msg;
+    pd.body.appendChild(t);
+    setTimeout(function(){
+      if(t.parentNode){t.style.animation='gfToastOut 300ms ease-in forwards';setTimeout(function(){if(t.parentNode)t.parentNode.removeChild(t);},300);}
+    },2000);
+  },2400);
+})();
+"""
+
 
 logo_b64 = get_logo_b64()
 logo_src = f"data:image/webp;base64,{logo_b64}" if logo_b64 else ""
@@ -5365,6 +5417,16 @@ if st.session_state.get("just_completed_task"):
         xp_tier = "Standard"
         hay_earned = 10
         _diff_mult = 1.0
+    _ca_player = get_player(current_user_id)
+    _ca_mascot = get_level_img_src(_ca_player.get("level", 1)) or ""
+    _ca_has_cheese = bool(st.session_state.get("fresh_cheese_pending", 0))
+    _ca_data = (
+        f'var _CA_MASCOT="{_ca_mascot}";'
+        f'var _CA_TIER="{xp_tier}";'
+        f'var _CA_HAY={hay_earned};'
+        f'var _CA_CHEESE={"true" if _ca_has_cheese else "false"};'
+    )
+    _stc.html(f'<script>{_ca_data}{_GF_COMPLETION_ANIM_JS}</script>', height=0)
     show_hay_popup(task_name, xp_gained, leveled_up, xp_tier, hay_earned, _diff_mult)
     _sb_hay_amt = st.session_state.pop("just_earned_speed_bonus", 0)
     if _sb_hay_amt:
