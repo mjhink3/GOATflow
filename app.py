@@ -1731,6 +1731,25 @@ def ensure_schema():
                 )
             """)
 
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS stakes (
+                    id SERIAL PRIMARY KEY,
+                    user_id TEXT NOT NULL,
+                    stake_text TEXT,
+                    date DATE NOT NULL DEFAULT CURRENT_DATE,
+                    status TEXT NOT NULL DEFAULT 'active',
+                    hay_earned INTEGER NOT NULL DEFAULT 0,
+                    created_at TIMESTAMP DEFAULT NOW(),
+                    updated_at TIMESTAMP DEFAULT NOW()
+                )
+            """)
+            cur.execute("""
+                SELECT indexname FROM pg_indexes
+                WHERE tablename = 'stakes' AND indexname = 'stakes_user_date_idx'
+            """)
+            if not cur.fetchone():
+                cur.execute("CREATE UNIQUE INDEX stakes_user_date_idx ON stakes (user_id, date)")
+
             conn.commit()
     finally:
         conn.close()
@@ -2221,6 +2240,163 @@ def get_engagement_streak(user_id: str) -> int:
         else:
             break
     return streak
+
+
+def auto_break_old_stakes(user_id: str):
+    """Set any active stakes from before today to 'broken'."""
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE stakes SET status = 'broken', updated_at = NOW()
+                WHERE user_id = %s AND status = 'active' AND date < CURRENT_DATE
+            """, (user_id,))
+            conn.commit()
+    except Exception:
+        try: conn.rollback()
+        except Exception: pass
+    finally:
+        conn.close()
+
+def get_today_stake(user_id: str):
+    conn = get_db()
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT * FROM stakes WHERE user_id = %s AND date = CURRENT_DATE", (user_id,))
+            row = cur.fetchone()
+            return dict(row) if row else None
+    except Exception:
+        return None
+    finally:
+        conn.close()
+
+def get_yesterday_stake(user_id: str):
+    conn = get_db()
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT * FROM stakes WHERE user_id = %s AND date = CURRENT_DATE - INTERVAL '1 day'", (user_id,))
+            row = cur.fetchone()
+            return dict(row) if row else None
+    except Exception:
+        return None
+    finally:
+        conn.close()
+
+def save_stake(user_id: str, stake_text):
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            status = 'active' if stake_text and stake_text.strip() else 'skipped'
+            cur.execute("""
+                INSERT INTO stakes (user_id, stake_text, date, status)
+                VALUES (%s, %s, CURRENT_DATE, %s)
+                ON CONFLICT (user_id, date) DO NOTHING
+            """, (user_id, stake_text, status))
+            conn.commit()
+            return True
+    except Exception:
+        try: conn.rollback()
+        except Exception: pass
+        return False
+    finally:
+        conn.close()
+
+def claim_stake(user_id: str) -> int:
+    """Claim today's stake. Awards +50 Hay. Returns hay earned (0 if already claimed/skipped)."""
+    conn = get_db()
+    try:
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+            cur.execute("SELECT id, status FROM stakes WHERE user_id = %s AND date = CURRENT_DATE", (user_id,))
+            row = cur.fetchone()
+            if not row or row['status'] != 'active':
+                return 0
+            hay = 50
+            cur.execute("""
+                UPDATE stakes SET status = 'claimed', hay_earned = %s, updated_at = NOW()
+                WHERE user_id = %s AND date = CURRENT_DATE
+            """, (hay, user_id))
+            cur.execute("UPDATE player SET hay = hay + %s WHERE user_id = %s", (hay, user_id))
+            conn.commit()
+            return hay
+    except Exception:
+        try: conn.rollback()
+        except Exception: pass
+        return 0
+    finally:
+        conn.close()
+
+def break_stake(user_id: str):
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                UPDATE stakes SET status = 'broken', updated_at = NOW()
+                WHERE user_id = %s AND date = CURRENT_DATE AND status = 'active'
+            """, (user_id,))
+            conn.commit()
+    except Exception:
+        try: conn.rollback()
+        except Exception: pass
+    finally:
+        conn.close()
+
+def get_stake_streak(user_id: str) -> int:
+    """Consecutive days with status='claimed' up to and including today or yesterday."""
+    from datetime import date, timedelta
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT date FROM stakes WHERE user_id = %s AND status = 'claimed'
+                ORDER BY date DESC
+            """, (user_id,))
+            rows = cur.fetchall()
+    except Exception:
+        return 0
+    finally:
+        conn.close()
+    if not rows:
+        return 0
+    dates = [r[0] for r in rows]
+    today = date.today()
+    if dates[0] < today - timedelta(days=1):
+        return 0
+    streak = 0
+    expected = dates[0]
+    for d in dates:
+        if d == expected:
+            streak += 1
+            expected = expected - timedelta(days=1)
+        else:
+            break
+    return streak
+
+STAKE_MILESTONES = {
+    3:   ("Planted 🌱", 25),
+    7:   ("Rooted 🪨", 75),
+    14:  ("Staked In 🪧", 150),
+    30:  ("Iron Stake ⚓", 300),
+    60:  ("Unbreakable 💎", 500),
+    100: ("The G.O.A.T. Pledge 🐐", 1000),
+}
+
+def award_stake_milestone_hay(user_id: str, streak: int) -> tuple:
+    """If streak hits a milestone, award bonus Hay and return (label, hay). Else (None, 0)."""
+    if streak not in STAKE_MILESTONES:
+        return None, 0
+    label, hay = STAKE_MILESTONES[streak]
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("UPDATE player SET hay = hay + %s WHERE user_id = %s", (hay, user_id))
+            conn.commit()
+        return label, hay
+    except Exception:
+        try: conn.rollback()
+        except Exception: pass
+        return None, 0
+    finally:
+        conn.close()
 
 
 def get_weekly_clip_rates(user_id: str) -> list:
@@ -3342,6 +3518,83 @@ if not user_info:
 current_user_id = user_info["id"]
 current_user_name = user_info["display_name"]
 
+# ── Stakes: auto-break any active stakes from previous days ─────────────────
+auto_break_old_stakes(current_user_id)
+
+# ── Morning Stake modal — fires once per day if no stake set yet ─────────────
+_today_stake = get_today_stake(current_user_id)
+if _today_stake is None:
+    _yest_stake = get_yesterday_stake(current_user_id)
+    _broken_yesterday = (
+        _yest_stake and
+        _yest_stake.get("status") == "broken" and
+        _yest_stake.get("stake_text")
+    )
+
+    _ms_img = (
+        f'<img src="{icon_stakes_src}" style="width:88px;height:88px;object-fit:contain;display:block;margin:0 auto 8px auto;" onerror="this.style.display=\'none\'">'
+        if icon_stakes_src else "🪧"
+    )
+    _broken_banner = ""
+    if _broken_yesterday:
+        _prev_text = safe(str(_yest_stake["stake_text"])[:60])
+        _broken_banner = f"""
+<div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-family:'DM Sans',sans-serif;font-size:13px;color:#fca5a5;line-height:1.5;text-align:left;">
+  Yesterday's Stake went unclaimed.<br>
+  <span style="font-size:11px;color:#ef4444;">"{_prev_text}"</span><br>
+  <span style="font-size:11px;color:#9ca3af;display:block;margin-top:4px;">New day. New Contraaact. 🐐</span>
+</div>"""
+
+    st.markdown("""
+<style>
+#gf-morning-stake-wrap {
+  position:fixed;inset:0;background:rgba(8,8,15,0.96);backdrop-filter:blur(14px);
+  z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;
+}
+#gf-morning-stake-wrap .ms-card {
+  background:#0e0e22;border:1px solid rgba(124,58,237,0.45);border-radius:16px;
+  padding:32px 28px 24px 28px;max-width:400px;width:100%;text-align:center;
+  box-shadow:0 8px 40px rgba(124,58,237,0.25);
+}
+header[data-testid="stHeader"],#MainMenu{display:none!important;}
+section.main > div.block-container{padding-top:0!important;padding-bottom:0!important;}
+</style>""", unsafe_allow_html=True)
+
+    st.markdown(f"""
+<div id="gf-morning-stake-wrap">
+  <div class="ms-card">
+    {_ms_img}
+    <div style="font-family:Syne,Helvetica,sans-serif;font-weight:700;font-size:22px;color:#fff;margin-bottom:6px;">Morning Stake</div>
+    <div style="font-family:'DM Sans',sans-serif;font-size:14px;color:#9ca3af;margin-bottom:20px;line-height:1.6;">
+      One commitment. One day.<br>Sign the Contraaact.
+    </div>
+    {_broken_banner}
+  </div>
+</div>""", unsafe_allow_html=True)
+
+    with st.form("morning_stake_form", clear_on_submit=False):
+        _stake_input = st.text_input(
+            "commitment",
+            placeholder="Today I commit to...",
+            max_chars=120,
+            label_visibility="collapsed",
+        )
+        _sc1, _sc2 = st.columns([3, 2])
+        with _sc1:
+            _stake_btn = st.form_submit_button("🪧 Stake It", use_container_width=True)
+        with _sc2:
+            _skip_btn = st.form_submit_button("Skip today", use_container_width=True)
+
+    if _stake_btn and _stake_input.strip():
+        save_stake(current_user_id, _stake_input.strip())
+        st.rerun()
+    elif _skip_btn or (_stake_btn and not _stake_input.strip()):
+        save_stake(current_user_id, None)
+        st.rerun()
+
+    st.stop()
+# ─────────────────────────────────────────────────────────────────────────────
+
 saved_horns_text = get_horns(current_user_id)
 current_horns = parse_horns(saved_horns_text)
 
@@ -3400,6 +3653,7 @@ def _build_weekly_bar_html(weekly_list: list) -> str:
     return html
 
 _sb_weekly_bars_html = _build_weekly_bar_html(_sb_weekly)
+_sb_stake_streak = get_stake_streak(current_user_id)
 
 def __sb_content():
     sidebar_logo = f'<img src="{logo_src}" alt="GOATflow" style="height:150px;object-fit:contain;">' if logo_src else '<div style="font-size:1.2rem;font-weight:900;color:#6100ff;">🐐 GOATflow</div>'
@@ -3467,6 +3721,10 @@ def __sb_content():
         <div style="display:flex;justify-content:space-between;margin-bottom:0.3rem;">
             <span style="font-size:0.6rem;color:{SILVER};display:flex;align-items:center;gap:3px;"><img src="{icon_clip_rate_src}" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;" class="goatflow-icon"> Clip Rate (7d)</span>
             <span style="font-size:0.6rem;font-weight:700;color:{_sb_clip_color};">{_sb_clip_display}</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;margin-bottom:0.3rem;">
+            <span style="font-size:0.6rem;color:{SILVER};display:flex;align-items:center;gap:3px;"><img src="{icon_stakes_src}" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;" class="goatflow-icon"> Stake Streak 🪧</span>
+            <span style="font-size:0.6rem;font-weight:700;color:{"#f59e0b" if _sb_stake_streak > 0 else "#9ca3af"};">{_sb_stake_streak if _sb_stake_streak > 0 else "—"} {"day" if _sb_stake_streak == 1 else "days" if _sb_stake_streak > 1 else ""}</span>
         </div>
         {_sb_weekly_bars_html}
         <div style="font-size:0.52rem;color:#6b7280;text-align:right;margin-bottom:0.4rem;margin-top:0.3rem;">
@@ -5399,6 +5657,55 @@ if st.session_state.get("just_purged"):
     st.session_state["just_purged"] = False
 
 
+# ── Stake Claim/Break Dialog ─────────────────────────────────────────────────
+@st.dialog("🪧 Your Morning Stake", width="small")
+def show_stake_dialog():
+    _s = get_today_stake(current_user_id)
+    if not _s:
+        st.info("No Stake set for today.")
+        return
+
+    _txt  = _s.get("stake_text") or ""
+    _stat = _s.get("status") or ""
+
+    if _txt:
+        st.markdown(f"""
+<div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.35);border-radius:10px;padding:14px 16px;font-family:'DM Sans',sans-serif;font-size:15px;color:#fde68a;line-height:1.6;margin-bottom:16px;">
+  "{safe(_txt)}"
+</div>""", unsafe_allow_html=True)
+    else:
+        st.markdown("<p style='color:#9ca3af;font-size:13px;'>Today was skipped.</p>", unsafe_allow_html=True)
+
+    _streak = get_stake_streak(current_user_id)
+    if _streak > 0:
+        st.markdown(f"<p style='font-family:DM Sans,sans-serif;font-size:12px;color:#f59e0b;margin-bottom:8px;'>🔥 Stake Streak: <b>{_streak}</b> day{'s' if _streak != 1 else ''}</p>", unsafe_allow_html=True)
+
+    if _stat == "active" and _txt:
+        st.markdown("**Did you honor your Stake today?**")
+        _c1, _c2 = st.columns(2)
+        with _c1:
+            if st.button("✅ I did it", use_container_width=True, key="stake_claim_yes"):
+                _hay = claim_stake(current_user_id)
+                _new_streak = get_stake_streak(current_user_id)
+                _milestone_label, _bonus = award_stake_milestone_hay(current_user_id, _new_streak)
+                _total = _hay + _bonus
+                _msg = f"🎉 +{_total} Hay earned!"
+                if _bonus and _milestone_label:
+                    _msg += f"\n\n🔥 Streak milestone: **{_milestone_label}**! +{_bonus} bonus Hay for {_new_streak}-day streak."
+                st.success(_msg)
+                st.rerun()
+        with _c2:
+            if st.button("❌ I didn't", use_container_width=True, key="stake_claim_no"):
+                break_stake(current_user_id)
+                st.warning("Stake marked broken. Fresh start tomorrow.")
+                st.rerun()
+    elif _stat == "claimed":
+        st.success("✅ Stake claimed! You honored your commitment today.")
+    elif _stat == "broken":
+        st.error("❌ Stake broken. New day tomorrow.")
+    elif _stat == "skipped":
+        st.info("⬜ You skipped today's Stake.")
+
 
 @st.dialog("🌾")
 def show_hay_popup(task_name, xp_gained, leveled_up, xp_tier, hay_earned, difficulty_multiplier=1.0):
@@ -5643,6 +5950,18 @@ player = get_player(current_user_id)
 active_count = len(signals)
 summit_count = sum(1 for s in signals if s.get("bleat_type") in ("Summit-Level Bleat", "Summit Call"))
 gait_streak = get_engagement_streak(current_user_id)
+stake_streak = get_stake_streak(current_user_id)
+
+# ── Today's Stake card data ──────────────────────────────────────────────────
+_today_stake_card = get_today_stake(current_user_id)
+_stake_status     = (_today_stake_card.get("status") or "") if _today_stake_card else ""
+_stake_text_raw   = (_today_stake_card.get("stake_text") or "") if _today_stake_card else ""
+_stake_text_short = (_stake_text_raw[:28] + "…") if len(_stake_text_raw) > 28 else _stake_text_raw
+_stake_dot        = {"active": "🟡", "claimed": "✅", "broken": "❌"}.get(_stake_status, "⬜")
+_stake_card_color = {"active": "#f59e0b", "claimed": "#22c55e", "broken": "#ef4444"}.get(_stake_status, "#6b7280")
+_stake_card_label = _stake_text_short if _stake_text_short else ("Skipped today" if _stake_status == "skipped" else "No Stake set")
+_stake_card_sub   = f"{_stake_dot} {_stake_status.capitalize()}" if _stake_status else "—"
+
 level, xp_into, xp_needed = compute_level(player["total_xp"])
 cur_pasture = pasture_name(level)
 
@@ -5761,10 +6080,10 @@ st.markdown(f'''
         <div class="stat-label">GAIT</div>
         <div class="stat-sub">{"Complete a Track today" if gait_streak == 0 else f"{gait_streak} day{'' if gait_streak == 1 else 's'} in a row"}</div>
     </div>
-    <div class="stat-box" title="Percentage of today's tracks that have been completed. Keep your daily stakes high.">
-        <div class="stat-value" style="color:{stakes_pct_color};">{_stakes_icon_html} {stakes_pct_display}</div>
-        <div class="stat-label">STAKES %</div>
-        <div class="stat-sub">{stakes_sublabel}</div>
+    <div class="stat-box" id="gf-stake-card" style="cursor:pointer;border-color:{_stake_card_color};" title="Your Morning Stake for today. Click to view or claim.">
+        <div class="stat-value" style="font-size:0.85rem;font-family:'DM Sans',sans-serif;font-weight:600;color:{_stake_card_color};line-height:1.35;min-height:56px;display:flex;align-items:center;justify-content:center;padding:0 4px;">{_stake_card_label if _stake_card_label else "🪧"}</div>
+        <div class="stat-label">STAKE</div>
+        <div class="stat-sub">{_stake_card_sub}</div>
     </div>
     <div class="stat-box" id="gf-precision-card" title="Percentage of timed Tracks completed within their estimate.">
         <div class="stat-value" id="gf-precision-val" style="color:#9ca3af;">{("<img src='" + icon_precision_src + "' style='width:56px;height:56px;object-fit:contain;' class='goatflow-icon'>&#8202;") if icon_precision_src else ""}—</div>
@@ -5778,6 +6097,34 @@ st.markdown(f'''
 </div>
 ''', unsafe_allow_html=True)
 
+# ── Hidden button for stake card click ──────────────────────────────────────
+_stake_open_col = st.columns([1])[0]
+with _stake_open_col:
+    if st.button("open_stake_dialog", key="gf_stake_open_btn", label_visibility="collapsed"):
+        st.session_state["open_stake_dialog"] = True
+
+if st.session_state.pop("open_stake_dialog", False):
+    show_stake_dialog()
+
+# ── JS: stake card click → trigger hidden button ─────────────────────────────
+_stc.html("""<script>
+(function(){
+  function bindStakeCard(){
+    var card=window.parent.document.getElementById('gf-stake-card');
+    if(!card||card._stakebound)return;
+    card._stakebound=true;
+    card.addEventListener('click',function(){
+      var btns=window.parent.document.querySelectorAll('[data-testid="stButton"] button');
+      for(var i=0;i<btns.length;i++){
+        if(btns[i].innerText==='open_stake_dialog'){btns[i].click();return;}
+      }
+    });
+  }
+  bindStakeCard();
+  setTimeout(bindStakeCard,800);
+  setTimeout(bindStakeCard,2000);
+})();
+</script>""", height=0)
 
 _stc.html("""<script>
 (function(){
@@ -6612,3 +6959,54 @@ st.markdown(f'''
     GOATflow is a subsidiary of the WorkGOAT Ecosystem. Build your legacy at <a href="https://workgoat.vip" target="_blank" rel="noopener noreferrer">workgoat.vip</a>
 </div>
 ''', unsafe_allow_html=True)
+
+# ── End-of-session Stake reminder toast (10-min timer, fires once/day) ───────
+_stake_for_toast  = get_today_stake(current_user_id)
+_toast_status     = (_stake_for_toast.get("status") or "") if _stake_for_toast else ""
+_toast_text_js    = (_stake_for_toast.get("stake_text") or "")[:60] if _stake_for_toast else ""
+_toast_text_js    = _toast_text_js.replace("'", "\\'").replace('"', '\\"')
+_show_toast_flag  = "true" if _toast_status == "active" and _toast_text_js else "false"
+
+_stc.html(f"""<script>
+(function(){{
+  if(!{_show_toast_flag})return;
+  var TOAST_KEY='goatflow_stake_toast_shown';
+  var today=new Date().toISOString().slice(0,10);
+  if(localStorage.getItem(TOAST_KEY)===today)return;
+  var delay=10*60*1000;
+  setTimeout(function(){{
+    if(localStorage.getItem(TOAST_KEY)===today)return;
+    localStorage.setItem(TOAST_KEY,today);
+    var d=window.parent.document;
+    var wrap=d.createElement('div');
+    wrap.id='gf-stake-toast';
+    wrap.style.cssText='position:fixed;bottom:88px;left:50%;transform:translateX(-50%);z-index:9998;background:#0e0e22;border:1px solid rgba(245,158,11,0.5);border-radius:14px;padding:14px 18px;max-width:340px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,0.7);font-family:DM Sans,sans-serif;animation:gfSlideUp 0.35s ease;';
+    wrap.innerHTML='<div style="font-size:12px;color:#f59e0b;font-weight:700;margin-bottom:6px;">🪧 Stake Check-in</div>'
+      +'<div style="font-size:13px;color:#e5e7eb;margin-bottom:12px;line-height:1.5;">Did you honor your Stake today?<br><span style=\\"font-size:11px;color:#9ca3af;\\">\\"{_toast_text_js}\\"</span></div>'
+      +'<div style="display:flex;gap:8px;">'
+      +'<button id="gf-stake-toast-yes" style="flex:1;background:#22c55e;color:#fff;border:none;border-radius:8px;padding:8px;font-size:13px;font-weight:600;cursor:pointer;">✅ Yes</button>'
+      +'<button id="gf-stake-toast-no" style="flex:1;background:rgba(239,68,68,0.15);color:#ef4444;border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:8px;font-size:13px;font-weight:600;cursor:pointer;">❌ No</button>'
+      +'<button id="gf-stake-toast-dismiss" style="background:transparent;color:#6b7280;border:none;padding:8px 6px;cursor:pointer;font-size:16px;">✕</button>'
+      +'</div>';
+    if(!d.getElementById('gf-stake-toast-style')){{
+      var st=d.createElement('style');st.id='gf-stake-toast-style';
+      st.textContent='@keyframes gfSlideUp{{from{{transform:translateX(-50%) translateY(20px);opacity:0}}to{{transform:translateX(-50%) translateY(0);opacity:1}}}}';
+      d.head.appendChild(st);
+    }}
+    d.body.appendChild(wrap);
+    function removeToast(){{var t=d.getElementById('gf-stake-toast');if(t)t.remove();}}
+    d.getElementById('gf-stake-toast-dismiss').addEventListener('click',removeToast);
+    d.getElementById('gf-stake-toast-yes').addEventListener('click',function(){{
+      removeToast();
+      var btns=d.querySelectorAll('[data-testid="stButton"] button');
+      for(var i=0;i<btns.length;i++){{if(btns[i].innerText==='open_stake_dialog'){{btns[i].click();return;}}}}
+    }});
+    d.getElementById('gf-stake-toast-no').addEventListener('click',function(){{
+      removeToast();
+      var btns=d.querySelectorAll('[data-testid="stButton"] button');
+      for(var i=0;i<btns.length;i++){{if(btns[i].innerText==='open_stake_dialog'){{btns[i].click();return;}}}}
+    }});
+    setTimeout(removeToast,30000);
+  }},delay);
+}})();
+</script>""", height=0)
