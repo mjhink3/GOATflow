@@ -3531,45 +3531,45 @@ if _today_stake is None:
         _yest_stake.get("stake_text")
     )
 
+    # ── Hide all dashboard chrome, show only the stake card ────────────────
+    st.markdown("""
+<style>
+header[data-testid="stHeader"],
+[data-testid="stSidebar"],
+[data-testid="collapsedControl"],
+#MainMenu,
+.stDeployButton { display:none !important; }
+section.main > div.block-container {
+  max-width:480px !important;
+  padding-top:2rem !important;
+  margin:0 auto !important;
+}
+</style>""", unsafe_allow_html=True)
+
     _ms_img = (
-        f'<img src="{icon_stakes_src}" style="width:88px;height:88px;object-fit:contain;display:block;margin:0 auto 8px auto;" onerror="this.style.display=\'none\'">'
-        if icon_stakes_src else "🪧"
+        f'<img src="{icon_stakes_src}" style="width:80px;height:80px;object-fit:contain;display:block;margin:0 auto 12px auto;" onerror="this.style.display=\'none\'">'
+        if icon_stakes_src else ""
     )
     _broken_banner = ""
     if _broken_yesterday:
         _prev_text = safe(str(_yest_stake["stake_text"])[:60])
         _broken_banner = f"""
-<div style="background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-family:'DM Sans',sans-serif;font-size:13px;color:#fca5a5;line-height:1.5;text-align:left;">
+<div style="background:rgba(239,68,68,0.08);border:1px solid rgba(239,68,68,0.3);border-radius:8px;padding:10px 14px;margin-bottom:16px;font-family:'DM Sans',sans-serif;font-size:13px;color:#fca5a5;line-height:1.5;text-align:left;">
   Yesterday's Stake went unclaimed.<br>
   <span style="font-size:11px;color:#ef4444;">"{_prev_text}"</span><br>
   <span style="font-size:11px;color:#9ca3af;display:block;margin-top:4px;">New day. New Contraaact. 🐐</span>
 </div>"""
 
-    st.markdown("""
-<style>
-#gf-morning-stake-wrap {
-  position:fixed;inset:0;background:rgba(8,8,15,0.96);backdrop-filter:blur(14px);
-  z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;
-}
-#gf-morning-stake-wrap .ms-card {
-  background:#0e0e22;border:1px solid rgba(124,58,237,0.45);border-radius:16px;
-  padding:32px 28px 24px 28px;max-width:400px;width:100%;text-align:center;
-  box-shadow:0 8px 40px rgba(124,58,237,0.25);
-}
-header[data-testid="stHeader"],#MainMenu{display:none!important;}
-section.main > div.block-container{padding-top:0!important;padding-bottom:0!important;}
-</style>""", unsafe_allow_html=True)
-
     st.markdown(f"""
-<div id="gf-morning-stake-wrap">
-  <div class="ms-card">
-    {_ms_img}
-    <div style="font-family:Syne,Helvetica,sans-serif;font-weight:700;font-size:22px;color:#fff;margin-bottom:6px;">Morning Stake</div>
-    <div style="font-family:'DM Sans',sans-serif;font-size:14px;color:#9ca3af;margin-bottom:20px;line-height:1.6;">
-      One commitment. One day.<br>Sign the Contraaact.
-    </div>
-    {_broken_banner}
+<div style="background:#0e0e22;border:1px solid rgba(124,58,237,0.45);border-radius:16px;
+  padding:28px 24px 20px 24px;text-align:center;box-shadow:0 8px 40px rgba(124,58,237,0.2);
+  margin-bottom:20px;">
+  {_ms_img}
+  <div style="font-family:Syne,Helvetica,sans-serif;font-weight:700;font-size:22px;color:#fff;margin-bottom:6px;">Morning Stake</div>
+  <div style="font-family:'DM Sans',sans-serif;font-size:14px;color:#9ca3af;margin-bottom:{'16px' if _broken_banner else '0'};line-height:1.6;">
+    One commitment. One day. Sign the Contraaact.
   </div>
+  {_broken_banner}
 </div>""", unsafe_allow_html=True)
 
     with st.form("morning_stake_form", clear_on_submit=False):
