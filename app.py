@@ -6098,10 +6098,11 @@ st.markdown(f'''
 ''', unsafe_allow_html=True)
 
 # ── Hidden button for stake card click ──────────────────────────────────────
-_stake_open_col = st.columns([1])[0]
-with _stake_open_col:
-    if st.button("open_stake_dialog", key="gf_stake_open_btn", label_visibility="collapsed"):
-        st.session_state["open_stake_dialog"] = True
+st.markdown("""<style>div[data-testid="stButton"]:has(button[kind="secondary"]#gf_stake_open_btn),
+[data-testid="column"]:has(button[data-testid="baseButton-secondary"][key="gf_stake_open_btn"]),
+div.st-key-gf_stake_open_btn{display:none!important;}</style>""", unsafe_allow_html=True)
+if st.button("open_stake_dialog", key="gf_stake_open_btn"):
+    st.session_state["open_stake_dialog"] = True
 
 if st.session_state.pop("open_stake_dialog", False):
     show_stake_dialog()
