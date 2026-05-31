@@ -53,3 +53,5 @@ PROD_DATABASE_URL = "postgresql://postgres:X%2B6.VXUC9%21y_%256n@db.mazdcgqpewlx
 
 [userenv.shared]
 ADMIN_USERNAME = "ob_testuser"
+MAX_USERS = "50"
+CHURN_DAILY_LIMIT = "5"

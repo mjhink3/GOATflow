@@ -1,0 +1,93 @@
+Add two access control features 
+to GOATflow:
+
+FEATURE 1 — HARD USER CAP:
+
+Add a MAX_USERS environment variable 
+check to the Create Account flow.
+
+Before creating any new account:
+1. Query the total count of 
+   registered users in the 
+   users table
+2. Read the cap from environment:
+   max_users = int(os.environ.get(
+       "MAX_USERS", "50"))
+3. If current count >= max_users:
+   Block registration entirely
+   Show this message instead 
+   of the registration form:
+
+   "GOATflow is currently at 
+   capacity for this beta cohort.
+   
+   Join the waitlist at 
+   workgoat.vip to be notified 
+   when the next cohort opens.
+   
+   🐐"
+   
+   Style: DM Sans 400, 14px, 
+   #9ca3af, centered
+   Add a purple button beneath:
+   "Visit workgoat.vip →"
+   linking to https://workgoat.vip
+
+4. If under the cap — 
+   proceed normally with 
+   existing invite code check
+
+FEATURE 2 — CHURN ENGINE 
+DAILY RATE LIMITER:
+
+Create a new table if it 
+does not exist:
+churn_usage (
+    id SERIAL PRIMARY KEY,
+    user_id INTEGER,
+    usage_date DATE,
+    count INTEGER DEFAULT 0,
+    UNIQUE(user_id, usage_date)
+)
+
+Before every Churn Engine API call:
+1. Check today's count for 
+   this user_id
+2. daily_limit = int(os.environ.get(
+       "CHURN_DAILY_LIMIT", "5"))
+3. If count >= daily_limit:
+   Do not call the API
+   Disable the Drop Into 
+   Churn Engine button visually
+   Show below the button:
+   "Daily limit reached. 
+    Come back tomorrow. 🐐"
+   Color: #9ca3af, DM Sans 12px
+4. If under limit:
+   Allow the API call
+   Run INSERT ... ON CONFLICT 
+   DO UPDATE to increment count
+   After first use show:
+   "X of 5 daily uses remaining"
+   Color: #6b7280, DM Sans 11px
+5. Reset is automatic — 
+   the date column handles it,
+   new day = new row = fresh count
+
+ENVIRONMENT VARIABLES TO ADD 
+IN STREAMLIT SECRETS:
+MAX_USERS = "50"
+CHURN_DAILY_LIMIT = "5"
+
+Both values are adjustable 
+from Streamlit secrets without 
+any code changes — just update 
+the number and reboot the app.
+
+Confirm both features work:
+1. Try creating a 51st account — 
+   should show capacity message
+2. Press Churn Engine 5 times — 
+   sixth press should be blocked
+3. Existing users and existing 
+   Tracks completely unaffected

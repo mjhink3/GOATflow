@@ -1750,6 +1750,16 @@ def ensure_schema():
             if not cur.fetchone():
                 cur.execute("CREATE UNIQUE INDEX stakes_user_date_idx ON stakes (user_id, date)")
 
+            cur.execute("""
+                CREATE TABLE IF NOT EXISTS churn_usage (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER,
+                    usage_date DATE NOT NULL DEFAULT CURRENT_DATE,
+                    count INTEGER NOT NULL DEFAULT 0,
+                    UNIQUE(user_id, usage_date)
+                )
+            """)
+
             conn.commit()
     finally:
         conn.close()
@@ -1759,6 +1769,57 @@ try:
     ensure_schema()
 except Exception:
     pass
+
+
+def get_user_count() -> int:
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM users")
+            return cur.fetchone()[0]
+    except Exception:
+        return 0
+    finally:
+        conn.close()
+
+
+def get_churn_usage(user_id) -> int:
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT count FROM churn_usage WHERE user_id = %s AND usage_date = CURRENT_DATE",
+                (user_id,)
+            )
+            row = cur.fetchone()
+            return row[0] if row else 0
+    except Exception:
+        return 0
+    finally:
+        conn.close()
+
+
+def increment_churn_usage(user_id) -> int:
+    """Increment today's churn count, return new total."""
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                INSERT INTO churn_usage (user_id, usage_date, count)
+                VALUES (%s, CURRENT_DATE, 1)
+                ON CONFLICT (user_id, usage_date)
+                DO UPDATE SET count = churn_usage.count + 1
+                RETURNING count
+            """, (user_id,))
+            row = cur.fetchone()
+            conn.commit()
+            return row[0] if row else 1
+    except Exception:
+        try: conn.rollback()
+        except Exception: pass
+        return 1
+    finally:
+        conn.close()
 
 
 def create_user(username: str, password: str, display_name: str):
@@ -3409,48 +3470,64 @@ if not user_info:
                         st.rerun()
 
     with signup_tab:
-        st.markdown(
-            '<div style="font-size:0.72rem;color:#6b7280;margin-bottom:0.6rem;text-align:center;">'
-            '🔒 GOATflow is invite-only. You need an invite code to create an account.'
-            '</div>',
-            unsafe_allow_html=True
-        )
-        with st.form("signup_form"):
-            signup_invite = st.text_input("Invite Code", key="signup_invite", placeholder="Enter your invite code (e.g. GF-XXXXXXXXXX)")
-            signup_display = st.text_input("Display Name", key="signup_display", placeholder="How should we call you?")
-            signup_username = st.text_input("Goatname", key="signup_username", placeholder="Choose a unique goatname")
-            signup_password = st.text_input("Paaassword", type="password", key="signup_password", placeholder="Choose a paaassword (min 6 characters)")
-            signup_confirm = st.text_input("Confirm Paaassword", type="password", key="signup_confirm", placeholder="Re-enter your paaassword")
-            signup_submitted = st.form_submit_button("🐐 Create Account", use_container_width=True)
-            if signup_submitted:
-                if not signup_invite.strip():
-                    st.error("An invite code is required to create an account.")
-                elif not signup_display or not signup_username or not signup_password:
-                    st.error("All fields are required.")
-                elif len(signup_password) < 6:
-                    st.error("Paaassword must be at least 6 characters.")
-                elif signup_password != signup_confirm:
-                    st.error("Paaasswords do not match.")
-                elif len(signup_username) < 3:
-                    st.error("Goatname must be at least 3 characters.")
-                else:
-                    _inv_valid, _inv_err = validate_invite_code(signup_invite.strip())
-                    if not _inv_valid:
-                        st.error(_inv_err)
+        _max_users = int(os.environ.get("MAX_USERS", "50"))
+        _user_count = get_user_count()
+        if _user_count >= _max_users:
+            st.markdown("""
+<div style="text-align:center;padding:24px 16px;">
+  <div style="font-family:'DM Sans',sans-serif;font-size:14px;color:#9ca3af;line-height:1.7;margin-bottom:20px;">
+    GOATflow is currently at capacity for this beta cohort.<br><br>
+    Join the waitlist at workgoat.vip to be notified<br>when the next cohort opens.<br><br>🐐
+  </div>
+  <a href="https://workgoat.vip" target="_blank" rel="noopener noreferrer"
+     style="display:inline-block;background:#7c3aed;color:#fff;font-family:'DM Sans',sans-serif;
+            font-size:14px;font-weight:600;padding:10px 24px;border-radius:8px;text-decoration:none;">
+    Visit workgoat.vip →
+  </a>
+</div>""", unsafe_allow_html=True)
+        else:
+            st.markdown(
+                '<div style="font-size:0.72rem;color:#6b7280;margin-bottom:0.6rem;text-align:center;">'
+                '🔒 GOATflow is invite-only. You need an invite code to create an account.'
+                '</div>',
+                unsafe_allow_html=True
+            )
+            with st.form("signup_form"):
+                signup_invite = st.text_input("Invite Code", key="signup_invite", placeholder="Enter your invite code (e.g. GF-XXXXXXXXXX)")
+                signup_display = st.text_input("Display Name", key="signup_display", placeholder="How should we call you?")
+                signup_username = st.text_input("Goatname", key="signup_username", placeholder="Choose a unique goatname")
+                signup_password = st.text_input("Paaassword", type="password", key="signup_password", placeholder="Choose a paaassword (min 6 characters)")
+                signup_confirm = st.text_input("Confirm Paaassword", type="password", key="signup_confirm", placeholder="Re-enter your paaassword")
+                signup_submitted = st.form_submit_button("🐐 Create Account", use_container_width=True)
+                if signup_submitted:
+                    if not signup_invite.strip():
+                        st.error("An invite code is required to create an account.")
+                    elif not signup_display or not signup_username or not signup_password:
+                        st.error("All fields are required.")
+                    elif len(signup_password) < 6:
+                        st.error("Paaassword must be at least 6 characters.")
+                    elif signup_password != signup_confirm:
+                        st.error("Paaasswords do not match.")
+                    elif len(signup_username) < 3:
+                        st.error("Goatname must be at least 3 characters.")
                     else:
-                        _claimed = consume_invite_code(signup_invite.strip(), signup_username.strip().lower())
-                        if not _claimed:
-                            st.error("This invite code was just claimed by someone else. Please request a new one.")
+                        _inv_valid, _inv_err = validate_invite_code(signup_invite.strip())
+                        if not _inv_valid:
+                            st.error(_inv_err)
                         else:
-                            user, err = create_user(signup_username, signup_password, signup_display)
-                            if err:
-                                release_invite_code(signup_invite.strip())
-                                st.error(err)
+                            _claimed = consume_invite_code(signup_invite.strip(), signup_username.strip().lower())
+                            if not _claimed:
+                                st.error("This invite code was just claimed by someone else. Please request a new one.")
                             else:
-                                st.session_state["auth_user_id"] = user["id"]
-                                st.session_state["auth_user_name"] = user["username"]
-                                st.session_state["auth_display_name"] = user["display_name"]
-                                st.rerun()
+                                user, err = create_user(signup_username, signup_password, signup_display)
+                                if err:
+                                    release_invite_code(signup_invite.strip())
+                                    st.error(err)
+                                else:
+                                    st.session_state["auth_user_id"] = user["id"]
+                                    st.session_state["auth_user_name"] = user["username"]
+                                    st.session_state["auth_display_name"] = user["display_name"]
+                                    st.rerun()
 
     st.markdown(f'''
     <div class="global-footer">
@@ -5383,8 +5460,31 @@ with col_files:
         label_visibility="collapsed",
     )
 
-drop_btn = st.button("Drop Into Churn Engine", use_container_width=True, key="drop_btn",
-                     help="GOATflow will metabolize your input and rank everything against your Horns.")
+# ── Churn Engine daily rate limiter ─────────────────────────────────────────
+_churn_daily_limit = int(os.environ.get("CHURN_DAILY_LIMIT", "5"))
+_churn_used_today  = get_churn_usage(current_user_id)
+_churn_limit_hit   = _churn_used_today >= _churn_daily_limit
+
+drop_btn = st.button(
+    "Drop Into Churn Engine",
+    use_container_width=True,
+    key="drop_btn",
+    help="GOATflow will metabolize your input and rank everything against your Horns.",
+    disabled=_churn_limit_hit,
+)
+if _churn_limit_hit:
+    st.markdown(
+        '<div style="font-family:\'DM Sans\',sans-serif;font-size:12px;color:#9ca3af;'
+        'text-align:center;margin-top:4px;">Daily limit reached. Come back tomorrow. 🐐</div>',
+        unsafe_allow_html=True,
+    )
+elif _churn_used_today > 0:
+    _churn_remaining = _churn_daily_limit - _churn_used_today
+    st.markdown(
+        f'<div style="font-family:\'DM Sans\',sans-serif;font-size:11px;color:#6b7280;'
+        f'text-align:center;margin-top:4px;">{_churn_remaining} of {_churn_daily_limit} daily uses remaining</div>',
+        unsafe_allow_html=True,
+    )
 
 # ── FIX 1: Time Available Modal — intercepts drop button click ─────────────
 _stc.html(r"""<script>
@@ -5617,6 +5717,7 @@ setInterval(function(){
                 if is_incognito:
                     existing = existing + st.session_state.get("incognito_signals", [])
                 current_horns_text = get_horns(current_user_id)
+                increment_churn_usage(current_user_id)
                 result = run_churn_engine(existing, files_data, extra_text or "", current_horns_text)
 
                 files_data.clear()
