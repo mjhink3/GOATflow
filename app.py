@@ -1759,6 +1759,40 @@ except Exception:
     pass
 
 
+def ensure_admin_user():
+    admin_username = os.environ.get("ADMIN_USERNAME", "").strip().lower()
+    admin_password = os.environ.get("ADMIN_PASSWORD", "goatnow")
+    if not admin_username:
+        return
+    conn = get_db()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id FROM users WHERE username = %s", (admin_username,))
+            if cur.fetchone():
+                return
+            pw_hash, salt = hash_password(admin_password)
+            cur.execute(
+                "INSERT INTO users (username, password_hash, password_salt, display_name) VALUES (%s, %s, %s, %s) RETURNING id",
+                (admin_username, pw_hash, salt, admin_username)
+            )
+            user_id = cur.fetchone()[0]
+            cur.execute(
+                "INSERT INTO player (user_id, total_xp, total_hay_earned, level, tasks_completed, hay, fresh_cheese) VALUES (%s, 0, 0, 1, 0, 0, 0) ON CONFLICT (user_id) DO NOTHING",
+                (str(user_id),)
+            )
+        conn.commit()
+    except Exception:
+        pass
+    finally:
+        conn.close()
+
+
+try:
+    ensure_admin_user()
+except Exception:
+    pass
+
+
 def get_user_count() -> int:
     conn = get_db()
     try:
