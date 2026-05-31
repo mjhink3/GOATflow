@@ -5720,9 +5720,26 @@ setInterval(function(){
                             text_content = extract_docx_text(file_bytes)
                             files_data.append({"type": "text", "name": fname, "content": text_content if text_content.strip() else "[DOCX unreadable]"})
                         elif any(fname.lower().endswith(ext) for ext in [".png", ".jpg", ".jpeg", ".webp", ".gif"]) or "image" in ftype:
-                            b64 = base64.b64encode(file_bytes).decode("utf-8")
-                            mime = ftype if ftype else "image/png"
-                            files_data.append({"type": "image", "name": fname, "b64": b64, "mime": mime})
+                            if fname.lower().endswith((".heic", ".heif")) or "heic" in ftype or "heif" in ftype:
+                                st.warning(f"⚠️ {fname}: iPhone HEIC photos aren't supported. Go to iPhone Settings → Camera → Formats and choose 'Most Compatible' to shoot in JPEG instead.")
+                            else:
+                                try:
+                                    import io as _io
+                                    from PIL import Image as _PImg
+                                    img = _PImg.open(_io.BytesIO(file_bytes))
+                                    if img.mode not in ("RGB", "L"):
+                                        img = img.convert("RGB")
+                                    max_dim = 1500
+                                    w, h = img.size
+                                    if max(w, h) > max_dim:
+                                        scale = max_dim / max(w, h)
+                                        img = img.resize((int(w * scale), int(h * scale)), _PImg.LANCZOS)
+                                    buf = _io.BytesIO()
+                                    img.save(buf, format="JPEG", quality=82)
+                                    b64 = base64.b64encode(buf.getvalue()).decode("utf-8")
+                                    files_data.append({"type": "image", "name": fname, "b64": b64, "mime": "image/jpeg"})
+                                except Exception as _img_err:
+                                    st.warning(f"⚠️ Could not process image {fname}: {_img_err}")
                         else:
                             try:
                                 text_content = file_bytes.decode("utf-8", errors="replace")
