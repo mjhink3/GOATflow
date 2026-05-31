@@ -84,7 +84,7 @@ BORDER = "#2A2A4A"
 WHITE = "#F5F5F5"
 DARK_SURFACE = "#0D0D1A"
 
-XP_TIERS = {"Micro": 100, "Standard": 500, "High-Leverage": 1500, "GOAT": 5000}
+HAY_TIERS = {"Micro": 15, "Standard": 40, "High-Leverage": 100, "GOAT": 250}
 
 GF_QUOTES = [
     "You're not just climbing \u2014 you're GOAAATing to the top. Keep sieving.",
@@ -115,7 +115,7 @@ GF_QUOTES = [
     "You came here to build something. The Track Sieve is your weapon. Use it.",
     "Setbacks are just detours on the climb. Log the lesson. Keep GOAAATing.",
 ]
-BASE_LEVEL_XP = 5000
+BASE_LEVEL_XP = 500
 LEVEL_GROWTH = 0.20
 
 PASTURE_NAMES = {
@@ -1600,7 +1600,7 @@ def ensure_schema():
                     EXCEPTION WHEN duplicate_table THEN NULL;
                     END $$;
                 """)
-            for pcol in [("hay", "INTEGER NOT NULL", "0"), ("fresh_cheese", "INTEGER NOT NULL", "0"), ("onboarding_done", "BOOLEAN NOT NULL", "FALSE")]:
+            for pcol in [("hay", "INTEGER NOT NULL", "0"), ("fresh_cheese", "INTEGER NOT NULL", "0"), ("onboarding_done", "BOOLEAN NOT NULL", "FALSE"), ("total_hay_earned", "INTEGER NOT NULL", "0")]:
                 cur.execute(f"SELECT column_name FROM information_schema.columns WHERE table_name = 'player' AND column_name = '{pcol[0]}'")
                 if not cur.fetchone():
                     cur.execute(f"ALTER TABLE player ADD COLUMN {pcol[0]} {pcol[1]} DEFAULT {pcol[2]}")
@@ -1962,7 +1962,7 @@ def get_player(user_id: str):
                 conn.commit()
             return dict(row)
     except Exception:
-        return {"user_id": user_id, "total_xp": 0, "level": 1, "tasks_completed": 0, "hay": 0, "fresh_cheese": 0, "onboarding_done": False}
+        return {"user_id": user_id, "total_xp": 0, "total_hay_earned": 0, "level": 1, "tasks_completed": 0, "hay": 0, "fresh_cheese": 0, "onboarding_done": False}
     finally:
         conn.close()
 
@@ -2006,8 +2006,8 @@ def get_active_signals(user_id: str):
         conn.close()
 
 
-HAY_BASE = {"Standard": 10, "Micro": 10, "High-Leverage": 10, "GOAT": 10}
-HAY_SUMMIT_BONUS = 50
+HAY_BASE = {"Micro": 15, "Standard": 40, "High-Leverage": 100, "GOAT": 250}
+HAY_SUMMIT_MULT = 1.5
 HAY_SPEED_BONUS = 10
 HAY_TO_CHEESE = 500
 
@@ -2066,19 +2066,17 @@ def complete_signal(signal_id: int, user_id: str, time_estimate_minutes: int = N
             if not row:
                 conn.rollback()
                 return None, 0, False, 0, 0, 0, 0, 1.0, None
-            xp = XP_TIERS.get(row["xp_reward"], 500)
-            cur.execute("SELECT total_xp, hay, fresh_cheese, tasks_completed FROM player WHERE user_id = %s", (user_id,))
+            cur.execute("SELECT total_hay_earned, hay, fresh_cheese, tasks_completed FROM player WHERE user_id = %s", (user_id,))
             player_row = cur.fetchone()
-            old_xp = player_row["total_xp"] if player_row else 0
+            old_total_hay_earned = player_row["total_hay_earned"] if player_row else 0
             old_hay = player_row["hay"] if player_row else 0
             old_cheese = player_row["fresh_cheese"] if player_row else 0
             tasks_completed_so_far = player_row["tasks_completed"] if player_row else 0
-            old_level, _, _ = compute_level(old_xp)
-            new_xp = old_xp + xp
-            new_level, _, _ = compute_level(new_xp)
+            old_level, _, _ = compute_level(old_total_hay_earned)
 
             is_summit = row["bleat_type"] in ("Summit-Level Bleat", "Summit Call")
-            base_hay = HAY_SUMMIT_BONUS if is_summit else HAY_BASE.get(row["xp_reward"], 10)
+            tier_base = HAY_BASE.get(row["xp_reward"], 40)
+            base_hay = round(tier_base * HAY_SUMMIT_MULT) if is_summit else tier_base
 
             speed_bonus_hay = 0
             logged_at = row["created_at"]
@@ -2108,15 +2106,17 @@ def complete_signal(signal_id: int, user_id: str, time_estimate_minutes: int = N
             new_cheese = old_cheese + cheese_gained
             cheese_converted = cheese_gained
 
+            new_total_hay_earned = old_total_hay_earned + hay_earned
+            new_level, _, _ = compute_level(new_total_hay_earned)
             cur.execute("""
                 UPDATE player
-                SET total_xp = %s,
+                SET total_hay_earned = %s,
                     tasks_completed = tasks_completed + 1,
                     level = %s,
                     hay = %s,
                     fresh_cheese = %s
                 WHERE user_id = %s
-            """, (new_xp, new_level, new_hay_remainder, new_cheese, user_id))
+            """, (new_total_hay_earned, new_level, new_hay_remainder, new_cheese, user_id))
             cur.execute("DELETE FROM signals WHERE id = %s AND user_id = %s", (signal_id, user_id))
             cur.execute("""
                 INSERT INTO operational_log (user_id, task_name, task_why, resolution, horn_applied_name, priority_score, xp_tier, category, logged_at, hay_earned)
@@ -2129,7 +2129,7 @@ def complete_signal(signal_id: int, user_id: str, time_estimate_minutes: int = N
             log_id = log_row["id"] if log_row else None
             conn.commit()
             leveled_up = new_level > old_level
-            return row["xp_reward"], xp, leveled_up, hay_earned, new_hay_remainder, cheese_converted, speed_bonus_hay, difficulty_multiplier, log_id
+            return row["xp_reward"], 0, leveled_up, hay_earned, new_hay_remainder, cheese_converted, speed_bonus_hay, difficulty_multiplier, log_id
     except Exception:
         conn.rollback()
         return None, 0, False, 0, 0, 0, 0, 1.0, None
@@ -2549,11 +2549,11 @@ Your job:
 - Classify each Track as either:
   * 'Routine Grazing' — low impact, daily maintenance, routine checks, standard workflow
   * 'Summit Call' — high impact, crisis-level, urgent deadlines, legal issues, safety concerns, facility emergencies
-- Assign a Cheese Churn Rate (CCR) tier:
-  * Micro (100 CCR) — quick fixes, simple acknowledgments, routine checks
-  * Standard (500 CCR) — moderate tasks requiring some effort or coordination
-  * High-Leverage (1500 CCR) — complex tasks with significant operational impact
-  * GOAT (5000 CCR) — critical, facility-level actions with major consequences
+- Assign a Weight Tier:
+  * Micro — quick fixes, simple acknowledgments, routine checks
+  * Standard — moderate tasks requiring some effort or coordination
+  * High-Leverage — complex tasks with significant operational impact
+  * GOAT — critical, facility-level actions with major consequences
 
 Rules:
 - Task names should be clear, action-oriented, and distilled from noise.
@@ -2561,7 +2561,7 @@ Rules:
 - Be specific and operational — this is for a Postmaster running a facility.
 - Return ALL tasks (existing + new, merged where appropriate).
 - Sort by operational_weight descending.
-- xp_reward (CCR tier) must be exactly one of: Micro, Standard, High-Leverage, GOAT
+- xp_reward (weight tier) must be exactly one of: Micro, Standard, High-Leverage, GOAT
 - bleat_type must be exactly one of: Routine Grazing, Summit Call
 - operational_weight MUST be a number between 0.0 and 10.0 (not 0.0–1.0). Examples: a critical production outage = 9.5, an overdue invoice = 7.2, booking a dentist = 2.1. Never return values below 1.0 unless the task is truly negligible.
 - Summit Calls should generally have operational_weight >= 7.0
@@ -2617,7 +2617,7 @@ def run_churn_engine(existing_signals: list[dict], files_data: list[dict], extra
         lines = []
         for s in existing_signals:
             bt = s.get('bleat_type', 'Routine Grazing')
-            lines.append(f"- [{s['operational_weight']:.1f}] [{bt}] {s['task_name']}: {s['why']} (CCR Tier: {s['xp_reward']})")
+            lines.append(f"- [{s['operational_weight']:.1f}] [{bt}] {s['task_name']}: {s['why']} (Tier: {s['xp_reward']})")
         existing_desc = "EXISTING TRACKS:\n" + "\n".join(lines)
     else:
         existing_desc = "EXISTING TRACKS: (none)"
@@ -2677,8 +2677,11 @@ CRITICAL RULES for the JSON you return:
             ))
 
     def _call_model(prompt_contents):
-        resp = client.models.generate_content(model="gemini-2.5-flash", contents=prompt_contents)
-        txt = resp.text.strip()
+        chunks = []
+        for chunk in client.models.generate_content_stream(model="gemini-2.5-flash", contents=prompt_contents):
+            if chunk.text:
+                chunks.append(chunk.text)
+        txt = "".join(chunks).strip()
         if txt.startswith("```"):
             txt = txt.split("```")[1]
             if txt.startswith("json"):
@@ -3730,11 +3733,11 @@ def __sb_content():
 
     st.markdown("---")
 
-    level_data = compute_level(player_data["total_xp"])
+    level_data = compute_level(player_data.get("total_hay_earned", 0))
     cur_level, cur_xp_into, cur_xp_needed = level_data
     sidebar_pasture = pasture_name(cur_level)
 
-    _sb_linkedin_text = f"I'm at {sidebar_pasture} (Level {cur_level}) with {player_data['total_xp']:,} Cheese Churn Points on GOATflow! {player_data['tasks_completed']} Tracks completed. Part of the WorkGOAT Ecosystem."
+    _sb_linkedin_text = f"I'm at {sidebar_pasture} (Level {cur_level}) on GOATflow! {player_data['tasks_completed']} Tracks completed. Part of the WorkGOAT Ecosystem."
     _sb_linkedin_url = "https://www.linkedin.com/sharing/share-offsite/?" + urllib.parse.urlencode({"url": "https://workgoat.vip", "title": _sb_linkedin_text, "summary": _sb_linkedin_text})
 
     _level_img_src = get_level_img_src(cur_level)
@@ -3759,12 +3762,8 @@ def __sb_content():
     <div style="margin-top:0.5rem;padding:0.6rem;background:{CARD_BG};border-radius:8px;border:1px solid {BORDER};">
         <div style="font-size:0.7rem;font-weight:700;color:{WHITE};margin-bottom:0.4rem;font-family:Syne,sans-serif;display:flex;align-items:center;gap:5px;">{"<img src='" + icon_stats_src + "' style='width:18px;height:18px;object-fit:contain;vertical-align:middle;' class='goatflow-icon'>" if icon_stats_src else "📊"} My Stats</div>
         <div style="display:flex;justify-content:space-between;margin-bottom:0.2rem;">
-            <span style="font-size:0.6rem;color:{SILVER};">Total Grit (XP)</span>
-            <span style="font-size:0.6rem;font-weight:700;color:{NEON_GREEN};">{player_data["total_xp"]:,}</span>
-        </div>
-        <div style="display:flex;justify-content:space-between;margin-bottom:0.2rem;">
-            <span style="font-size:0.6rem;color:{SILVER};display:flex;align-items:center;gap:3px;"><img src="{icon_cheese_src}" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;" class="goatflow-icon"> Cheese Churn Rate (CCR)</span>
-            <span style="font-size:0.6rem;font-weight:700;color:{NEON_VIOLET};">{player_data["tasks_completed"]} churned</span>
+            <span style="font-size:0.6rem;color:{SILVER};display:flex;align-items:center;gap:3px;"><img src="{icon_hay_stack_src}" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;" class="goatflow-icon"> Lifetime Hay</span>
+            <span style="font-size:0.6rem;font-weight:700;color:{NEON_GREEN};">{player_data.get("total_hay_earned", 0):,}</span>
         </div>
         <div style="display:flex;justify-content:space-between;margin-bottom:0.2rem;">
             <span style="font-size:0.6rem;color:{SILVER};display:flex;align-items:center;gap:3px;"><img src="{icon_level_src}" style="width:18px;height:18px;object-fit:contain;vertical-align:middle;" class="goatflow-icon"> Ascension Rank</span>
@@ -3772,7 +3771,7 @@ def __sb_content():
         </div>
         <div style="display:flex;justify-content:space-between;margin-bottom:0.2rem;">
             <span style="font-size:0.6rem;color:{SILVER};">Next Fence</span>
-            <span style="font-size:0.6rem;font-weight:700;color:{SILVER};">{cur_xp_into:,}/{cur_xp_needed:,}</span>
+            <span style="font-size:0.6rem;font-weight:700;color:{SILVER};">{cur_xp_into:,}/{cur_xp_needed:,} Hay</span>
         </div>
         <div style="border-top:1px solid {BORDER};margin:0.4rem 0;"></div>
         <div style="display:flex;justify-content:space-between;margin-bottom:0.15rem;">
@@ -5670,8 +5669,9 @@ setInterval(function(){
 },800);
 </script>
 ''', unsafe_allow_html=True)
-        with st.spinner(""):
+        with st.status("⚙️ Sieving the terrain...", expanded=True) as _churn_status:
             try:
+                st.write("📂 Processing your input...")
                 files_data = []
                 if uploaded_files:
                     for f in uploaded_files:
@@ -5696,14 +5696,17 @@ setInterval(function(){
                             except Exception:
                                 files_data.append({"type": "text", "name": fname, "content": "[unreadable]"})
 
+                st.write("🧠 Running Churn Engine...")
                 existing = get_active_signals(current_user_id)
                 current_horns_text = get_horns(current_user_id)
                 increment_churn_usage(current_user_id)
                 result = run_churn_engine(existing, files_data, extra_text or "", current_horns_text)
 
+                st.write("📋 Re-sorting your Tracks...")
                 files_data.clear()
 
                 save_signals(current_user_id, [s.model_dump() for s in result.signals])
+                _churn_status.update(label="✅ Churn Complete", state="complete", expanded=False)
                 st.session_state["just_dropped"] = True
                 st.session_state["just_purged"] = True
                 st.session_state["sieve_counter"] = st.session_state.get("sieve_counter", 0) + 1
@@ -5712,6 +5715,7 @@ setInterval(function(){
                 import traceback
                 traceback.print_exc()
                 churn_placeholder.empty()
+                _churn_status.update(label="❌ Churn Engine hit a snag", state="error", expanded=True)
                 st.error(f"The Churn Engine hit a snag: {e}")
 
 if st.session_state.get("just_dropped"):
@@ -5800,7 +5804,7 @@ def show_hay_popup(task_name, xp_gained, leveled_up, xp_tier, hay_earned, diffic
         f'<div style="color:#f59e0b;font-size:1.35rem;font-weight:900;margin-bottom:0.15rem;font-family:Syne,sans-serif;">{safe(hay_pun)}</div>'
         f'<div style="color:{NEON_GREEN};font-size:1.5rem;font-weight:900;margin-bottom:0.05rem;display:flex;align-items:center;justify-content:center;gap:6px;">\U0001F33E +{hay_earned} Hay <img src="{icon_hay_stack_src}" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;" class="goatflow-icon-inline"></div>'
         f'{_mult_label}'
-        f'<div style="color:{SILVER};font-size:0.72rem;margin-bottom:0.25rem;">+{xp_gained:,} CCR also earned</div>'
+        f''
         f'<div style="color:{SILVER};font-size:0.85rem;font-weight:500;margin-bottom:0.3rem;">{safe(task_name)}</div>'
         f'<div style="color:{NEON_VIOLET};font-size:0.88rem;font-weight:700;font-style:italic;">{safe(goat_pun)}</div>'
         f'</div>',
@@ -5866,7 +5870,7 @@ if st.session_state.get("just_completed_task"):
         _diff_mult = 1.0
     elif len(task_data) == 4:
         task_name, xp_gained, leveled_up, xp_tier = task_data
-        hay_earned = HAY_BASE.get(xp_tier, 10)
+        hay_earned = HAY_BASE.get(xp_tier, 40)
         _diff_mult = 1.0
     else:
         task_name, xp_gained, leveled_up = task_data
@@ -6031,7 +6035,7 @@ _stake_card_color = {"active": "#f59e0b", "claimed": "#22c55e", "broken": "#ef44
 _stake_card_label = _stake_text_short if _stake_text_short else ("Skipped today" if _stake_status == "skipped" else "No Stake set")
 _stake_card_sub   = f"{_stake_dot} {_stake_status.capitalize()}" if _stake_status else "—"
 
-level, xp_into, xp_needed = compute_level(player["total_xp"])
+level, xp_into, xp_needed = compute_level(player.get("total_hay_earned", 0))
 cur_pasture = pasture_name(level)
 
 # ── Clip Rate + Horns count ─────────────────────────────────────────────────
@@ -6074,7 +6078,7 @@ _sidebar_clip_text = clip_rate_display
 horns_count = len(parse_horns(get_horns(current_user_id)))
 _horns_img_stat = f'<img src="data:image/webp;base64,{horns_icon_b64}" alt="Horns" class="goatflow-icon" style="height:40px;vertical-align:middle;">' if horns_icon_b64 else "🐐"
 
-linkedin_total_text = f"I'm at {cur_pasture} (Level {level}) with {player['total_xp']:,} Cheese Churn Points on GOATflow! {player['tasks_completed']} Tracks completed. Part of the WorkGOAT Ecosystem."
+linkedin_total_text = f"I'm at {cur_pasture} (Level {level}) on GOATflow! {player['tasks_completed']} Tracks completed. Part of the WorkGOAT Ecosystem."
 linkedin_total_url = "https://www.linkedin.com/sharing/share-offsite/?" + urllib.parse.urlencode({"url": "https://workgoat.vip", "title": linkedin_total_text, "summary": linkedin_total_text})
 
 hay_balance = player.get("hay", 0)
@@ -6547,7 +6551,7 @@ else:
         tier_lower = tier.lower()
         xp_class_map = {"micro": "xp-micro", "standard": "xp-standard", "high-leverage": "xp-high-leverage", "goat": "xp-goat"}
         xp_class = xp_class_map.get(tier_lower, "xp-standard")
-        xp_amount = XP_TIERS.get(tier, 500)
+        xp_amount = HAY_TIERS.get(tier, 40)
         weight = sig['operational_weight']
         bleat_type = sig.get('bleat_type', 'Routine Grazing')
 
@@ -6591,7 +6595,7 @@ else:
             f'<div class="signal-why">{safe(sig["why"])}</div>'
             f'<div style="margin-top:0.3rem;">'
             f'<span class="bleat-type-tag {bleat_class}">{bleat_label}</span>'
-            f'<span class="xp-tag {xp_class}">+{xp_amount:,} CCR \u2014 {safe(tier)}</span>'
+            f'<span class="xp-tag {xp_class}">+{xp_amount} Hay \u2014 {safe(tier)}</span>'
             f'{horn_tag_html}'
             f'</div>'
             f'</div>'
@@ -7009,7 +7013,7 @@ st.markdown(f'''
     <div class="xp-bar-outer">
         <div class="xp-bar-inner" style="width:{xp_pct:.1f}%;"></div>
     </div>
-    <div class="xp-text">{xp_into:,}/{xp_needed:,} CCR</div>
+    <div class="xp-text">{xp_into:,}/{xp_needed:,} Hay</div>
 </div>
 <div class="global-footer">
     GOATflow is a subsidiary of the WorkGOAT Ecosystem. Build your legacy at <a href="https://workgoat.vip" target="_blank" rel="noopener noreferrer">workgoat.vip</a>
