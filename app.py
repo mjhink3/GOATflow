@@ -401,18 +401,6 @@ CUSTOM_CSS = f"""
         letter-spacing: 0.01em;
     }}
 
-    .incognito-badge {{
-        display: inline-block;
-        background: linear-gradient(135deg, #1a1a2e, #2a2a4a);
-        color: {NEON_VIOLET};
-        border: 1px solid {NEON_VIOLET};
-        border-radius: 6px;
-        padding: 0.2rem 0.6rem;
-        font-size: 0.65rem;
-        font-weight: 700;
-        margin-top: 0.3rem;
-        letter-spacing: 0.03em;
-    }}
 
     .goat-tagline {{
         font-size: 0.7rem;
@@ -3933,10 +3921,6 @@ def __sb_content():
     st.markdown(f'<div style="text-align:center;font-size:1.1rem;font-weight:800;color:{WHITE};margin-bottom:0.2rem;">🛡️ OpSec Layer</div>', unsafe_allow_html=True)
     st.markdown(f'<div style="text-align:center;font-size:0.7rem;color:{SILVER};margin-bottom:0.6rem;">Operations Security Controls</div>', unsafe_allow_html=True)
 
-    incognito_mode = st.toggle("🕶️ Incognito Mode", key="incognito_mode", help="When ON, Tracks are session-only and will NOT be saved to the database.")
-    if incognito_mode:
-        st.markdown('<div style="text-align:center;"><span class="incognito-badge">🕶️ INCOGNITO ACTIVE</span></div>', unsafe_allow_html=True)
-        st.markdown(f'<div style="font-size:0.65rem;color:{NEON_VIOLET};text-align:center;margin-top:0.3rem;">Tracks exist only in this session. Nothing is persisted.</div>', unsafe_allow_html=True)
 
     st.markdown(f'''
     <div style="margin-top:0.8rem;padding:0.6rem;background:{CARD_BG};border-radius:8px;border:1px solid {BORDER};">
@@ -4032,7 +4016,7 @@ def __sb_content():
     st.markdown("---")
     if st.button("Logout", use_container_width=True, key="logout_btn"):
         for key in ["auth_user_id", "auth_user_name", "auth_display_name",
-                     "incognito_signals", "incognito_mode", "just_completed_task",
+                     "just_completed_task",
                      "just_dropped", "just_purged", "fresh_cheese_pending", "just_earned_fresh_cheese"]:
             st.session_state.pop(key, None)
         st.rerun()
@@ -5712,25 +5696,14 @@ setInterval(function(){
                             except Exception:
                                 files_data.append({"type": "text", "name": fname, "content": "[unreadable]"})
 
-                is_incognito = st.session_state.get("incognito_mode", False)
                 existing = get_active_signals(current_user_id)
-                if is_incognito:
-                    existing = existing + st.session_state.get("incognito_signals", [])
                 current_horns_text = get_horns(current_user_id)
                 increment_churn_usage(current_user_id)
                 result = run_churn_engine(existing, files_data, extra_text or "", current_horns_text)
 
                 files_data.clear()
 
-                if is_incognito:
-                    new_incog = []
-                    for s in result.signals:
-                        sig_dict = s.model_dump()
-                        sig_dict["id"] = f"incog_{random.randint(100000, 999999)}"
-                        new_incog.append(sig_dict)
-                    st.session_state["incognito_signals"] = new_incog
-                else:
-                    save_signals(current_user_id, [s.model_dump() for s in result.signals])
+                save_signals(current_user_id, [s.model_dump() for s in result.signals])
                 st.session_state["just_dropped"] = True
                 st.session_state["just_purged"] = True
                 st.session_state["sieve_counter"] = st.session_state.get("sieve_counter", 0) + 1
@@ -5742,11 +5715,9 @@ setInterval(function(){
                 st.error(f"The Churn Engine hit a snag: {e}")
 
 if st.session_state.get("just_dropped"):
-    incognito_active = st.session_state.get("incognito_mode", False)
-    incog_label = ' <span class="incognito-badge">🕶️ INCOGNITO</span>' if incognito_active else ''
-    st.markdown(f'''
+    st.markdown('''
     <div class="completed-toast">
-        <div class="completed-toast-text">🌪️ Churn Complete - Tracks re-prioritized{incog_label}</div>
+        <div class="completed-toast-text">🌪️ Churn Complete - Tracks re-prioritized</div>
     </div>
     ''', unsafe_allow_html=True)
     st.session_state["just_dropped"] = False
@@ -6043,9 +6014,6 @@ _te_mins_raw = st.query_params.get("te_mins", "")
 _te_mins_param = int(_te_mins_raw) if _te_mins_raw and _te_mins_raw.isdigit() else None
 
 signals = get_active_signals(current_user_id)
-if st.session_state.get("incognito_mode", False):
-    incog_sigs = st.session_state.get("incognito_signals", [])
-    signals = signals + incog_sigs
 player = get_player(current_user_id)
 
 active_count = len(signals)
@@ -6630,7 +6598,6 @@ else:
         )
         st.markdown(card_html, unsafe_allow_html=True)
 
-        is_incognito_sig = isinstance(sig.get('id'), str) and str(sig['id']).startswith("incog_")
         _sig_id_str = str(sig.get('id', ''))
         _is_pending_cancel = st.session_state.get("pending_cancel_id") == _sig_id_str
 
@@ -6645,11 +6612,7 @@ else:
             _cc1, _cc2 = st.columns([1, 1])
             with _cc1:
                 if st.button("Yes, cancel it", key=f"confirm_cancel_{_sig_id_str}", use_container_width=True):
-                    if is_incognito_sig:
-                        incog_sigs = st.session_state.get("incognito_signals", [])
-                        st.session_state["incognito_signals"] = [s for s in incog_sigs if str(s.get("id")) != _sig_id_str]
-                    else:
-                        cancel_signal(sig['id'], current_user_id)
+                    cancel_signal(sig['id'], current_user_id)
                     st.session_state.pop("pending_cancel_id", None)
                     st.rerun()
             with _cc2:
@@ -6660,42 +6623,33 @@ else:
             _bc1, _bc2 = st.columns([3, 1])
             with _bc1:
                 if st.button("Complete?", key=f"complete_{sig['id']}", use_container_width=True):
-                    if is_incognito_sig:
-                        xp_tier = sig.get("xp_reward", "Standard")
-                        xp = XP_TIERS.get(xp_tier, 500)
-                        hay_amt = HAY_BASE.get(xp_tier, 10)
-                        incog_sigs = st.session_state.get("incognito_signals", [])
-                        st.session_state["incognito_signals"] = [s for s in incog_sigs if s.get("id") != sig["id"]]
-                        st.session_state["just_completed_task"] = (sig['task_name'], xp, False, xp_tier, hay_amt)
+                    _te_for_sig = _te_mins_param if (_te_sig_param == str(sig['id'])) else None
+                    reward, xp, leveled_up, hay_earned, hay_remaining, cheese_count, speed_bonus, diff_mult, comp_log_id = complete_signal(sig['id'], current_user_id, _te_for_sig)
+                    if reward:
+                        st.session_state["just_completed_task"] = (sig['task_name'], xp, leveled_up, reward, hay_earned, diff_mult)
+                        if cheese_count:
+                            st.session_state["fresh_cheese_pending"] = cheese_count
+                        if speed_bonus:
+                            st.session_state["just_earned_speed_bonus"] = speed_bonus
+                        import datetime as _dt
+                        _sig_created = sig.get("created_at")
+                        _days_elapsed = 0
+                        if _sig_created:
+                            _created_clean = _sig_created.replace(tzinfo=None) if hasattr(_sig_created, "replace") else _sig_created
+                            _days_elapsed = max(0, (_dt.datetime.utcnow() - _created_clean).days)
+                        st.session_state["adaptive_prompt_pending"] = {
+                            "task_name": sig["task_name"],
+                            "log_id": comp_log_id,
+                            "days_to_complete": _days_elapsed,
+                            "is_summit": sig.get("bleat_type") in ("Summit-Level Bleat", "Summit Call"),
+                            "category": sig.get("category", "other"),
+                            "diff_mult": diff_mult,
+                        }
+                        st.session_state["priority_feedback_pending"] = {
+                            "trackId": str(sig.get("id", "")),
+                            "trackTitle": sig["task_name"],
+                        }
                         st.rerun()
-                    else:
-                        _te_for_sig = _te_mins_param if (_te_sig_param == str(sig['id'])) else None
-                        reward, xp, leveled_up, hay_earned, hay_remaining, cheese_count, speed_bonus, diff_mult, comp_log_id = complete_signal(sig['id'], current_user_id, _te_for_sig)
-                        if reward:
-                            st.session_state["just_completed_task"] = (sig['task_name'], xp, leveled_up, reward, hay_earned, diff_mult)
-                            if cheese_count:
-                                st.session_state["fresh_cheese_pending"] = cheese_count
-                            if speed_bonus:
-                                st.session_state["just_earned_speed_bonus"] = speed_bonus
-                            import datetime as _dt
-                            _sig_created = sig.get("created_at")
-                            _days_elapsed = 0
-                            if _sig_created:
-                                _created_clean = _sig_created.replace(tzinfo=None) if hasattr(_sig_created, "replace") else _sig_created
-                                _days_elapsed = max(0, (_dt.datetime.utcnow() - _created_clean).days)
-                            st.session_state["adaptive_prompt_pending"] = {
-                                "task_name": sig["task_name"],
-                                "log_id": comp_log_id,
-                                "days_to_complete": _days_elapsed,
-                                "is_summit": sig.get("bleat_type") in ("Summit-Level Bleat", "Summit Call"),
-                                "category": sig.get("category", "other"),
-                                "diff_mult": diff_mult,
-                            }
-                            st.session_state["priority_feedback_pending"] = {
-                                "trackId": str(sig.get("id", "")),
-                                "trackTitle": sig["task_name"],
-                            }
-                            st.rerun()
             with _bc2:
                 if st.button("Cancel", key=f"cancel_{_sig_id_str}", use_container_width=True):
                     st.session_state["pending_cancel_id"] = _sig_id_str
