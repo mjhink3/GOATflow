@@ -1,0 +1,316 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  /* ── shadcn system tokens ── */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+
+  /* ── GOATflow brand colors (generates bg-goat-*, text-goat-*, etc.) ── */
+  --color-goat-black: var(--goat-black);
+  --color-goat-surface: var(--goat-surface);
+  --color-goat-card: var(--goat-card);
+  --color-goat-border: var(--goat-border);
+  --color-goat-purple: var(--goat-purple);
+  --color-goat-button: var(--goat-button);
+  --color-goat-violet: var(--goat-violet);
+  --color-goat-green: var(--goat-green);
+  --color-goat-amber: var(--goat-amber);
+  --color-goat-cheese: var(--goat-cheese);
+  --color-goat-red: var(--goat-red);
+  --color-goat-white: var(--goat-white);
+  --color-goat-silver: var(--goat-silver);
+
+  /* ── GOATflow font families ── */
+  --font-syne: var(--font-syne-var, 'Syne', sans-serif);
+  --font-dm-sans: var(--font-dm-sans-var, 'DM Sans', sans-serif);
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   GOATflow CSS custom properties
+   ───────────────────────────────────────────────────────────────────────── */
+:root {
+  /* Brand token primitives */
+  --goat-black: #08080f;
+  --goat-surface: #0D0D1A;
+  --goat-card: #1A1A2E;
+  --goat-border: #2A2A4A;
+  --goat-purple: #6100ff;
+  --goat-button: #7c3aed;
+  --goat-violet: #8B5CF6;
+  --goat-green: #53c660;
+  --goat-amber: #f59e0b;
+  --goat-cheese: #22c55e;
+  --goat-red: #ef4444;
+  --goat-white: #F5F5F5;
+  --goat-silver: #C0C0C0;
+
+  /* shadcn semantic tokens — always dark in GOATflow */
+  --background: #08080f;
+  --foreground: #F5F5F5;
+  --card: #1A1A2E;
+  --card-foreground: #F5F5F5;
+  --popover: #1A1A2E;
+  --popover-foreground: #F5F5F5;
+  --primary: #7c3aed;
+  --primary-foreground: #F5F5F5;
+  --secondary: #2A2A4A;
+  --secondary-foreground: #F5F5F5;
+  --muted: #2A2A4A;
+  --muted-foreground: #C0C0C0;
+  --accent: #6100ff;
+  --accent-foreground: #F5F5F5;
+  --destructive: #ef4444;
+  --destructive-foreground: #F5F5F5;
+  --border: #2A2A4A;
+  --input: #2A2A4A;
+  --ring: #7c3aed;
+  --radius: 0.625rem;
+  --sidebar: #0D0D1A;
+  --sidebar-foreground: #F5F5F5;
+  --sidebar-primary: #7c3aed;
+  --sidebar-primary-foreground: #F5F5F5;
+  --sidebar-accent: #1A1A2E;
+  --sidebar-accent-foreground: #F5F5F5;
+  --sidebar-border: #2A2A4A;
+  --sidebar-ring: #7c3aed;
+  --chart-1: #6100ff;
+  --chart-2: #53c660;
+  --chart-3: #f59e0b;
+  --chart-4: #ef4444;
+  --chart-5: #8B5CF6;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Keyframe animations — exact copy from app.py
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* Level bar Hay progress glow pulse */
+@keyframes metabolism-pulse {
+  0%, 100% {
+    box-shadow: 0 0 8px rgba(139, 92, 246, 0.5);
+    background-position: 0% 50%;
+  }
+  50% {
+    box-shadow: 0 0 22px rgba(139, 92, 246, 0.9);
+    background-position: 100% 50%;
+  }
+}
+
+/* Full-screen green flash on track completion */
+@keyframes gfFlash {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Modal pop-in (centered, scale from 0.5) */
+@keyframes gfPopIn {
+  0%   { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+  100% { transform: translate(-50%, -50%) scale(1);   opacity: 1; }
+}
+
+/* Modal pop-out */
+@keyframes gfPopOut {
+  0%   { opacity: 1; transform: translate(-50%, -50%) scale(1);    }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(0.85); }
+}
+
+/* Goatification toast slide-in from top */
+@keyframes gfToastIn {
+  0%   { transform: translateY(-60px); opacity: 0; }
+  100% { transform: translateY(0);     opacity: 1; }
+}
+
+/* Goatification toast fade out */
+@keyframes gfToastOut {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* General slide-up entrance (track cards, elements) */
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+/* Fresh Cheese banner scale-in */
+@keyframes cheese-pulse {
+  0%   { transform: scale(0.95); opacity: 0; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+
+/* Track card staggered entrance */
+@keyframes trackSlideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+/* Voice FAB mic idle glow */
+@keyframes gfMicPulse {
+  0%, 100% { box-shadow: 0 4px 20px rgba(124, 58, 237, 0.5); }
+  50%       { box-shadow: 0 4px 30px rgba(124, 58, 237, 0.85); }
+}
+
+/* Voice FAB recording rings expanding out */
+@keyframes gfRingPulse {
+  0%   { transform: scale(1);   opacity: 0.5; }
+  100% { transform: scale(2.2); opacity: 0;   }
+}
+
+/* Level-up fence overlay fade */
+@keyframes fence-sequence {
+  0%   { opacity: 0; }
+  10%  { opacity: 1; }
+  80%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* Level-up title shake */
+@keyframes fence-shake {
+  0%,  100% { transform: translateX(0);   }
+  25%        { transform: translateX(-8px); }
+  75%        { transform: translateX(8px);  }
+}
+
+/* Animal slideshow exit */
+@keyframes dissolve-out {
+  0%   { opacity: 1; transform: scale(1);    }
+  100% { opacity: 0; transform: scale(0.95); }
+}
+
+/* Login logo & card entrance from below */
+@keyframes gfFadeSlideDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to   { opacity: 1; transform: translateY(0);     }
+}
+
+/* Login tagline entrance */
+@keyframes gfFadeSlideUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0);    }
+}
+
+/* Generic fade in */
+@keyframes gfFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Login page ambient floating particles */
+@keyframes gfParticleFloat {
+  0%   { transform: translateY(0);           opacity: 0.4; }
+  50%  { transform: translateY(var(--ty, -20px)); opacity: 0.7; }
+  100% { transform: translateY(0);           opacity: 0.4; }
+}
+
+/* Horns callout arrow bounce left */
+@keyframes pointLeft {
+  0%   { transform: translateX(0);   opacity: 1;   }
+  50%  { transform: translateX(-6px); opacity: 0.6; }
+  100% { transform: translateX(0);   opacity: 1;   }
+}
+
+/* Horn item pulse on add */
+@keyframes hornPulse {
+  0%   { transform: rotate(-5deg) scale(1);    }
+  50%  { transform: rotate(5deg)  scale(1.05); }
+  100% { transform: rotate(-5deg) scale(1);    }
+}
+
+/* GOATflow BAM logo float (level-up screen) */
+@keyframes gfFloatBAM {
+  0%, 100% { transform: translateY(0);    }
+  50%       { transform: translateY(-12px); }
+}
+
+/* Adaptive prompt slide up from bottom-center */
+@keyframes gfSlideUp {
+  from { opacity: 0; transform: translateX(-50%) translateY(16px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0);    }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Animation utility classes
+   ───────────────────────────────────────────────────────────────────────── */
+.animate-metabolism-pulse { animation: metabolism-pulse 2s ease-in-out infinite; }
+.animate-gf-flash         { animation: gfFlash 300ms ease-out forwards; }
+.animate-gf-pop-in        { animation: gfPopIn 200ms ease-out forwards; }
+.animate-gf-pop-out       { animation: gfPopOut 200ms ease-in forwards; }
+.animate-gf-toast-in      { animation: gfToastIn 300ms ease-out forwards; }
+.animate-gf-toast-out     { animation: gfToastOut 300ms ease-in forwards; }
+.animate-slide-up         { animation: slide-up 350ms ease-out backwards; }
+.animate-cheese-pulse     { animation: cheese-pulse 0.6s ease-out forwards; }
+.animate-track-slide-up   { animation: trackSlideUp 300ms ease-out both; }
+.animate-gf-mic-pulse     { animation: gfMicPulse 2s ease-in-out infinite; }
+.animate-gf-ring-pulse    { animation: gfRingPulse 1.2s ease-out infinite; }
+.animate-fence-sequence   { animation: fence-sequence 5s ease-in-out forwards; }
+.animate-fence-shake      { animation: fence-shake 0.5s ease-in-out 0.5s; }
+.animate-dissolve-out     { animation: dissolve-out 0.8s ease-out forwards; }
+.animate-gf-fade-slide-down { animation: gfFadeSlideDown 600ms ease-out both; }
+.animate-gf-fade-slide-up   { animation: gfFadeSlideUp 500ms ease-out both; }
+.animate-gf-fade-in         { animation: gfFadeIn 300ms ease-out both; }
+.animate-gf-particle-float  { animation: gfParticleFloat var(--duration, 4s) ease-in-out infinite; }
+.animate-point-left         { animation: pointLeft 1s ease-in-out infinite; }
+.animate-horn-pulse         { animation: hornPulse 0.6s ease-in-out; }
+.animate-gf-float-bam       { animation: gfFloatBAM 3s ease-in-out infinite; }
+.animate-gf-slide-up        { animation: gfSlideUp 300ms ease-out forwards; }
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Base layer
+   ───────────────────────────────────────────────────────────────────────── */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-dm-sans);
+  }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-syne);
+  }
+}
+
+aside::-webkit-scrollbar { display: none; }

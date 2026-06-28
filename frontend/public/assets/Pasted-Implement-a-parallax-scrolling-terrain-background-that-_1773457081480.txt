@@ -1,0 +1,102 @@
+Implement a parallax scrolling terrain background 
+that creates the visual effect of descending from 
+mountain peaks at the top of the app to flat 
+prairie at the bottom as the user scrolls down.
+
+TECHNICAL APPROACH:
+Create a fixed-position full-height background layer 
+behind all app content using layered SVG terrain 
+silhouettes. Use CSS parallax (background-attachment: 
+fixed with multiple background layers) for the 
+parallax effect.
+
+TERRAIN LAYERS — implement as a single tall SVG 
+background image (2000px tall × full width) 
+divided into vertical zones:
+
+Layer 1 — Mountains (top 0-400px of SVG):
+Sharp dramatic mountain peaks. 3-4 peaks of 
+varying height. Tallest peak slightly left of center.
+Fill color: #0d0d1f
+Stroke: none
+Silhouette only — no detail, pure shape.
+Add a second slightly offset mountain layer 
+behind the first at #111128 for depth.
+
+Layer 2 — High Cliffs (400-700px of SVG):
+Sheer vertical cliff faces, flat tops, 
+dramatic vertical drops on one side.
+Fill color: #0f0f22
+
+Layer 3 — Ridgeline (700-1000px of SVG):
+Long continuous ridge, high but traversable,
+rolling slightly. Less dramatic than cliffs.
+Fill color: #111125
+
+Layer 4 — Foothills (1000-1300px of SVG):
+Wider, rounder hills. Gentler slopes.
+Multiple overlapping rounded shapes.
+Fill color: #121228
+
+Layer 5 — Grazing Grounds (1300-1700px of SVG):
+Very gentle rolling meadow undulation.
+Almost flat but with soft organic curves.
+Fill color: #13132a
+
+Layer 6 — The Pen / Prairie (1700-2000px of SVG):
+Completely flat horizon line.
+Fill color: #14142c
+
+VISUAL TREATMENT FOR ALL LAYERS:
+- All terrain is silhouette only — dark shapes, 
+  no internal detail or texture
+- Each layer is slightly lighter than the one above 
+  by approximately #020203 — creating the illusion 
+  of atmospheric depth as elevation decreases
+- The topographic contour line pattern from the 
+  existing background should overlay all terrain 
+  layers at 2% opacity — connecting the texture 
+  system to the terrain system
+
+PARALLAX BEHAVIOR:
+Apply background-attachment: fixed to the terrain 
+SVG so it scrolls at 60% of the content scroll speed.
+This creates the parallax depth effect — content 
+moves faster than terrain, suggesting the user 
+is moving through an environment.
+
+On mobile (under 768px), set background-attachment: 
+scroll instead of fixed — CSS fixed backgrounds 
+perform poorly on mobile Safari. On mobile, 
+use a JavaScript IntersectionObserver to apply 
+a subtle translateY transform to the background 
+element as the user scrolls, achieving the same 
+parallax effect without the mobile Safari issue.
+
+CONTENT OVERLAY:
+All app content (logo, input area, stat cards, 
+Track cards) sits above the terrain on its own 
+z-index layer. The terrain is purely background — 
+it should never obscure, overlap, or interfere 
+with any interactive element.
+
+The terrain background opacity overall should be 
+set to 0.7 — present and atmospheric but not 
+competing with the content in the foreground.
+
+TIER LABELS (optional subtle touch):
+At the right edge of each terrain zone transition, 
+add a very faint text label in DM Sans 400, 
+8px, color #ffffff at 8% opacity:
+- At mountain zone: "The Summit"
+- At cliff zone: "The High Cliffs" 
+- At ridgeline zone: "The Ridgeline"
+- At foothills zone: "The Foothills"
+- At grazing zone: "The Grazing Grounds"
+- At prairie zone: "The Pen"
+
+These labels are barely visible — they reward 
+close inspection and connect the visual terrain 
+to the WorkGOAT tier system without explaining it. 
+A user who notices them gets the reference. 
+A user who does not still has a beautiful background.

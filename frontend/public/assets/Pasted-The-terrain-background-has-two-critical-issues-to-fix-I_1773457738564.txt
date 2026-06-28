@@ -1,0 +1,100 @@
+The terrain background has two critical issues to fix:
+
+ISSUE 1 — TERRAIN IS COVERING CONTENT
+The terrain layers are appearing on top of app content 
+instead of behind it. Fix the z-index stack:
+
+Set every terrain layer div to z-index: 1
+Set the main app content wrapper to z-index: 10
+Set the side panel to z-index: 20  
+Set the bottom navigation bar to z-index: 30
+
+Also set the opacity of every terrain layer div to 0.25
+This makes the terrain atmospheric and subtle — 
+present but not competing with content.
+
+Additionally set pointer-events: none on all 
+terrain layer divs so they never intercept 
+any clicks or touches meant for content above.
+
+ISSUE 2 — TERRAIN IS MOVING WITH THE SCROLL
+Remove the JavaScript scroll event listener 
+that was applying translateY transforms to 
+the terrain layers entirely. Delete it completely.
+
+Instead implement true fixed terrain:
+
+Set the terrain background container div to:
+position: fixed;
+top: 0;
+left: 0;
+width: 100%;
+height: 100%;
+z-index: 1;
+pointer-events: none;
+overflow: hidden;
+
+This pins the entire terrain to the viewport. 
+It does not move at all. Ever.
+
+The terrain layers inside this container keep 
+their existing clip-path polygon shapes and 
+colors — do not change the shapes, only the 
+positioning behavior.
+
+HOW THE SCROLL EFFECT NOW WORKS:
+Because the terrain is fixed to the viewport 
+and the content scrolls over it at normal speed, 
+the user naturally sees higher terrain zones 
+(mountain peaks) when at the top of the page 
+and lower terrain zones (foothills, prairie) 
+as they scroll down — because the content panels 
+cover the upper terrain zones as scrolling progresses, 
+revealing only the lower elevation zones behind 
+the content in the viewport. 
+
+This creates the descending-through-terrain effect 
+without any JavaScript movement — the content 
+itself acts as the mask that reveals progressively 
+lower terrain as the user scrolls down.
+
+TERRAIN LAYER POSITIONING INSIDE THE FIXED CONTAINER:
+Distribute the six terrain layers across the full 
+100% height of the fixed container evenly:
+
+Layer 1 Mountains: top: 0, height: 30%
+Layer 2 High Cliffs: top: 18%, height: 25%
+Layer 3 Ridgeline: top: 35%, height: 22%
+Layer 4 Foothills: top: 52%, height: 20%
+Layer 5 Grazing Grounds: top: 68%, height: 18%
+Layer 6 Prairie/The Pen: top: 82%, height: 20%
+
+Layers should overlap slightly at their boundaries 
+so there are no gaps between terrain zones.
+
+TIER LABELS — reposition to fixed locations:
+Each label stays fixed in the viewport at its 
+terrain zone position on the right edge.
+Font: DM Sans 400, 8px, 
+Color: rgba(255, 255, 255, 0.06)
+Letter-spacing: 0.2em
+Text-transform: uppercase
+Position: fixed, right: 12px
+
+Label vertical positions:
+"THE SUMMIT" — top: 8%
+"THE HIGH CLIFFS" — top: 24%
+"THE RIDGELINE" — top: 40%
+"THE FOOTHILLS" — top: 56%
+"THE GRAZING GROUNDS" — top: 72%
+"THE PEN" — top: 86%
+
+LOGIN PAGE SPECIFIC:
+On the login page, the terrain background should 
+be visible but the login content (logo, tagline, 
+login form) must sit clearly above it at z-index: 10.
+The terrain opacity on the login page should be 
+0.3 — slightly more visible than the dashboard 
+since the login page has less content competing 
+for attention and the terrain IS the visual 
+statement on that page.

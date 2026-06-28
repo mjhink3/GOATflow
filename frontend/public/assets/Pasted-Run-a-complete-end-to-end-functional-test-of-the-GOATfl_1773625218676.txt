@@ -1,0 +1,360 @@
+Run a complete end-to-end functional test 
+of the GOATflow application simulating 
+a real user's experience from first visit 
+through 14 days of use.
+
+This is NOT a code audit.
+Do not report what code exists.
+Report whether each action actually 
+executes correctly and produces the 
+expected output.
+
+For each test below report:
+PASS — executes correctly, output matches spec
+FAIL — executes but produces wrong output
+ERROR — throws an error or crashes
+N/A — cannot be tested without live browser
+
+════════════════════════════════════
+SECTION 1 — FIRST VISIT AND LOGIN
+════════════════════════════════════
+
+[ ] App loads at goatflow.app 
+    without errors in server logs
+[ ] Login page renders completely — 
+    logo, tagline, both subtitle lines, 
+    Login/Create Account tabs, form fields
+[ ] "Enter your goatname" placeholder 
+    shows on username field
+[ ] "Enter your paaassword" placeholder 
+    shows on password field
+[ ] Create Account tab shows 
+    "Choose a unique goatname" placeholder
+[ ] Create Account tab shows 
+    "Choose a paaassword" placeholder
+[ ] Create Account tab shows 
+    "Re-enter your paaassword" placeholder
+[ ] Creating a new account succeeds 
+    and sets onboarding_done = FALSE in DB
+[ ] Logging in with wrong password shows 
+    appropriate error message
+[ ] Logging in with correct credentials 
+    redirects to dashboard
+
+════════════════════════════════════
+SECTION 2 — ONBOARDING SEQUENCE
+════════════════════════════════════
+
+[ ] Animal parade fires immediately 
+    on first login for new account
+[ ] All 11 animal cards display 
+    in correct order
+[ ] Red X animation plays on each card
+[ ] Cards accelerate in timing 
+    for final animals
+[ ] White flash fires after last animal
+[ ] BAM screen appears after white flash
+[ ] BAM screen text animates in staggered
+[ ] "Let's Start" button appears 
+    after all text loads
+[ ] Clicking "Let's Start" advances 
+    to Shepherd tutorial
+[ ] Skip intro link works and jumps 
+    directly to tutorial
+[ ] Tutorial Card 1 — Horns — displays correctly
+[ ] Tutorial Card 2 — Input methods — displays
+[ ] Tutorial Card 3 — Tracks — displays
+[ ] Tutorial Card 4 — Hay and Cheese — 
+    displays WITH goat callout box 
+    containing milk/gaming warning
+[ ] Tutorial Card 5 — Dial It In — displays
+[ ] "Let's go" on Card 5 opens side panel
+[ ] Side panel scrolls to Horns section
+[ ] Onboarding does NOT fire on 
+    second login with same account
+[ ] goatflow_resetOnboarding() in console 
+    clears localStorage AND resets 
+    DB flag — confirm both
+[ ] After reset onboarding fires again 
+    on next login
+
+════════════════════════════════════
+SECTION 3 — HORNS SYSTEM
+════════════════════════════════════
+
+[ ] Horns panel opens via >> toggle
+[ ] Horn input field accepts text
+[ ] Typing a Horn and clicking 
+    Lock In My Horns saves it
+[ ] Horn appears in the Horn list
+[ ] Horn count increments to 1/10
+[ ] Second Horn saves and shows 2/10
+[ ] Adding 10 Horns shows 10/10
+[ ] Attempting to add 11th Horn 
+    shows "Maximum 10 Horns reached" 
+    and blocks the addition
+[ ] Deleting a Horn removes it from list
+[ ] After deletion count drops to 9/10
+[ ] Horn counter re-enables input at 9/10
+[ ] Horns persist after page refresh
+[ ] Quick Scripts section is visible 
+    and scripts are copyable
+[ ] Horn Effectiveness shows — 
+    until 10 feedback entries
+
+════════════════════════════════════
+SECTION 4 — TRACK SIEVE AND CHURN ENGINE
+════════════════════════════════════
+
+[ ] Time available modal fires when 
+    Drop Into Churn Engine is tapped
+[ ] Each time pill is selectable
+[ ] "Let's Go" on modal closes it 
+    and proceeds to processing
+[ ] Skip on modal proceeds without 
+    time context
+[ ] Text pasted into textarea is 
+    processed by GPT-4o
+[ ] PDF file upload is accepted
+[ ] DOCX file upload is accepted
+[ ] PNG image upload is accepted
+[ ] Bray button is visible and pulsing
+[ ] Tapping Bray starts recording 
+    (button turns red)
+[ ] Speaking produces live transcription 
+    in preview bubble
+[ ] Tapping Bray again stops recording
+[ ] Transcribed text appears in textarea
+[ ] "Bray captured. 🐐" confirmation 
+    appears above button
+[ ] Churn Engine processes input 
+    and returns Track list
+[ ] "Cutting the bull." appears as 
+    final processing line
+[ ] Track list animates in with 
+    staggered delays per card
+[ ] Each Track has title, rationale, 
+    priority score
+[ ] Summit Call Tracks have red 
+    left border and SUMMIT CALL tag
+[ ] Standard Tracks have purple 
+    left border
+[ ] Per-track time estimate "⏱ How long?" 
+    appears on each card
+[ ] Selecting a time estimate pill 
+    saves and shows badge on card
+[ ] Load Index banner appears when 
+    time was declared AND estimates set
+
+════════════════════════════════════
+SECTION 5 — TRACK COMPLETION AND REWARDS
+════════════════════════════════════
+
+[ ] Tapping Complete on a Track 
+    marks it complete
+[ ] Hay award fires immediately — 
+    correct amount shown in animation
+[ ] Summit Call completion awards 50 Hay
+[ ] Standard Track completion awards 10 Hay
+[ ] Speed bonus fires for on-time completion 
+    — shows +25 Hay
+[ ] Speed bonus fires for within 2x estimate 
+    — shows +10 Hay
+[ ] Same-day completion awards +5 Hay 
+    when no estimate set
+[ ] Hay balance in stat card increments 
+    correctly after completion
+[ ] Completed stat card increments
+[ ] Active Tracks stat card decrements
+[ ] Priority feedback prompt appears 
+    after completion
+[ ] "Was this ranked correctly?" shows 
+    with 👍 Yes and 👎 Off buttons
+[ ] Tapping Yes records 'correct' 
+    to localStorage feedback array
+[ ] Tapping Off reveals "Too high" 
+    and "Too low" options
+[ ] Feedback prompt auto-dismisses 
+    after 8 seconds if not tapped
+[ ] Adaptive completion question appears 
+    based on days elapsed
+[ ] Answering saves to Trail Note 
+    for that Track
+[ ] 500 Hay threshold triggers 
+    Fresh Cheese conversion
+[ ] Conversion animation fires
+[ ] Fresh Cheese stat increments
+[ ] Hay resets to 0 after conversion
+[ ] Conversion Goatification fires
+
+════════════════════════════════════
+SECTION 6 — STATS VERIFICATION
+════════════════════════════════════
+
+[ ] Active Tracks count matches 
+    actual number of incomplete Tracks
+[ ] Summit Calls count matches 
+    actual Summit Call Tracks
+[ ] Completed count matches 
+    operational_log entries
+[ ] Hay balance matches DB value
+[ ] Fresh Cheese balance matches DB value
+[ ] Clip Rate calculates correctly — 
+    complete 5 Tracks and verify 
+    percentage matches manual calculation
+[ ] Clip Rate shows — for zero completions
+[ ] Clip Rate color codes correctly — 
+    green above 75%, amber 50-74%, 
+    red below 50%
+[ ] Gait shows 1 after completing 
+    a Track today
+[ ] Gait advances to 2 after completing 
+    a Track on the second consecutive day
+[ ] Gait does NOT advance from 
+    generating Tracks alone — 
+    only from completing them
+[ ] Gait resets to 0 if a day is missed
+[ ] Active Horns count matches 
+    number of saved Horns
+[ ] Precision Rate shows — until 
+    5 timed completions
+[ ] Precision Rate calculates correctly 
+    after 5 timed completions
+[ ] Load Index displays correctly 
+    when time declared and estimates set
+[ ] Horn Effectiveness shows — 
+    until 10 feedback entries
+
+════════════════════════════════════
+SECTION 7 — TRAIL SYSTEM
+════════════════════════════════════
+
+[ ] Your Trail button opens Trail view
+[ ] Completed Tracks appear in Trail 
+    with date logged and date completed
+[ ] Days to complete shown correctly
+[ ] Hay earned shown per entry
+[ ] Trail Note "+" button appears 
+    on each entry
+[ ] Tapping "+" opens inline text input
+[ ] Typing a note and saving persists it
+[ ] Note appears on the Trail entry
+[ ] Adaptive completion answer from 
+    Section 5 appears linked to its 
+    Track entry in the Trail
+[ ] Achievements section visible in Trail
+[ ] Four achievement cards show — 
+    locked until earned
+[ ] Achievement unlocks when earned 
+    and shows date and Hay bonus
+
+════════════════════════════════════
+SECTION 8 — GOATIFICATIONS
+════════════════════════════════════
+
+[ ] Goatifications section in side panel 
+    shows with correct toggle states
+[ ] Master toggle disables all others 
+    when turned off
+[ ] Each individual toggle saves state
+[ ] Tapping any toggle fires haptic 
+    preview pattern
+[ ] Fresh Cheese conversion fires 
+    Goatification when toggle is ON
+[ ] Summit Call Overdue fires after 
+    4 hours when toggle is ON
+[ ] Speed Bonus fires when toggle is ON
+[ ] Clip Rate Nudge fires after 3 days 
+    below 60% when toggle is ON — 
+    confirm trigger logic exists
+[ ] Streak Milestone fires at exactly 
+    3 days — confirm trigger logic
+[ ] Streak Milestone fires at exactly 
+    7 days — confirm trigger logic
+[ ] Streak Milestone fires at exactly 
+    14 days — CRITICAL for beta
+[ ] Streak Milestone fires at exactly 
+    30 days
+[ ] Each milestone only fires once 
+    per achievement
+[ ] In-app toast slides in from top 
+    for each Goatification
+[ ] Toast auto-dismisses after 4 seconds
+[ ] Toast can be manually dismissed
+[ ] Quiet hours suppress notifications 
+    between 10pm and 7am
+
+════════════════════════════════════
+SECTION 9 — SIDE PANEL
+════════════════════════════════════
+
+[ ] Panel is closed on fresh login
+[ ] >> toggle opens panel
+[ ] >> toggle closes panel
+[ ] All sections present and visible 
+    when scrolling panel
+[ ] User profile shows username, 
+    tier, level
+[ ] My Stats shows all stats with 
+    correct values
+[ ] Port to WorkGOAT button present
+[ ] OpSec Layer shows security status
+[ ] Incognito Mode toggle works
+[ ] Logout button works and 
+    returns to login screen
+[ ] Panel state does not persist 
+    as open between sessions
+
+════════════════════════════════════
+SECTION 10 — PERFORMANCE AND STABILITY
+════════════════════════════════════
+
+[ ] App loads in under 5 seconds 
+    on a warm server
+[ ] No JavaScript console errors 
+    on initial load
+[ ] No JavaScript console errors 
+    after completing a Track
+[ ] No JavaScript console errors 
+    after the Churn Engine runs
+[ ] Images load without 404 errors — 
+    check all icon paths
+[ ] Health endpoint at /health 
+    returns 200 OK
+[ ] Keep-alive ping fires every 
+    4 minutes without errors
+[ ] App does not crash after 
+    30 minutes of idle time
+[ ] All stat cards update without 
+    page refresh after completing a Track
+[ ] Pasture Gauge updates after 
+    Hay is earned
+
+════════════════════════════════════
+SUMMARY REQUESTED
+════════════════════════════════════
+
+After all tests provide:
+
+1. Total PASS / FAIL / ERROR / N/A counts
+
+2. Every FAIL and ERROR listed with:
+   - What was expected
+   - What actually happened
+   - Severity: blocks testing / 
+     degrades experience / minor
+
+3. Any test that returned N/A that 
+   you believe would fail in a 
+   live browser — flag these specifically
+
+4. Single verdict:
+   GREEN — ready for personal testing
+   YELLOW — ready with known issues 
+     listed explicitly
+   RED — not ready, critical failures 
+     must be fixed first
+
+Do not fix anything during this test.
+Do not plan fixes.
+Just test and report accurately.

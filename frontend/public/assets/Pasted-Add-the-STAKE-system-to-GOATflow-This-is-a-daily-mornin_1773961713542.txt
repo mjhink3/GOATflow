@@ -1,0 +1,130 @@
+Add the STAKE system to GOATflow.
+This is a daily morning commitment feature.
+
+TRIGGER:
+On first login of each day, before 
+the dashboard loads, show the 
+Morning Stake modal.
+
+MORNING STAKE MODAL:
+Full screen overlay, same style 
+as the existing welcome overlay.
+Background: rgba(8, 8, 15, 0.94) 
+with backdrop blur.
+
+Display the Contraaact mascot image 
+centered at the top (upload provided).
+
+Text below image in Syne 700, 20px, white:
+"Morning Stake"
+
+Subtext in DM Sans 400, 14px, #9ca3af:
+"One commitment. One day. 
+Sign the Contraaact."
+
+Single text input field below:
+Placeholder: "Today I commit to..."
+DM Sans 400, 16px
+Dark input styling matching app theme
+Max 120 characters
+
+Two buttons:
+Primary: "🪧 Stake It"
+Purple background, Syne 700
+On click: saves commitment to database
+with timestamp, closes modal,
+loads dashboard
+
+Secondary: "Skip today" 
+Small, gray, DM Sans 400, 12px
+Sets today's stake as null,
+closes modal
+
+Once staked: LOCK the input.
+No editing. Store in stakes table:
+- user_id
+- stake_text
+- date
+- status (active/claimed/broken)
+- created_at
+
+DASHBOARD STAKE CARD:
+Add a 6th stat card to the 
+existing stat card row: STAKE
+Shows truncated stake text (30 chars)
+Status indicator dot:
+🟡 yellow = active
+✅ green = claimed  
+❌ red = broken
+
+On click opens a micro-modal:
+Full stake text displayed
+"Mark as Claimed ✅" button
+"+50 Hay earned" confirmation on claim
+
+END OF SESSION CHECK:
+When user has active tracks and 
+has been in app for 10+ minutes,
+show a bottom toast notification:
+"Did you honor your Stake today?"
+Two buttons: ✅ Claimed | ❌ Not today
+This fires max once per day.
+
+STAKE STREAK:
+Track consecutive days where 
+status = claimed.
+Display in side panel My Stats 
+alongside Gait streak.
+Label: "Stake Streak 🪧"
+
+MILESTONE GOATIFICATIONS:
+3 days: "Planted 🌱 +25 Hay"
+7 days: "Rooted 🪨 +75 Hay"  
+14 days: "Staked In 🪧 +150 Hay"
+30 days: "Iron Stake ⚓ +300 Hay"
+60 days: "Unbreakable 💎 +500 Hay"
+100 days: "The G.O.A.T. Pledge 🐐 +1000 Hay"
+
+OPERATIONAL EFFICIENCY BONUS:
+Calculate at end of each session
+(when user has been inactive 30+ mins
+or manually closes app):
+
+Get: percentage of tracks marked 
+complete that day (completed / total active)
+Get: stake status for today
+
+Apply bonus Hay:
+80%+ tracks + stake claimed = +100 Hay
+  + fire special Goatification:
+  "PEAK DAY. The pasture is yours. 🐐"
+  Triple haptic pulse [100,60,100,60,100]
+80%+ tracks + stake broken = +25 Hay
+50-79% tracks + stake claimed = +60 Hay
+50-79% tracks + stake broken = +10 Hay
+Under 50% + stake claimed = +30 Hay
+Under 50% + stake broken = +0 Hay
+
+BROKEN STAKES:
+At midnight if stake status still = active,
+auto-set to broken.
+Next morning modal shows mascot 
+with a sad head shake before 
+the new day's Contraaact prompt.
+Text: "Yesterday's Stake went unclaimed.
+New day. New Contraaact. 🐐"
+
+DATABASE:
+Add stakes table to existing schema:
+id, user_id, stake_text, date, 
+status, hay_earned, created_at, updated_at
+
+Confirm implementation with:
+1. Morning modal fires on first 
+   daily login only
+2. Stake card visible on dashboard
+3. Claim/broken flow working
+4. Streak tracking in stats panel
+5. Operational efficiency bonus 
+   calculating correctly
+6. Midnight auto-break working
