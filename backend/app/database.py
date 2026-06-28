@@ -23,12 +23,28 @@ def _parse_dsn(url: str) -> dict:
 async def create_pool() -> asyncpg.Pool:
     global _pool
     kwargs = _parse_dsn(settings.DATABASE_URL)
-    _pool = await asyncpg.create_pool(
-        **kwargs,
-        ssl="require",
-        min_size=2,
-        max_size=10,
-    )
+    try:
+        _pool = await asyncpg.create_pool(
+            **kwargs,
+            ssl="require",
+            min_size=2,
+            max_size=10,
+            connect_timeout=30,
+        )
+    except Exception:
+        # Supabase pooler uses "postgres.projectref" as the username.
+        # Some network environments reject this — fall back to bare username.
+        fallback = dict(kwargs)
+        user = fallback.get("user") or ""
+        if "." in user:
+            fallback["user"] = user.split(".")[0]
+        _pool = await asyncpg.create_pool(
+            **fallback,
+            ssl="require",
+            min_size=2,
+            max_size=10,
+            connect_timeout=30,
+        )
     return _pool
 
 
