@@ -1,1 +1,0 @@
-- [Hay Economy Redesign](hay-economy-redesign.md) — CCR removed; Hay is the single currency; total_hay_earned drives rank; tiered base values per weight tier.
