@@ -354,24 +354,40 @@ export default function HerdPage() {
             ))}
           </select>
 
-          {/* Bleat type grid */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 10 }}>
-            {BLEAT_TYPES.map(bt => (
-              <button
-                key={bt.key}
-                onClick={() => setSelectedBleatType(selectedBleatType === bt.key ? "" : bt.key)}
-                style={{
-                  padding: "8px 10px", borderRadius: 8, fontSize: 11, fontWeight: 600,
-                  textAlign: "left", cursor: "pointer", lineHeight: 1.4,
-                  background: selectedBleatType === bt.key ? "rgba(97,0,255,0.3)" : "rgba(97,0,255,0.07)",
-                  border: `1px solid ${selectedBleatType === bt.key ? "rgba(97,0,255,0.6)" : "rgba(97,0,255,0.18)"}`,
-                  color: selectedBleatType === bt.key ? "#a78bfa" : "#9ca3af",
-                }}
-              >
-                {bt.label}
-              </button>
-            ))}
-          </div>
+          {/* Bleat type grid — two labeled category rows */}
+          {(["momentum", "accountability"] as const).map(cat => {
+            const isGreen = cat === "momentum";
+            const activeColor  = isGreen ? "rgba(83,198,96,0.35)"   : "rgba(245,158,11,0.35)";
+            const activeBorder = isGreen ? "rgba(83,198,96,0.65)"   : "rgba(245,158,11,0.65)";
+            const activeText   = isGreen ? "#86efac"                 : "#fcd34d";
+            const idleBg       = isGreen ? "rgba(83,198,96,0.05)"   : "rgba(245,158,11,0.05)";
+            const idleBorder   = isGreen ? "rgba(83,198,96,0.18)"   : "rgba(245,158,11,0.18)";
+            return (
+              <div key={cat} style={{ marginBottom: 8 }}>
+                <p style={{ fontSize: 9, color: isGreen ? "#53c660" : "#f59e0b", fontWeight: 600, marginBottom: 5, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                  {isGreen ? "Momentum 🟢" : "Accountability 🟡"}
+                </p>
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 5 }}>
+                  {BLEAT_TYPES.filter(bt => bt.category === cat).map(bt => (
+                    <button
+                      key={bt.key}
+                      onClick={() => setSelectedBleatType(selectedBleatType === bt.key ? "" : bt.key)}
+                      style={{
+                        padding: "7px 6px", borderRadius: 7, fontSize: 10, fontWeight: 600,
+                        textAlign: "center", cursor: "pointer", lineHeight: 1.4,
+                        background: selectedBleatType === bt.key ? activeColor : idleBg,
+                        border: `1px solid ${selectedBleatType === bt.key ? activeBorder : idleBorder}`,
+                        color: selectedBleatType === bt.key ? activeText : "#9ca3af",
+                      }}
+                    >
+                      {bt.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+          <div style={{ marginBottom: 10 }} />
 
           {bleatSuccess && (
             <p style={{ fontSize: 12, color: "#53c660", marginBottom: 8 }}>{bleatSuccess}</p>

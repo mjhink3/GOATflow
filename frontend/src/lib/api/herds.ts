@@ -70,12 +70,12 @@ export async function getHerdLeaderboard(): Promise<HerdMember[]> {
 }
 
 export const BLEAT_TYPES = [
-  { key: "on_fire",         label: "🔥 You on fire today?",   desc: "Check in on their momentum" },
-  { key: "how_climbing",    label: "🏔️ How's the climb?",     desc: "General progress check" },
-  { key: "stack_hay",       label: "🧀 Stack that Hay!",       desc: "Encouragement" },
-  { key: "summit_incoming", label: "⚡ Summit incoming?",      desc: "Nudge toward completion" },
-  { key: "holding_fence",   label: "🛡️ Holding the fence?",   desc: "Streak accountability" },
-  { key: "goat_move",       label: "🐐 GOAT move incoming?",  desc: "Hype them up" },
+  { key: "on_fire",         label: "🔥 You're on fire",       category: "momentum",       desc: "I see your momentum" },
+  { key: "stack_hay",       label: "🧀 Stack that Hay",        category: "momentum",       desc: "Encouragement to keep earning" },
+  { key: "goat_move",       label: "🐐 GOAT move incoming",   category: "momentum",       desc: "Hype them up" },
+  { key: "how_climbing",    label: "🏔️ How's the climb?",     category: "accountability", desc: "General check-in" },
+  { key: "holding_fence",   label: "🛡️ Holding the fence?",   category: "accountability", desc: "Streak check" },
+  { key: "summit_incoming", label: "⚡ Summit incoming?",      category: "accountability", desc: "Nudge toward completion" },
 ];
 
 export interface Bleat {
