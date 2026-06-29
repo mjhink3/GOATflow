@@ -173,3 +173,7 @@ async def ensure_schema(conn: asyncpg.Connection) -> None:
             used_at          TIMESTAMP
         )
     """)
+
+    await conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT")
+    await conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS provider TEXT DEFAULT 'local'")
+    await conn.execute("ALTER TABLE users ADD COLUMN IF NOT EXISTS provider_id TEXT")

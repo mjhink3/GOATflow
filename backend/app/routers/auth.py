@@ -1,3 +1,4 @@
+import secrets
 from datetime import datetime, timedelta
 
 import asyncpg
@@ -107,3 +108,47 @@ async def login(req: LoginRequest, conn: asyncpg.Connection = Depends(get_db)):
 @router.get("/me")
 async def me(current_user: dict = Depends(get_current_user)):
     return current_user
+
+
+class OAuthRequest(BaseModel):
+    email: str
+    display_name: str
+    provider: str
+    provider_id: str
+
+
+@router.post("/oauth")
+async def oauth_login(
+    body: OAuthRequest,
+    conn: asyncpg.Connection = Depends(get_db),
+):
+    user = await conn.fetchrow("SELECT * FROM users WHERE email = $1", body.email)
+
+    if not user:
+        random_username = f"{body.provider}_{secrets.token_hex(6)}"
+        pw_hash, salt = hash_password(secrets.token_hex(32))
+        user = await conn.fetchrow(
+            """
+            INSERT INTO users (username, display_name, password_hash, password_salt, email, provider, provider_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7)
+            RETURNING *
+            """,
+            random_username,
+            body.display_name,
+            pw_hash,
+            salt,
+            body.email,
+            body.provider,
+            body.provider_id,
+        )
+        await conn.execute(
+            "INSERT INTO player (user_id) VALUES ($1) ON CONFLICT DO NOTHING",
+            str(user["id"]),
+        )
+
+    return {
+        "access_token": _create_token(user["id"]),
+        "token_type": "bearer",
+        "user_id": str(user["id"]),
+        "display_name": user["display_name"],
+    }
