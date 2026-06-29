@@ -2,11 +2,17 @@ import NextAuth from "next-auth";
 import GoogleProvider from "next-auth/providers/google";
 import GitHubProvider from "next-auth/providers/github";
 import AzureADProvider from "next-auth/providers/azure-ad";
-// EmailProvider requires a database adapter for token persistence.
-// Uncomment after configuring @auth/pg-adapter or similar.
-// import EmailProvider from "next-auth/providers/email";
+import EmailProvider from "next-auth/providers/email";
+import { Pool } from "pg";
+import PostgresAdapter from "@auth/pg-adapter";
+
+const pool = new Pool({
+  connectionString: process.env.NEXTAUTH_DATABASE_URL,
+});
 
 const handler = NextAuth({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  adapter: PostgresAdapter(pool) as any,
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -21,14 +27,17 @@ const handler = NextAuth({
       clientSecret: process.env.AZURE_AD_CLIENT_SECRET!,
       tenantId: process.env.AZURE_AD_TENANT_ID!,
     }),
-    // EmailProvider({
-    //   server: {
-    //     host: "smtp.resend.com",
-    //     port: 465,
-    //     auth: { user: "resend", pass: process.env.RESEND_API_KEY! },
-    //   },
-    //   from: "GOATflow <noreply@goatflow.app>",
-    // }),
+    EmailProvider({
+      server: {
+        host: "smtp.resend.com",
+        port: 465,
+        auth: {
+          user: "resend",
+          pass: process.env.RESEND_API_KEY!,
+        },
+      },
+      from: "GOATflow <noreply@goatflow.app>",
+    }),
   ],
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {

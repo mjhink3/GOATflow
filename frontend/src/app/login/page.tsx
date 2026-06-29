@@ -78,6 +78,8 @@ export default function LoginPage() {
   const [tab, setTab] = useState<"login" | "signup">("login");
   const [pending, setPending] = useState(false);
   const [loginError, setLoginError] = useState("");
+  const [emailInput, setEmailInput] = useState("");
+  const [emailSent, setEmailSent] = useState(false);
 
   // Login form
   const [loginUsername, setLoginUsername] = useState("");
@@ -266,6 +268,35 @@ export default function LoginPage() {
               <svg width="18" height="18" viewBox="0 0 23 23"><path fill="#f3f3f3" d="M0 0h23v23H0z"/><path fill="#f35325" d="M1 1h10v10H1z"/><path fill="#81bc06" d="M12 1h10v10H12z"/><path fill="#05a6f0" d="M1 12h10v10H1z"/><path fill="#ffba08" d="M12 12h10v10H12z"/></svg>
               Continue with Microsoft
             </button>
+
+            {/* ── Email magic link ── */}
+            {emailSent ? (
+              <div style={{ padding: "12px 16px", borderRadius: 10, border: "1px solid rgba(83,198,96,0.3)", background: "rgba(83,198,96,0.08)", textAlign: "center" }}>
+                <p style={{ fontSize: 13, color: "#53c660", fontWeight: 600 }}>Check your inbox 📬</p>
+                <p style={{ fontSize: 11, color: "#9ca3af", marginTop: 4 }}>Magic link sent to {emailInput}</p>
+              </div>
+            ) : (
+              <>
+                <input
+                  type="email"
+                  value={emailInput}
+                  onChange={e => setEmailInput(e.target.value)}
+                  placeholder="Enter your email"
+                  style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, padding: "11px 14px", fontSize: 13, color: "#F5F5F5", outline: "none", boxSizing: "border-box" }}
+                />
+                <button
+                  onClick={async () => {
+                    if (!emailInput.trim()) return;
+                    await signIn("email", { email: emailInput.trim(), callbackUrl: "/auth/callback" });
+                    setEmailSent(true);
+                  }}
+                  disabled={!emailInput.trim()}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, width: "100%", padding: "11px 16px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.05)", color: !emailInput.trim() ? "#6b7280" : "#F5F5F5", fontSize: 13, fontWeight: 600, cursor: emailInput.trim() ? "pointer" : "not-allowed", opacity: emailInput.trim() ? 1 : 0.5 }}
+                >
+                  Continue with Email ✉️
+                </button>
+              </>
+            )}
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 20 }}>
