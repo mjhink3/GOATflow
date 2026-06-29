@@ -17,17 +17,17 @@ interface TrackCardProps {
 
 const TIER_STYLES: Record<string, { bg: string; border: string; color: string; label: string }> = {
   Micro: {
-    bg: "rgba(83,198,96,0.12)", border: "rgba(83,198,96,0.35)", color: "#53c660", label: "Micro",
+    bg: "rgba(107,114,128,0.1)", border: "rgba(107,114,128,0.3)", color: "#6b7280", label: "Micro",
   },
   Standard: {
-    bg: "rgba(97,0,255,0.12)", border: "rgba(97,0,255,0.35)", color: "#a78bfa", label: "Standard",
+    bg: "rgba(100,116,139,0.12)", border: "rgba(100,116,139,0.35)", color: "#94a3b8", label: "Standard",
   },
   "High-Leverage": {
-    bg: "rgba(245,158,11,0.12)", border: "rgba(245,158,11,0.4)", color: "#f59e0b", label: "High-Leverage",
+    bg: "rgba(139,92,246,0.15)", border: "rgba(139,92,246,0.4)", color: "#a78bfa", label: "High-Leverage",
   },
   GOAT: {
-    bg: "linear-gradient(135deg,rgba(139,92,246,0.18),rgba(97,0,255,0.12))",
-    border: "rgba(139,92,246,0.4)", color: "#c4b5fd", label: "GOAT",
+    bg: "linear-gradient(135deg,rgba(245,158,11,0.2),rgba(251,191,36,0.12))",
+    border: "rgba(245,158,11,0.5)", color: "#f59e0b", label: "GOAT",
   },
 };
 
@@ -35,19 +35,32 @@ export function TrackCard({ signal, index, onComplete, onCancel, onCompleted, on
   const [confirming, setConfirming] = useState(false);
   const [loading, setLoading] = useState<"complete" | "cancel" | null>(null);
 
-  const isSummit = signal.bleat_type === "Summit Call";
-  const isHighLev = signal.xp_reward === "High-Leverage";
   const tier = TIER_STYLES[signal.xp_reward] ?? TIER_STYLES.Standard;
 
-  const leftBorder = isSummit
+  // Effective bleat: High-Leverage/GOAT always Summit Call; Standard >=7 also Summit Call
+  const effectiveSummit =
+    signal.bleat_type === "Summit Call" ||
+    signal.xp_reward === "High-Leverage" ||
+    signal.xp_reward === "GOAT" ||
+    (signal.xp_reward === "Standard" && signal.operational_weight >= 7);
+
+  // Hide category when the important signals already dominate
+  const hideCategoryTag =
+    effectiveSummit && (signal.xp_reward === "High-Leverage" || signal.xp_reward === "GOAT");
+
+  // Weight watermark color
+  const weightColor =
+    signal.operational_weight >= 8
+      ? "rgba(239,68,68,0.38)"
+      : signal.operational_weight >= 5
+      ? "rgba(97,0,255,0.3)"
+      : "rgba(156,163,175,0.2)";
+
+  const leftBorder = effectiveSummit
     ? "4px solid #ef4444"
-    : isHighLev
-    ? "4px solid #f59e0b"
     : "4px solid rgba(97,0,255,0.5)";
 
-  const cardGlow = isHighLev
-    ? "0 0 12px rgba(245,158,11,0.18)"
-    : isSummit
+  const cardGlow = effectiveSummit
     ? "0 0 10px rgba(239,68,68,0.12)"
     : "none";
 
@@ -93,7 +106,7 @@ export function TrackCard({ signal, index, onComplete, onCancel, onCompleted, on
       <span
         style={{
           position: "absolute", top: 10, right: 12,
-          fontSize: 42, fontWeight: 800, color: "rgba(97,0,255,0.3)",
+          fontSize: 42, fontWeight: 800, color: weightColor,
           fontFamily: "var(--font-syne)", lineHeight: 1, pointerEvents: "none",
           userSelect: "none",
         }}
@@ -124,7 +137,7 @@ export function TrackCard({ signal, index, onComplete, onCancel, onCompleted, on
       {/* Tags row */}
       <div className="flex items-center gap-2 flex-wrap mb-3">
         {/* Bleat type */}
-        {isSummit ? (
+        {effectiveSummit ? (
           <span style={{
             fontSize: 9, padding: "2px 8px", borderRadius: 99, fontWeight: 700, textTransform: "uppercase",
             background: "linear-gradient(135deg,rgba(255,59,59,0.25),rgba(255,100,0,0.15))",
@@ -150,13 +163,9 @@ export function TrackCard({ signal, index, onComplete, onCancel, onCompleted, on
           {tier.label}
         </span>
 
-        {/* Category */}
-        {signal.category && signal.category !== "other" && (
-          <span style={{
-            fontSize: 9, padding: "2px 6px", borderRadius: 99,
-            background: "rgba(97,0,255,0.08)", border: "1px solid rgba(97,0,255,0.2)",
-            color: "#7c3aed", textTransform: "uppercase", letterSpacing: "0.08em",
-          }}>
+        {/* Category — muted context label, hidden when already noisy */}
+        {!hideCategoryTag && signal.category && signal.category !== "other" && (
+          <span style={{ fontSize: 9, color: "#4b5563", padding: "2px 4px" }}>
             {signal.category}
           </span>
         )}
