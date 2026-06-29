@@ -433,7 +433,7 @@ export default function DashboardPage() {
               </div>
             )}
             <div className="flex items-center gap-2 mb-3">
-              <Image src="/icons/icon_tracks.webp" alt="" width={20} height={20} />
+              <Image src="/icons/icon_tracks.webp" alt="" width={44} height={44} />
               <h2 className="font-syne text-goat-white font-bold" style={{ fontSize: 18 }}>
                 Active Tracks
               </h2>
