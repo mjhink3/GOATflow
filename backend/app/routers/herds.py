@@ -243,9 +243,26 @@ async def herd_leaderboard(
     return [dict(m) for m in members]
 
 
+BLEAT_LABELS = {
+    "on_fire":         "🔥 You on fire today?",
+    "how_climbing":    "🏔️ How's the climb?",
+    "stack_hay":       "🧀 Stack that Hay!",
+    "summit_incoming": "⚡ Summit incoming?",
+    "holding_fence":   "🛡️ Holding the fence?",
+    "goat_move":       "🐐 GOAT move incoming?",
+}
+
+BASE_HAY = {"quick": 10, "deet": 20, "goat_report": 35}
+
+
 class BleatIn(BaseModel):
     recipient_id: str
-    message: Optional[str] = None
+    bleat_type: str = "check_in"
+
+
+class BleatResponseIn(BaseModel):
+    response_type: str  # "quick", "deet", "goat_report"
+    response_text: Optional[str] = None
 
 
 @router.post("/bleats/send")
@@ -254,6 +271,9 @@ async def send_bleat(
     current_user: dict = Depends(get_current_user),
     conn: asyncpg.Connection = Depends(get_db),
 ):
+    if body.bleat_type not in BLEAT_LABELS:
+        raise HTTPException(status_code=400, detail=f"Invalid bleat_type. Choose from: {', '.join(BLEAT_LABELS)}")
+
     uid = int(current_user["id"])
     user = await conn.fetchrow("SELECT current_herd_id FROM users WHERE id = $1", uid)
     if not user or not user["current_herd_id"]:
@@ -271,9 +291,9 @@ async def send_bleat(
         raise HTTPException(status_code=404, detail="Recipient is not in your Herd.")
 
     bleat = await conn.fetchrow(
-        """INSERT INTO bleats (herd_id, sender_id, recipient_id, message)
+        """INSERT INTO bleats (herd_id, sender_id, recipient_id, bleat_type)
            VALUES ($1, $2, $3, $4) RETURNING *""",
-        herd_id, str(uid), body.recipient_id, body.message,
+        herd_id, str(uid), body.recipient_id, body.bleat_type,
     )
 
     await conn.execute(
@@ -303,6 +323,11 @@ async def bleat_stats(
         uid,
     )
 
+    avg_hay = await conn.fetchval(
+        "SELECT AVG(response_hay_earned) FROM bleats WHERE recipient_id = $1 AND responded_at IS NOT NULL",
+        uid,
+    )
+
     response_rate = round(total_responded / total_received * 100) if total_received > 0 else 0
 
     return {
@@ -311,6 +336,7 @@ async def bleat_stats(
         "total_sent": total_sent,
         "response_rate": response_rate,
         "avg_response_hours": round(float(avg_response_hours), 1) if avg_response_hours else None,
+        "avg_hay_per_response": round(float(avg_hay), 1) if avg_hay else None,
     }
 
 
@@ -348,9 +374,13 @@ async def get_bleats(
 @router.post("/bleats/{bleat_id}/respond")
 async def respond_bleat(
     bleat_id: int,
+    body: BleatResponseIn,
     current_user: dict = Depends(get_current_user),
     conn: asyncpg.Connection = Depends(get_db),
 ):
+    if body.response_type not in BASE_HAY:
+        raise HTTPException(status_code=400, detail="response_type must be quick, deet, or goat_report")
+
     uid = str(int(current_user["id"]))
 
     bleat = await conn.fetchrow(
@@ -362,31 +392,33 @@ async def respond_bleat(
     if bleat["responded_at"]:
         raise HTTPException(status_code=400, detail="Already responded.")
 
-    created = bleat["created_at"]
     now = datetime.now(timezone.utc)
-    hours_elapsed = (now - created).total_seconds() / 3600
+    hours_elapsed = (now - bleat["created_at"]).total_seconds() / 3600
 
     if hours_elapsed <= 6:
-        hay_reward = 20
-        speed_label = "lightning"
+        multiplier, speed_label = 2.0, "lightning fast"
     elif hours_elapsed <= 24:
-        hay_reward = 15
-        speed_label = "fast"
+        multiplier, speed_label = 1.5, "quick"
     elif hours_elapsed <= 48:
-        hay_reward = 10
-        speed_label = "normal"
+        multiplier, speed_label = 1.0, "on time"
     else:
-        hay_reward = 5
-        speed_label = "late"
+        multiplier, speed_label = 0.5, "late"
+
+    hay_reward = round(BASE_HAY[body.response_type] * multiplier)
 
     await conn.execute(
-        "UPDATE bleats SET responded_at = NOW(), response_hay_earned = $1 WHERE id = $2",
-        hay_reward, bleat_id,
+        """UPDATE bleats SET
+               responded_at = NOW(),
+               response_hay_earned = $1,
+               response_type = $2,
+               response_text = $3,
+               response_hay_tier = $4
+           WHERE id = $5""",
+        hay_reward, body.response_type, body.response_text, speed_label, bleat_id,
     )
 
     await conn.execute(
-        """UPDATE player SET hay = hay + $1, total_hay_earned = total_hay_earned + $1
-           WHERE user_id = $2""",
+        "UPDATE player SET hay = hay + $1, total_hay_earned = total_hay_earned + $1 WHERE user_id = $2",
         hay_reward, uid,
     )
 
@@ -394,7 +426,21 @@ async def respond_bleat(
     await conn.execute(
         """INSERT INTO hay_transactions (user_id, source_type, source_id, amount, balance_after, reason)
            VALUES ($1, 'bleat_response', $2, $3, $4, $5)""",
-        uid, bleat_id, hay_reward, player["hay"], f"Bleat response — {speed_label}",
+        uid, bleat_id, hay_reward, player["hay"],
+        f"Bleat response — {body.response_type} — {speed_label}",
     )
 
-    return {"hay_earned": hay_reward, "speed_label": speed_label}
+    if body.response_text and body.response_type in ("deet", "goat_report"):
+        await conn.execute(
+            """INSERT INTO trail_notes (user_id, task_name, question, note)
+               VALUES ($1, $2, $3, $4)""",
+            uid, f"Bleat response to {bleat['sender_id']}",
+            "What did you drop as a Deet?", body.response_text,
+        )
+
+    return {
+        "hay_earned": hay_reward,
+        "speed_label": speed_label,
+        "response_type": body.response_type,
+        "message": f"+{hay_reward} Hay — {body.response_type.replace('_', ' ').title()} response ({speed_label})",
+    }
