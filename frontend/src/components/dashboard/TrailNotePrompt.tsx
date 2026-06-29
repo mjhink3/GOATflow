@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { saveTrailNote } from "@/lib/api/behavioral";
 
 const AUTO_DISMISS_MS = 30_000;
 
@@ -54,6 +55,7 @@ export function TrailNotePrompt({ taskName, logId, daysElapsed, onDismiss }: Tra
       };
       localStorage.setItem("goatflow_trail_notes", JSON.stringify(existing));
     } catch { /* ignore storage errors */ }
+    saveTrailNote({ log_id: logId, task_name: taskName, question, note: trimmed });
     onDismiss();
   }
 

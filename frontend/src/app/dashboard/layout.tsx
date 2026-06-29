@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/hooks/useAuth";
+import { useBackfill } from "@/lib/hooks/useBackfill";
 import { Sidebar }  from "@/components/layout/Sidebar";
 import { LevelBar } from "@/components/layout/LevelBar";
 import { VoiceFAB } from "@/components/voice/VoiceFAB";
@@ -11,6 +12,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const router = useRouter();
   const { isAuthenticated, isLoading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  useBackfill();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {

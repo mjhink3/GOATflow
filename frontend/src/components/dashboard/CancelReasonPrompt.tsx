@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { saveCancelReason } from "@/lib/api/behavioral";
 
 interface Props {
   taskName: string;
@@ -27,6 +28,7 @@ export function CancelReasonPrompt({ taskName, logId, onDone }: Props) {
       store[String(logId)] = { reason: reason.trim(), taskName, timestamp: Date.now() };
       localStorage.setItem("goatflow_cancel_reasons", JSON.stringify(store));
     }
+    saveCancelReason({ log_id: logId ?? undefined, task_name: taskName, reason: reason.trim() || undefined });
     setSaved(true);
     setTimeout(onDone, 800);
   }

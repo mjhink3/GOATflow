@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { saveGutCheck } from "@/lib/api/behavioral";
 
 const AUTO_DISMISS_MS = 15_000;
 
@@ -41,6 +42,9 @@ export function TrackRatingPrompt({ taskName, tier, logId, onDismiss }: TrackRat
       existing.push({ log_id: logId, task_name: taskName, tier, rating, reason: reason.trim(), timestamp: Date.now() });
       localStorage.setItem("goatflow_track_ratings", JSON.stringify(existing));
     } catch { /* ignore */ }
+    if (rating) {
+      saveGutCheck({ log_id: logId, task_name: taskName, assigned_tier: tier, rating, reason: reason.trim() || undefined });
+    }
     if (timerRef.current) clearTimeout(timerRef.current);
     setSaved(true);
     dismissRef.current = setTimeout(onDismiss, 1000);

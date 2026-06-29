@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { usePlayer } from "@/lib/hooks/usePlayer";
 import { getLog, type LogFilter } from "@/lib/api/log";
+import { getAchievements, unlockAchievement } from "@/lib/api/behavioral";
 import type { OperationalLogEntry } from "@/lib/types";
 
 const WEEK_LABELS = ["Wk -3", "Wk -2", "Wk -1", "This Wk"];
@@ -244,6 +245,7 @@ export default function TrailPage() {
   const [trailNotes, setTrailNotes] = useState<TrailNoteMap>({});
   const [cancelReasons, setCancelReasons] = useState<CancelReasonMap>({});
   const [unlockedAchievements, setUnlockedAchievements] = useState<string[]>([]);
+  const syncedToBackend = useRef<Set<string>>(new Set());
   const { player } = usePlayer();
 
   const { data: entries = [], isLoading, isError } = useQuery<OperationalLogEntry[]>({
@@ -267,7 +269,29 @@ export default function TrailPage() {
       const raw = localStorage.getItem("goatflow_achievements");
       if (raw) setUnlockedAchievements(JSON.parse(raw));
     } catch { /* ignore */ }
+
+    // Seed which achievements are already in the backend so we don't double-post
+    getAchievements().then(rows => {
+      rows.forEach(r => syncedToBackend.current.add(r.achievement_id));
+    });
   }, []);
+
+  // Sync auto-unlocked achievements to backend once each
+  useEffect(() => {
+    if (!player) return;
+    const autoMap: { id: string; name: string; tier: number; unlocked: boolean }[] = [
+      { id: "first_blood",         name: "First Blood",         tier: 1, unlocked: (player.tasks_completed ?? 0) >= 1 },
+      { id: "the_grind",           name: "The Grind",           tier: 2, unlocked: (player.gait_streak ?? 0) >= 7 },
+      { id: "iron_commitment",     name: "Iron Commitment",     tier: 2, unlocked: (player.stake_streak ?? 0) >= 14 },
+      { id: "fresh_cheese_factory",name: "Fresh Cheese Factory",tier: 3, unlocked: (player.fresh_cheese ?? 0) >= 10 },
+    ];
+    for (const ach of autoMap) {
+      if (ach.unlocked && !syncedToBackend.current.has(ach.id)) {
+        syncedToBackend.current.add(ach.id);
+        unlockAchievement({ achievement_id: ach.id, achievement_name: ach.name, tier: ach.tier });
+      }
+    }
+  }, [player]);
 
   const weeklyRates: (number | null)[] = player?.weekly_clip_rates?.length
     ? player.weekly_clip_rates.map(r => r != null ? Math.round(r * 100) : null)
