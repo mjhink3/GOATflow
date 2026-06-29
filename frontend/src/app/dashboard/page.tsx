@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Image from "next/image";
 import { useSignals } from "@/lib/hooks/useSignals";
 import { useStakes } from "@/lib/hooks/useStakes";
@@ -54,11 +54,20 @@ export default function DashboardPage() {
   // ─────────────────────────────────────────────────────────────────────────
   const needsGate = !isLoadingToday && !todayStake && !gateSkipped;
 
+  // When stake is already done on mount, signal tour to start
+  useEffect(() => {
+    if (!isLoadingToday && !needsGate) {
+      const t = setTimeout(() => window.dispatchEvent(new CustomEvent("goatflow:stake-done")), 100);
+      return () => clearTimeout(t);
+    }
+  }, [isLoadingToday, needsGate]);
+
   async function handleStake() {
     const text = stakeText.trim() || "—";
     setStakePending(true);
     try {
       await createStake(text);
+      window.dispatchEvent(new CustomEvent("goatflow:stake-done"));
     } catch (err) {
       console.error("[stake] failed:", err);
     } finally {
@@ -274,7 +283,7 @@ export default function DashboardPage() {
                 {stakePending ? "Staking…" : "🔒 Stake It"}
               </button>
               <button
-                onClick={() => setGateSkipped(true)}
+                onClick={() => { setGateSkipped(true); window.dispatchEvent(new CustomEvent("goatflow:stake-done")); }}
                 style={{
                   padding: "12px 20px", borderRadius: 10, fontSize: 11, color: "#6b7280",
                   background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.08)",

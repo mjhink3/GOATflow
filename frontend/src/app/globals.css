@@ -316,6 +316,24 @@
 aside::-webkit-scrollbar { display: none; }
 
 /* ── Shepherd.js / GOATflow tour overrides ── */
+.shepherd-arrow {
+  display: none !important;
+}
+.shepherd-element {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+.goatflow-tour-step.shepherd-has-cancel-icon .shepherd-cancel-icon {
+  color: #6b7280 !important;
+}
+.goatflow-tour-step .shepherd-footer {
+  padding: 0 16px 16px !important;
+}
+.goatflow-tour-step .shepherd-header {
+  padding: 16px 16px 0 !important;
+  background: transparent !important;
+}
 .goatflow-tour-step .shepherd-content {
   background: #1A1A2E;
   border: 1px solid #2A2A4A;

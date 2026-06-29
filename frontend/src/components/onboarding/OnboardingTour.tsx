@@ -15,17 +15,20 @@ export function OnboardingTour() {
         cancelIcon: { enabled: true },
         classes: "goatflow-tour-step",
         scrollTo: { behavior: "smooth", block: "center" },
+        arrow: false,
       },
     });
 
     tour.addStep({
       id: "welcome",
+      arrow: false,
       text: "Welcome to GOATflow. This is your pasture. Let's show you around. 🐐",
       buttons: [{ text: "Let's go →", action: tour.next }],
     });
 
     tour.addStep({
       id: "horns",
+      arrow: false,
       text: "These are your GOAT Horns — permanent rules that tell the AI what matters most to you. Add at least one before your first churn. Example: 'Family always comes first.'",
       attachTo: { element: ".goat-horns-section", on: "right" },
       buttons: [{ text: "Got it →", action: tour.next }],
@@ -33,6 +36,7 @@ export function OnboardingTour() {
 
     tour.addStep({
       id: "track-sieve",
+      arrow: false,
       text: "This is the Track Sieve. Dump your emails, notes, or tasks here. The Churn Engine will organize them into prioritized Tracks. Be specific — the goat can't chew fog.",
       attachTo: { element: ".track-sieve-section", on: "bottom" },
       buttons: [{ text: "Got it →", action: tour.next }],
@@ -40,12 +44,14 @@ export function OnboardingTour() {
 
     tour.addStep({
       id: "morning-stake",
+      arrow: false,
       text: "Every morning, plant a Stake — one commitment for the day. Honor it and earn Hay. This is your daily accountability anchor.",
       buttons: [{ text: "Got it →", action: tour.next }],
     });
 
     tour.addStep({
       id: "signal-score",
+      arrow: false,
       text: "Your Signal Score grows as you use GOATflow genuinely. The more specific your inputs, the better your outputs. Your data is private — only your score is ever shared.",
       attachTo: { element: ".signal-score-section", on: "right" },
       buttons: [{ text: "Got it →", action: tour.next }],
@@ -53,6 +59,7 @@ export function OnboardingTour() {
 
     tour.addStep({
       id: "leaderboard",
+      arrow: false,
       text: "The Herd Leaderboard tracks your Hay, streaks, and weekly momentum. Compete, climb, and see where you stand.",
       buttons: [{ text: "Start climbing 🐐", action: tour.complete }],
     });
@@ -60,10 +67,25 @@ export function OnboardingTour() {
     tour.on("complete", () => localStorage.setItem(TOUR_KEY, "true"));
     tour.on("cancel", () => localStorage.setItem(TOUR_KEY, "true"));
 
-    const t = setTimeout(() => tour.start(), 1500);
+    let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
+
+    function startTour() {
+      if (fallbackTimer) clearTimeout(fallbackTimer);
+      if (!localStorage.getItem(TOUR_KEY) && !tour.isActive()) {
+        setTimeout(() => tour.start(), 500);
+      }
+    }
+
+    window.addEventListener("goatflow:stake-done", startTour);
+
+    // Fallback: if no stake gate is needed (already staked today), start after 2000ms
+    fallbackTimer = setTimeout(() => {
+      window.dispatchEvent(new CustomEvent("goatflow:stake-done"));
+    }, 2000);
 
     return () => {
-      clearTimeout(t);
+      window.removeEventListener("goatflow:stake-done", startTour);
+      if (fallbackTimer) clearTimeout(fallbackTimer);
       if (tour.isActive()) tour.cancel();
     };
   }, []);
