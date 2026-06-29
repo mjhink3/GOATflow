@@ -17,25 +17,30 @@ export function useHerd() {
     staleTime: 30_000,
   });
 
+  const refetchHerd = async () => {
+    await qc.invalidateQueries({ queryKey: ["herd"] });
+    await qc.refetchQueries({ queryKey: ["herd"] });
+  };
+
   const create = useMutation({
     mutationFn: ({ name, description }: { name: string; description?: string }) =>
       createHerd(name, description),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["herd"] }),
+    onSuccess: refetchHerd,
   });
 
   const join = useMutation({
     mutationFn: (invite_code: string) => joinHerd(invite_code),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["herd"] }),
+    onSuccess: refetchHerd,
   });
 
   const leave = useMutation({
     mutationFn: leaveHerd,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["herd"] }),
+    onSuccess: refetchHerd,
   });
 
   const newInvite = useMutation({
     mutationFn: generateInvite,
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["herd"] }),
+    onSuccess: refetchHerd,
   });
 
   return {
