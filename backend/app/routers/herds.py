@@ -90,7 +90,14 @@ async def get_my_herd(
         herd_id,
     )
 
-    stats = await conn.fetchrow("SELECT * FROM herd_stats WHERE herd_id = $1", herd_id)
+    stats = await conn.fetchrow(
+        """SELECT herd_id, total_hay_earned, total_tracks_completed, active_member_count,
+                  CAST(cheese_churn_rate AS FLOAT) AS cheese_churn_rate,
+                  CAST(herd_health_pct AS FLOAT) AS herd_health_pct,
+                  last_updated
+           FROM herd_stats WHERE herd_id = $1""",
+        herd_id,
+    )
 
     invite = await conn.fetchrow(
         "SELECT invite_code FROM herd_invites WHERE herd_id = $1 ORDER BY created_at DESC LIMIT 1",
