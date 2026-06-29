@@ -217,10 +217,10 @@ export default function LoginPage() {
           <Image
             src="/icons/goatflow_main_screen_logo.webp"
             alt="GOATflow"
-            width={200}
-            height={200}
+            width={240}
+            height={240}
             priority
-            style={{ width: 200, height: "auto", objectFit: "contain" }}
+            style={{ width: 240, height: "auto", objectFit: "contain" }}
           />
         </div>
 
@@ -229,14 +229,16 @@ export default function LoginPage() {
           className="animate-gf-fade-slide-up text-center mb-4"
           style={{
             fontFamily: "'DM Sans', sans-serif",
-            fontSize: "16px",
-            color: "rgba(255,255,255,0.55)",
-            letterSpacing: "0.05em",
+            fontSize: "15px",
+            color: "rgba(255,255,255,0.65)",
+            letterSpacing: "0.04em",
+            lineHeight: 1.6,
             animationDelay: "400ms",
-            marginTop: 4,
+            marginTop: 6,
+            marginBottom: 16,
           }}
         >
-          Grab life by the horns. Leave the bull behind.
+          Grab life by the horns.<br />Leave the bull behind.
         </p>
 
         {/* Auth card */}
@@ -441,7 +443,7 @@ export default function LoginPage() {
 
       {/* ── Global footer ── */}
       <footer
-        className="fixed bottom-0 left-0 right-0 z-10 py-3 text-center animate-gf-fade-in"
+        className="fixed bottom-2 left-0 right-0 z-10 py-1 text-center animate-gf-fade-in"
         style={{ animationDelay: "1100ms" }}
       >
         <p
