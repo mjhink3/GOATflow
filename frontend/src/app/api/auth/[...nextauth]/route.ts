@@ -125,15 +125,18 @@ const handler = NextAuth({
             provider_id: providerId,
           }),
         });
+        console.log("[signIn] oauth response status:", res.status);
         if (!res.ok) {
           console.error("[NextAuth signIn] /auth/oauth responded", res.status, await res.text().catch(() => ""));
           return false;
         }
         const data = await res.json();
+        console.log("[signIn] oauth response data keys:", Object.keys(data));
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (user as any).goatflow_token = data.access_token;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (user as any).goatflow_user_id = data.user_id;
+        console.log("[signIn] set goatflow_token:", !!data.access_token);
         return true;
       } catch (err) {
         console.error("[NextAuth signIn callback error]", err);
@@ -141,15 +144,19 @@ const handler = NextAuth({
       }
     },
     async jwt({ token, user }) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      console.log("[jwt] user present:", !!user, "goatflow_token:", !!(user as any)?.goatflow_token);
       if (user) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         token.goatflow_token = (user as any).goatflow_token;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         token.goatflow_user_id = (user as any).goatflow_user_id;
       }
+      console.log("[jwt] token after:", !!token.goatflow_token);
       return token;
     },
     async session({ session, token }) {
+      console.log("[session] token.goatflow_token:", !!token.goatflow_token);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (session as any).goatflow_token = token.goatflow_token;
       return session;

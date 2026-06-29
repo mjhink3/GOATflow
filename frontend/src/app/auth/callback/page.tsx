@@ -9,7 +9,7 @@ export default function AuthCallback() {
   const router = useRouter();
 
   useEffect(() => {
-    console.log("[AuthCallback] status:", status, "session:", session);
+    console.log("[callback] status:", status, "session:", JSON.stringify(session));
     if (status === "loading") return;
     if (session && (session as any).goatflow_token) {
       console.log("[AuthCallback] token found, redirecting to dashboard");
