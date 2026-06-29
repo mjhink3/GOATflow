@@ -5,7 +5,131 @@ import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useHerd } from "@/lib/hooks/useHerd";
 import { useAuth } from "@/lib/hooks/useAuth";
-import { sendBleat, getBleats, respondBleat, getBleatStats } from "@/lib/api/herds";
+import { sendBleat, getBleats, respondBleat, getBleatStats, BLEAT_TYPES, type Bleat } from "@/lib/api/herds";
+
+const RESPONSE_OPTIONS = [
+  { key: "quick",       label: "Quick 🐐",        hay: "10–20",  base: 10, needsText: false, desc: "Fast ack, no details needed" },
+  { key: "deet",        label: "Drop a Deet 📝",  hay: "20–40",  base: 20, needsText: true,  desc: "1–2 sentence update" },
+  { key: "goat_report", label: "GOAT Report 🏆",  hay: "35–70",  base: 35, needsText: true,  desc: "Full progress drop" },
+];
+
+function BleatCard({
+  bleat,
+  onRespond,
+}: {
+  bleat: Bleat;
+  onRespond: (id: number, type: string, text?: string) => Promise<void>;
+}) {
+  const [selectedType, setSelectedType] = useState("");
+  const [text, setText] = useState("");
+  const [isResponding, setIsResponding] = useState(false);
+
+  const bleatLabel = BLEAT_TYPES.find(t => t.key === bleat.bleat_type)?.label ?? bleat.bleat_type;
+
+  async function submit() {
+    if (!selectedType) return;
+    const opt = RESPONSE_OPTIONS.find(o => o.key === selectedType)!;
+    if (opt.needsText && !text.trim()) return;
+    setIsResponding(true);
+    await onRespond(bleat.id, selectedType, text.trim() || undefined);
+    setIsResponding(false);
+  }
+
+  if (bleat.responded_at) {
+    return (
+      <div style={{
+        padding: "10px 12px", borderRadius: 8, marginBottom: 6,
+        background: "rgba(83,198,96,0.06)", border: "1px solid rgba(83,198,96,0.2)",
+      }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+          <div>
+            <p style={{ fontSize: 12, color: "#F5F5F5" }}>
+              <strong>{bleat.sender_name}</strong> · {bleatLabel}
+            </p>
+            {bleat.response_text && (
+              <p style={{ fontSize: 11, color: "#9ca3af", fontStyle: "italic", marginTop: 3 }}>
+                "{bleat.response_text}"
+              </p>
+            )}
+          </div>
+          <span style={{ fontSize: 10, color: "#53c660", whiteSpace: "nowrap", flexShrink: 0 }}>
+            ✓ +{bleat.response_hay_earned} Hay ({bleat.response_hay_tier})
+          </span>
+        </div>
+      </div>
+    );
+  }
+
+  const activeOpt = RESPONSE_OPTIONS.find(o => o.key === selectedType);
+
+  return (
+    <div style={{
+      padding: "12px 14px", borderRadius: 8, marginBottom: 8,
+      background: "rgba(245,158,11,0.06)", border: "1px solid rgba(245,158,11,0.25)",
+    }}>
+      <p style={{ fontSize: 13, color: "#F5F5F5", marginBottom: 2 }}>
+        🐐 <strong>{bleat.sender_name}</strong> bleated you
+      </p>
+      <p style={{ fontSize: 12, color: "#f59e0b", marginBottom: 6 }}>{bleatLabel}</p>
+      <p style={{ fontSize: 10, color: "#6b7280", marginBottom: 10 }}>
+        {new Date(bleat.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+      </p>
+
+      {/* Response type buttons */}
+      <div style={{ display: "flex", gap: 6, marginBottom: selectedType ? 8 : 0 }}>
+        {RESPONSE_OPTIONS.map(opt => (
+          <button
+            key={opt.key}
+            onClick={() => setSelectedType(selectedType === opt.key ? "" : opt.key)}
+            style={{
+              flex: 1, padding: "7px 4px", borderRadius: 7, fontSize: 10, fontWeight: 600,
+              cursor: "pointer", textAlign: "center", lineHeight: 1.3,
+              background: selectedType === opt.key ? "rgba(97,0,255,0.35)" : "rgba(97,0,255,0.08)",
+              border: `1px solid ${selectedType === opt.key ? "rgba(97,0,255,0.6)" : "rgba(97,0,255,0.2)"}`,
+              color: selectedType === opt.key ? "#a78bfa" : "#6b7280",
+            }}
+          >
+            {opt.label}
+            <br />
+            <span style={{ fontSize: 9, color: "#f59e0b" }}>+{opt.hay} Hay</span>
+          </button>
+        ))}
+      </div>
+
+      {/* Text input for deet / goat_report */}
+      {activeOpt?.needsText && (
+        <div style={{ marginBottom: 8 }}>
+          <textarea
+            value={text}
+            onChange={e => setText(e.target.value)}
+            placeholder={activeOpt.desc}
+            rows={activeOpt.key === "goat_report" ? 3 : 2}
+            maxLength={400}
+            style={{
+              width: "100%", background: "rgba(97,0,255,0.08)", border: "1px solid rgba(97,0,255,0.25)",
+              borderRadius: 7, padding: "7px 10px", fontSize: 12, color: "#F5F5F5",
+              outline: "none", resize: "none", boxSizing: "border-box",
+            }}
+          />
+        </div>
+      )}
+
+      {selectedType && (
+        <button
+          onClick={submit}
+          disabled={isResponding || (!!activeOpt?.needsText && !text.trim())}
+          style={{
+            width: "100%", padding: "8px 0", borderRadius: 7, fontSize: 12, fontWeight: 700,
+            background: "rgba(83,198,96,0.25)", border: "1px solid rgba(83,198,96,0.45)",
+            color: "#53c660", cursor: isResponding ? "not-allowed" : "pointer",
+          }}
+        >
+          {isResponding ? "Responding…" : `Confirm Response (+${activeOpt?.hay} Hay)`}
+        </button>
+      )}
+    </div>
+  );
+}
 
 export default function HerdPage() {
   const router = useRouter();
@@ -15,17 +139,18 @@ export default function HerdPage() {
   const qc = useQueryClient();
 
   const [bleatRecipient, setBleatRecipient] = useState("");
-  const [bleatMessage, setBleatMessage] = useState("");
+  const [selectedBleatType, setSelectedBleatType] = useState("");
   const [isSendingBleat, setIsSendingBleat] = useState(false);
+  const [bleatSuccess, setBleatSuccess] = useState("");
 
-  const { data: bleatsData, refetch: refetchBleats } = useQuery({
+  const { data: bleatsData } = useQuery({
     queryKey: ["bleats"],
     queryFn: getBleats,
     staleTime: 30_000,
     enabled: isInHerd,
   });
 
-  const { data: bleatStats, refetch: refetchBleatStats } = useQuery({
+  const { data: bleatStats } = useQuery({
     queryKey: ["bleat-stats"],
     queryFn: getBleatStats,
     staleTime: 60_000,
@@ -33,12 +158,14 @@ export default function HerdPage() {
   });
 
   async function handleSendBleat() {
-    if (!bleatRecipient) return;
+    if (!bleatRecipient || !selectedBleatType) return;
     setIsSendingBleat(true);
     try {
-      await sendBleat(bleatRecipient, bleatMessage || undefined);
+      await sendBleat(bleatRecipient, selectedBleatType);
       setBleatRecipient("");
-      setBleatMessage("");
+      setSelectedBleatType("");
+      setBleatSuccess("Bleat sent! 🐐");
+      setTimeout(() => setBleatSuccess(""), 3000);
       qc.invalidateQueries({ queryKey: ["bleats"] });
       qc.invalidateQueries({ queryKey: ["bleat-stats"] });
     } catch (err) {
@@ -48,16 +175,12 @@ export default function HerdPage() {
     }
   }
 
-  async function handleRespondBleat(bleat_id: number) {
-    try {
-      const result = await respondBleat(bleat_id);
-      qc.invalidateQueries({ queryKey: ["bleats"] });
-      qc.invalidateQueries({ queryKey: ["bleat-stats"] });
-      qc.invalidateQueries({ queryKey: ["player"] });
-      window.alert(`🐐 Bleat responded! +${result.hay_earned} Hay earned (${result.speed_label} response)`);
-    } catch (err) {
-      console.error("[bleats] respond failed:", err);
-    }
+  async function handleRespondBleat(bleat_id: number, response_type: string, response_text?: string) {
+    const result = await respondBleat(bleat_id, response_type, response_text);
+    qc.invalidateQueries({ queryKey: ["bleats"] });
+    qc.invalidateQueries({ queryKey: ["bleat-stats"] });
+    qc.invalidateQueries({ queryKey: ["player"] });
+    window.alert(result.message);
   }
 
   if (isLoading) {
@@ -79,6 +202,9 @@ export default function HerdPage() {
       </div>
     );
   }
+
+  const pendingBleats = bleatsData?.received?.filter(b => !b.responded_at) ?? [];
+  const respondedBleats = bleatsData?.received?.filter(b => !!b.responded_at) ?? [];
 
   return (
     <div className="flex-1 px-6 py-8 max-w-2xl mx-auto w-full">
@@ -179,92 +305,85 @@ export default function HerdPage() {
           ▸ Bleats — Peer Accountability
         </p>
 
+        {/* Received — pending first */}
+        {pendingBleats.length > 0 && (
+          <div style={{ marginBottom: 16 }}>
+            <p style={{ fontSize: 10, color: "#f59e0b", fontWeight: 600, marginBottom: 8 }}>
+              📣 {pendingBleats.length} Bleat{pendingBleats.length !== 1 ? "s" : ""} waiting on you
+            </p>
+            {pendingBleats.map(bleat => (
+              <BleatCard key={bleat.id} bleat={bleat} onRespond={handleRespondBleat} />
+            ))}
+          </div>
+        )}
+
         {/* Send a Bleat */}
         <div style={{ marginBottom: 16 }}>
-          <p style={{ fontSize: 11, color: "#9ca3af", marginBottom: 8 }}>
-            Bleat a teammate to check in on their progress. They earn Hay for responding fast.
+          <p style={{ fontSize: 10, color: "#9ca3af", fontWeight: 600, marginBottom: 8 }}>SEND A BLEAT</p>
+          <p style={{ fontSize: 11, color: "#6b7280", marginBottom: 10 }}>
+            Bleat a teammate. They earn Hay for responding — more depth = more Hay.
           </p>
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            <select
-              value={bleatRecipient}
-              onChange={e => setBleatRecipient(e.target.value)}
-              style={{
-                background: "rgba(97,0,255,0.08)", border: "1px solid rgba(97,0,255,0.25)",
-                borderRadius: 8, padding: "8px 12px", fontSize: 12, color: "#F5F5F5",
-                outline: "none",
-              }}
-            >
-              <option value="">Select a teammate to Bleat…</option>
-              {members.filter(m => m.user_id !== currentUserId).map(m => (
-                <option key={m.user_id} value={m.user_id}>{m.display_name}</option>
-              ))}
-            </select>
-            <input
-              value={bleatMessage}
-              onChange={e => setBleatMessage(e.target.value)}
-              placeholder="Optional message… (e.g. 'Where are you at on the project?')"
-              maxLength={120}
-              style={{
-                background: "rgba(97,0,255,0.08)", border: "1px solid rgba(97,0,255,0.25)",
-                borderRadius: 8, padding: "8px 12px", fontSize: 12, color: "#F5F5F5",
-                outline: "none",
-              }}
-            />
-            <button
-              onClick={handleSendBleat}
-              disabled={!bleatRecipient || isSendingBleat}
-              style={{
-                background: bleatRecipient ? "rgba(97,0,255,0.35)" : "rgba(97,0,255,0.1)",
-                border: "1px solid rgba(97,0,255,0.5)", borderRadius: 8,
-                padding: "10px 16px", fontSize: 12, fontWeight: 700,
-                color: "#a78bfa", cursor: bleatRecipient ? "pointer" : "not-allowed",
-                textTransform: "uppercase", letterSpacing: "0.1em",
-              }}
-            >
-              {isSendingBleat ? "Bleating…" : "🐐 Send Bleat"}
-            </button>
+
+          {/* Recipient */}
+          <select
+            value={bleatRecipient}
+            onChange={e => setBleatRecipient(e.target.value)}
+            style={{
+              width: "100%", background: "rgba(97,0,255,0.08)", border: "1px solid rgba(97,0,255,0.25)",
+              borderRadius: 8, padding: "8px 12px", fontSize: 12, color: bleatRecipient ? "#F5F5F5" : "#6b7280",
+              outline: "none", marginBottom: 10,
+            }}
+          >
+            <option value="">Select a teammate…</option>
+            {members.filter(m => m.user_id !== currentUserId).map(m => (
+              <option key={m.user_id} value={m.user_id}>{m.display_name}</option>
+            ))}
+          </select>
+
+          {/* Bleat type grid */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 6, marginBottom: 10 }}>
+            {BLEAT_TYPES.map(bt => (
+              <button
+                key={bt.key}
+                onClick={() => setSelectedBleatType(selectedBleatType === bt.key ? "" : bt.key)}
+                style={{
+                  padding: "8px 10px", borderRadius: 8, fontSize: 11, fontWeight: 600,
+                  textAlign: "left", cursor: "pointer", lineHeight: 1.4,
+                  background: selectedBleatType === bt.key ? "rgba(97,0,255,0.3)" : "rgba(97,0,255,0.07)",
+                  border: `1px solid ${selectedBleatType === bt.key ? "rgba(97,0,255,0.6)" : "rgba(97,0,255,0.18)"}`,
+                  color: selectedBleatType === bt.key ? "#a78bfa" : "#9ca3af",
+                }}
+              >
+                {bt.label}
+              </button>
+            ))}
           </div>
+
+          {bleatSuccess && (
+            <p style={{ fontSize: 12, color: "#53c660", marginBottom: 8 }}>{bleatSuccess}</p>
+          )}
+
+          <button
+            onClick={handleSendBleat}
+            disabled={!bleatRecipient || !selectedBleatType || isSendingBleat}
+            style={{
+              width: "100%", padding: "10px 0", borderRadius: 8, fontSize: 12, fontWeight: 700,
+              textTransform: "uppercase", letterSpacing: "0.08em",
+              background: bleatRecipient && selectedBleatType ? "rgba(97,0,255,0.35)" : "rgba(97,0,255,0.08)",
+              border: "1px solid rgba(97,0,255,0.5)", color: "#a78bfa",
+              cursor: bleatRecipient && selectedBleatType ? "pointer" : "not-allowed",
+            }}
+          >
+            {isSendingBleat ? "Bleating…" : "🐐 Send Bleat"}
+          </button>
         </div>
 
-        {/* Received Bleats */}
-        {bleatsData?.received && bleatsData.received.length > 0 && (
-          <div style={{ marginBottom: 12 }}>
-            <p style={{ fontSize: 10, color: "#f59e0b", marginBottom: 8, fontWeight: 600 }}>
-              📣 Bleats Received ({bleatsData.received.filter(b => !b.responded_at).length} pending)
-            </p>
-            {bleatsData.received.slice(0, 5).map(bleat => (
-              <div key={bleat.id} style={{
-                padding: "10px 12px", borderRadius: 8, marginBottom: 6,
-                background: bleat.responded_at ? "rgba(83,198,96,0.06)" : "rgba(245,158,11,0.08)",
-                border: `1px solid ${bleat.responded_at ? "rgba(83,198,96,0.2)" : "rgba(245,158,11,0.25)"}`,
-                display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8,
-              }}>
-                <div>
-                  <p style={{ fontSize: 12, color: "#F5F5F5", marginBottom: 2 }}>
-                    🐐 <strong>{bleat.sender_name}</strong> bleated you
-                  </p>
-                  {bleat.message && <p style={{ fontSize: 11, color: "#9ca3af", fontStyle: "italic" }}>"{bleat.message}"</p>}
-                  <p style={{ fontSize: 10, color: "#6b7280", marginTop: 2 }}>
-                    {new Date(bleat.created_at).toLocaleDateString()}
-                  </p>
-                </div>
-                {!bleat.responded_at ? (
-                  <button
-                    onClick={() => handleRespondBleat(bleat.id)}
-                    style={{
-                      background: "rgba(83,198,96,0.2)", border: "1px solid rgba(83,198,96,0.4)",
-                      borderRadius: 6, padding: "6px 12px", fontSize: 11, fontWeight: 600,
-                      color: "#53c660", cursor: "pointer", whiteSpace: "nowrap",
-                    }}
-                  >
-                    Respond +Hay
-                  </button>
-                ) : (
-                  <span style={{ fontSize: 10, color: "#53c660" }}>
-                    ✓ +{bleat.response_hay_earned} Hay
-                  </span>
-                )}
-              </div>
+        {/* Responded bleats (collapsed) */}
+        {respondedBleats.length > 0 && (
+          <div style={{ marginTop: 12 }}>
+            <p style={{ fontSize: 10, color: "#4b5563", fontWeight: 600, marginBottom: 6 }}>RECENT RESPONSES</p>
+            {respondedBleats.slice(0, 3).map(bleat => (
+              <BleatCard key={bleat.id} bleat={bleat} onRespond={handleRespondBleat} />
             ))}
           </div>
         )}
@@ -272,29 +391,27 @@ export default function HerdPage() {
         {/* Bleat Stats */}
         {bleatStats && (
           <div style={{
-            padding: "10px 12px", borderRadius: 8,
+            marginTop: 16, padding: "10px 12px", borderRadius: 8,
             background: "rgba(97,0,255,0.06)", border: "1px solid rgba(97,0,255,0.15)",
           }}>
-            <p style={{ fontSize: 10, color: "#6b7280", marginBottom: 6 }}>YOUR BLEAT STATS</p>
-            <div style={{ display: "flex", gap: 16 }}>
-              <div>
-                <p style={{ fontSize: 16, fontWeight: 800, color: "#a78bfa" }}>{bleatStats.response_rate}%</p>
-                <p style={{ fontSize: 9, color: "#6b7280" }}>Response Rate</p>
-              </div>
-              <div>
-                <p style={{ fontSize: 16, fontWeight: 800, color: "#f59e0b" }}>{bleatStats.total_sent}</p>
-                <p style={{ fontSize: 9, color: "#6b7280" }}>Bleats Sent</p>
-              </div>
-              <div>
-                <p style={{ fontSize: 16, fontWeight: 800, color: "#53c660" }}>{bleatStats.total_responded}</p>
-                <p style={{ fontSize: 9, color: "#6b7280" }}>Responded</p>
-              </div>
-              {bleatStats.avg_response_hours !== null && (
-                <div>
-                  <p style={{ fontSize: 16, fontWeight: 800, color: "#F5F5F5" }}>{bleatStats.avg_response_hours}h</p>
-                  <p style={{ fontSize: 9, color: "#6b7280" }}>Avg Response</p>
+            <p style={{ fontSize: 10, color: "#6b7280", marginBottom: 8 }}>YOUR BLEAT STATS</p>
+            <div style={{ display: "flex", gap: 16, flexWrap: "wrap" }}>
+              {[
+                { val: `${bleatStats.response_rate}%`, label: "Response Rate", color: "#a78bfa" },
+                { val: bleatStats.total_sent,           label: "Bleats Sent",   color: "#f59e0b" },
+                { val: bleatStats.total_responded,      label: "Responded",     color: "#53c660" },
+                ...(bleatStats.avg_response_hours !== null
+                  ? [{ val: `${bleatStats.avg_response_hours}h`, label: "Avg Response", color: "#F5F5F5" }]
+                  : []),
+                ...(bleatStats.avg_hay_per_response !== null
+                  ? [{ val: `${bleatStats.avg_hay_per_response}`, label: "Avg Hay / Bleat", color: "#f59e0b" }]
+                  : []),
+              ].map(({ val, label, color }) => (
+                <div key={label}>
+                  <p style={{ fontSize: 16, fontWeight: 800, color }}>{val}</p>
+                  <p style={{ fontSize: 9, color: "#6b7280" }}>{label}</p>
                 </div>
-              )}
+              ))}
             </div>
           </div>
         )}
