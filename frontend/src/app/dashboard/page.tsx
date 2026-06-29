@@ -275,10 +275,10 @@ export default function DashboardPage() {
             style={{ background: "rgba(13,13,26,0.6)" }}
           >
             <div className="flex items-center gap-2 mb-4">
-              <Image src="/icons/icon_track_sieve.png" alt="" width={22} height={22} />
-              <h2 className="font-syne text-goat-white font-bold" style={{ fontSize: 14 }}>Track Sieve</h2>
+              <Image src="/icons/icon_track_sieve.png" alt="" width={44} height={44} />
+              <h2 className="font-syne text-goat-white font-bold" style={{ fontSize: 18 }}>Track Sieve</h2>
               <span style={{
-                marginLeft: "auto", fontSize: 9, color: "#6b7280",
+                marginLeft: "auto", fontSize: 11, color: "#6b7280",
                 background: "rgba(97,0,255,0.1)", border: "1px solid rgba(97,0,255,0.2)",
                 borderRadius: 99, padding: "2px 8px",
               }}>
@@ -304,10 +304,10 @@ export default function DashboardPage() {
                 }}
               >
                 <span style={{ fontSize: 22 }}>📂</span>
-                <p style={{ fontSize: 11, color: "#a78bfa", textAlign: "center", fontWeight: 600 }}>
+                <p style={{ fontSize: 14, color: "#a78bfa", textAlign: "center", fontWeight: 600 }}>
                   Drag and drop files here
                 </p>
-                <p style={{ fontSize: 9, color: "#6b7280", textAlign: "center", lineHeight: 1.5 }}>
+                <p style={{ fontSize: 11, color: "#6b7280", textAlign: "center", lineHeight: 1.5 }}>
                   Limit 200MB per file<br />PDF, PNG, JPG, WEBP, DOCX, TXT
                 </p>
                 {sieverFiles.length > 0 && (
@@ -328,7 +328,7 @@ export default function DashboardPage() {
                 <button
                   onClick={e => { e.stopPropagation(); fileInputRef.current?.click(); }}
                   style={{
-                    marginTop: 4, padding: "5px 14px", borderRadius: 8, fontSize: 10,
+                    marginTop: 4, padding: "5px 14px", borderRadius: 8, fontSize: 12,
                     background: "rgba(97,0,255,0.2)", border: "1px solid rgba(97,0,255,0.4)",
                     color: "#a78bfa", cursor: "pointer",
                   }}
@@ -353,7 +353,7 @@ export default function DashboardPage() {
                 style={{
                   width: "100%", height: "100%", minHeight: 140,
                   background: "rgba(97,0,255,0.05)", border: "1px solid rgba(97,0,255,0.2)",
-                  borderRadius: 10, padding: "10px 12px", fontSize: 12, color: "#F5F5F5",
+                  borderRadius: 10, padding: "10px 12px", fontSize: 14, color: "#F5F5F5",
                   outline: "none", resize: "none", fontFamily: "inherit",
                 }}
               />
@@ -366,15 +366,15 @@ export default function DashboardPage() {
             <button
               onClick={handleChurn}
               disabled={isChurning || churnCount >= CHURN_DAILY_LIMIT}
-              className="flex items-center justify-center gap-2 w-full py-3 rounded-xl font-bold uppercase tracking-widest transition-colors disabled:opacity-40"
+              className="flex items-center justify-center gap-2 w-full py-4 rounded-xl font-bold uppercase tracking-widest transition-colors disabled:opacity-40"
               style={{
-                fontSize: 13,
+                fontSize: 16,
                 background: isChurning ? "rgba(97,0,255,0.2)" : "rgba(97,0,255,0.35)",
                 border: "1px solid rgba(97,0,255,0.55)",
                 color: "#a78bfa", cursor: isChurning ? "not-allowed" : "pointer",
               }}
             >
-              <Image src="/icons/icon_churn_engine.png" alt="" width={20} height={20} />
+              <Image src="/icons/icon_churn_engine.png" alt="" width={40} height={40} />
               {isChurning ? "Churning…" : "Drop Into Churn Engine"}
             </button>
           </section>
@@ -398,12 +398,12 @@ export default function DashboardPage() {
           <section>
             <div className="flex items-center gap-2 mb-3">
               <Image src="/icons/icon_tracks.webp" alt="" width={20} height={20} />
-              <h2 className="font-syne text-goat-white font-bold" style={{ fontSize: 14 }}>
+              <h2 className="font-syne text-goat-white font-bold" style={{ fontSize: 18 }}>
                 Active Tracks
               </h2>
               {signals.length > 0 && (
                 <span style={{
-                  fontSize: 9, color: "#a78bfa", background: "rgba(97,0,255,0.15)",
+                  fontSize: 11, color: "#a78bfa", background: "rgba(97,0,255,0.15)",
                   border: "1px solid rgba(97,0,255,0.3)", borderRadius: 99, padding: "2px 8px",
                 }}>
                   {signals.length}

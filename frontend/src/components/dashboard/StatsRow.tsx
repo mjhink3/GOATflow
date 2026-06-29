@@ -95,7 +95,7 @@ export function StatsRow() {
           className="px-4 py-3 rounded-xl border border-goat-border animate-gf-fade-in"
           style={{ background: "rgba(97,0,255,0.06)" }}
         >
-          <p style={{ fontSize: 11, color: "#9ca3af", fontStyle: "italic", lineHeight: 1.6 }}>
+          <p style={{ fontSize: 14, color: "#9ca3af", fontStyle: "italic", lineHeight: 1.6 }}>
             &ldquo;{quote}&rdquo;
           </p>
         </div>
