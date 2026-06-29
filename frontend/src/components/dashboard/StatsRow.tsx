@@ -19,9 +19,9 @@ function StatCard({ icon, value, label, sub, color = "#F5F5F5" }: StatCardProps)
   return (
     <div
       className="flex flex-col items-center justify-center gap-1 p-3 rounded-xl border border-goat-border"
-      style={{ background: "rgba(26,26,46,0.6)", minHeight: 140 }}
+      style={{ background: "rgba(26,26,46,0.6)", minHeight: 120 }}
     >
-      <Image src={icon} alt={label} width={88} height={88} />
+      <Image src={icon} alt={label} width={56} height={56} />
       <span style={{ fontSize: 24, fontWeight: 800, color, lineHeight: 1, fontFamily: "var(--font-syne)", textAlign: "center" }}>
         {value}
       </span>

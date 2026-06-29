@@ -163,10 +163,10 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
 
       {/* ── User avatar + rank ── */}
       <div className="flex flex-col items-center px-4 py-4 border-b border-goat-border gap-2">
-        <div style={{ position: "relative", width: 84, height: 84, flexShrink: 0 }}>
+        <div style={{ position: "relative", width: 104, height: 104, flexShrink: 0 }}>
           <div style={{
-            width: 80,
-            height: 80,
+            width: 100,
+            height: 100,
             margin: 2,
             borderRadius: 12,
             backgroundImage: `url(${levelImg})`,
