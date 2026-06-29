@@ -110,6 +110,35 @@ async def me(current_user: dict = Depends(get_current_user)):
     return current_user
 
 
+class TokenBridgeStore(BaseModel):
+    email: str
+    goatflow_token: str
+    user_id: str
+
+
+@router.post("/store-token")
+async def store_token(body: TokenBridgeStore, conn: asyncpg.Connection = Depends(get_db)):
+    await conn.execute(
+        """INSERT INTO oauth_token_bridge (email, goatflow_token, goatflow_user_id)
+           VALUES ($1, $2, $3)
+           ON CONFLICT (email) DO UPDATE SET goatflow_token=$2, goatflow_user_id=$3, created_at=NOW()""",
+        body.email, body.goatflow_token, body.user_id,
+    )
+    return {"ok": True}
+
+
+@router.get("/retrieve-token")
+async def retrieve_token(email: str, conn: asyncpg.Connection = Depends(get_db)):
+    row = await conn.fetchrow(
+        "SELECT goatflow_token, goatflow_user_id FROM oauth_token_bridge WHERE email=$1",
+        email,
+    )
+    if not row:
+        return {"token": None, "user_id": None}
+    await conn.execute("DELETE FROM oauth_token_bridge WHERE email=$1", email)
+    return {"token": row["goatflow_token"], "user_id": row["goatflow_user_id"]}
+
+
 class OAuthRequest(BaseModel):
     email: str
     display_name: str
