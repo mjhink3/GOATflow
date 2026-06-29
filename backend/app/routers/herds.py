@@ -32,23 +32,24 @@ async def create_herd(
     current_user: dict = Depends(get_current_user),
     conn: asyncpg.Connection = Depends(get_db),
 ):
-    existing = await conn.fetchrow("SELECT current_herd_id FROM users WHERE id = $1", current_user["id"])
+    uid = int(current_user["id"])
+    existing = await conn.fetchrow("SELECT current_herd_id FROM users WHERE id = $1", uid)
     if existing and existing["current_herd_id"]:
         raise HTTPException(status_code=400, detail="You are already in a Herd. Leave your current Herd first.")
 
     herd = await conn.fetchrow(
         "INSERT INTO herds (name, description, created_by) VALUES ($1, $2, $3) RETURNING *",
-        body.name, body.description, str(current_user["id"]),
+        body.name, body.description, str(uid),
     )
 
     await conn.execute(
         "INSERT INTO herd_members (herd_id, user_id, role) VALUES ($1, $2, 'herdboss')",
-        herd["id"], str(current_user["id"]),
+        herd["id"], str(uid),
     )
 
     await conn.execute(
         "UPDATE users SET current_herd_id = $1, role = 'herdboss' WHERE id = $2",
-        herd["id"], current_user["id"],
+        herd["id"], uid,
     )
 
     await conn.execute(
@@ -59,7 +60,7 @@ async def create_herd(
     invite_code = secrets.token_urlsafe(8)
     await conn.execute(
         "INSERT INTO herd_invites (herd_id, invite_code, created_by) VALUES ($1, $2, $3)",
-        herd["id"], invite_code, str(current_user["id"]),
+        herd["id"], invite_code, str(uid),
     )
 
     return {"herd": dict(herd), "invite_code": invite_code}
@@ -70,7 +71,8 @@ async def get_my_herd(
     current_user: dict = Depends(get_current_user),
     conn: asyncpg.Connection = Depends(get_db),
 ):
-    user = await conn.fetchrow("SELECT current_herd_id FROM users WHERE id = $1", current_user["id"])
+    uid = int(current_user["id"])
+    user = await conn.fetchrow("SELECT current_herd_id FROM users WHERE id = $1", uid)
     if not user or not user["current_herd_id"]:
         return {"herd": None, "members": [], "stats": None, "invite_code": None, "my_role": "member"}
 
@@ -95,7 +97,7 @@ async def get_my_herd(
         herd_id,
     )
 
-    my_role = next((m["role"] for m in members if m["user_id"] == str(current_user["id"])), "member")
+    my_role = next((m["role"] for m in members if m["user_id"] == str(uid)), "member")
 
     return {
         "herd": dict(herd),
@@ -112,7 +114,8 @@ async def join_herd(
     current_user: dict = Depends(get_current_user),
     conn: asyncpg.Connection = Depends(get_db),
 ):
-    existing = await conn.fetchrow("SELECT current_herd_id FROM users WHERE id = $1", current_user["id"])
+    uid = int(current_user["id"])
+    existing = await conn.fetchrow("SELECT current_herd_id FROM users WHERE id = $1", uid)
     if existing and existing["current_herd_id"]:
         raise HTTPException(status_code=400, detail="You are already in a Herd. Leave your current Herd first.")
 
@@ -132,12 +135,12 @@ async def join_herd(
     await conn.execute(
         """INSERT INTO herd_members (herd_id, user_id, role) VALUES ($1, $2, 'member')
            ON CONFLICT (herd_id, user_id) DO UPDATE SET is_active = TRUE""",
-        herd_id, str(current_user["id"]),
+        herd_id, str(uid),
     )
 
     await conn.execute(
         "UPDATE users SET current_herd_id = $1, role = 'member' WHERE id = $2",
-        herd_id, current_user["id"],
+        herd_id, uid,
     )
 
     await conn.execute(
@@ -161,7 +164,8 @@ async def leave_herd(
     current_user: dict = Depends(get_current_user),
     conn: asyncpg.Connection = Depends(get_db),
 ):
-    user = await conn.fetchrow("SELECT current_herd_id FROM users WHERE id = $1", current_user["id"])
+    uid = int(current_user["id"])
+    user = await conn.fetchrow("SELECT current_herd_id FROM users WHERE id = $1", uid)
     if not user or not user["current_herd_id"]:
         raise HTTPException(status_code=400, detail="You are not in a Herd.")
 
@@ -169,12 +173,12 @@ async def leave_herd(
 
     await conn.execute(
         "UPDATE herd_members SET is_active = FALSE WHERE herd_id = $1 AND user_id = $2",
-        herd_id, str(current_user["id"]),
+        herd_id, str(uid),
     )
 
     await conn.execute(
         "UPDATE users SET current_herd_id = NULL, role = 'member' WHERE id = $1",
-        current_user["id"],
+        uid,
     )
 
     await conn.execute(
@@ -192,7 +196,8 @@ async def generate_invite(
     current_user: dict = Depends(get_current_user),
     conn: asyncpg.Connection = Depends(get_db),
 ):
-    user = await conn.fetchrow("SELECT current_herd_id, role FROM users WHERE id = $1", current_user["id"])
+    uid = int(current_user["id"])
+    user = await conn.fetchrow("SELECT current_herd_id, role FROM users WHERE id = $1", uid)
     if not user or not user["current_herd_id"]:
         raise HTTPException(status_code=400, detail="You are not in a Herd.")
     if user["role"] != "herdboss":
@@ -201,7 +206,7 @@ async def generate_invite(
     invite_code = secrets.token_urlsafe(8)
     await conn.execute(
         "INSERT INTO herd_invites (herd_id, invite_code, created_by) VALUES ($1, $2, $3)",
-        user["current_herd_id"], invite_code, str(current_user["id"]),
+        user["current_herd_id"], invite_code, str(uid),
     )
 
     return {"invite_code": invite_code}
@@ -212,7 +217,8 @@ async def herd_leaderboard(
     current_user: dict = Depends(get_current_user),
     conn: asyncpg.Connection = Depends(get_db),
 ):
-    user = await conn.fetchrow("SELECT current_herd_id FROM users WHERE id = $1", current_user["id"])
+    uid = int(current_user["id"])
+    user = await conn.fetchrow("SELECT current_herd_id FROM users WHERE id = $1", uid)
     if not user or not user["current_herd_id"]:
         raise HTTPException(status_code=400, detail="You are not in a Herd.")
 
