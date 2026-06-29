@@ -1,8 +1,10 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useHerd } from "@/lib/hooks/useHerd";
 
 export default function HerdPage() {
+  const router = useRouter();
   const { herd, members, stats, invite_code, isInHerd, isHerdBoss, isLoading } = useHerd();
 
   if (isLoading) {
@@ -27,6 +29,17 @@ export default function HerdPage() {
 
   return (
     <div className="flex-1 px-6 py-8 max-w-2xl mx-auto w-full">
+      <button
+        onClick={() => router.push("/dashboard")}
+        style={{
+          display: "inline-flex", alignItems: "center", gap: 6,
+          fontSize: 11, color: "#6b7280", background: "none", border: "none",
+          cursor: "pointer", padding: 0, alignSelf: "flex-start", marginBottom: 16,
+        }}
+      >
+        ← Back to Dashboard
+      </button>
+
       {/* Header */}
       <div style={{ marginBottom: 32 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>

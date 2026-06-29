@@ -619,7 +619,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
       <div className="px-4 py-2 border-b border-goat-border">
         <button
           className="w-full flex items-center gap-2 py-2 px-3 rounded-lg border border-goat-border text-xs text-goat-silver hover:border-goat-violet hover:text-goat-violet transition-colors"
-          onClick={() => { router.push("/herd"); onClose?.(); }}
+          onClick={() => { router.push(pathname === "/herd" ? "/dashboard" : "/herd"); onClose?.(); }}
         >
           🐐 My Herd
         </button>

@@ -16,7 +16,7 @@ export function useHorns() {
   const saveMutation = useMutation({
     mutationFn: (rules: Horn[]) => apiSave(rules),
     onSuccess: (data) => {
-      qc.setQueryData<Horn[]>(["horns"], data.rules);
+      qc.setQueryData<Horn[]>(["horns"], data);
     },
   });
 
