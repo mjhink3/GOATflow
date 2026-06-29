@@ -213,14 +213,14 @@ export default function LoginPage() {
       <main className="relative z-10 flex flex-col items-center w-full max-w-sm px-4 pt-16 pb-24">
 
         {/* Logo */}
-        <div className="animate-gf-fade-slide-down mb-2">
+        <div className="animate-gf-fade-slide-down mb-2 flex justify-center">
           <Image
             src="/icons/goatflow_main_screen_logo.webp"
             alt="GOATflow"
-            width={190}
-            height={190}
+            width={280}
+            height={280}
             priority
-            style={{ width: 190, height: "auto" }}
+            style={{ width: 280, height: "auto", objectFit: "contain" }}
           />
         </div>
 
@@ -229,10 +229,11 @@ export default function LoginPage() {
           className="animate-gf-fade-slide-up text-center mb-8"
           style={{
             fontFamily: "'DM Sans', sans-serif",
-            fontSize: "13px",
+            fontSize: "16px",
             color: "rgba(255,255,255,0.55)",
             letterSpacing: "0.05em",
             animationDelay: "400ms",
+            marginTop: 8,
           }}
         >
           Grab life by the horns. Leave the bull behind.
