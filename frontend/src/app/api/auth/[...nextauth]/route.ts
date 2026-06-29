@@ -9,9 +9,6 @@ const pool = new Pool({
   connectionString: process.env.NEXTAUTH_DATABASE_URL,
 });
 
-// Module-level token cache to bridge signIn → jwt callback gap
-const tokenMap = new Map<string, { token: string; userId: string }>();
-
 // Manual adapter targeting our prefixed tables. @auth/pg-adapter assumes a
 // "users" table with a "name" column; our GOATflow "users" table uses
 // "display_name", so we use nextauth_users for the adapter's bookkeeping and
@@ -139,8 +136,13 @@ const handler = NextAuth({
         (user as any).goatflow_token = data.access_token;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (user as any).goatflow_user_id = data.user_id;
-        // Store in module-level map for jwt callback to retrieve if user object is dropped
-        tokenMap.set(email, { token: data.access_token, userId: data.user_id });
+        // Store in DB bridge — survives across Vercel serverless instances
+        await fetch(`${apiUrl}/auth/store-token`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, goatflow_token: data.access_token, user_id: data.user_id }),
+        });
+        console.log("[signIn] token stored in DB bridge");
         return true;
       } catch (err) {
         console.error("[signIn callback error]", err);
@@ -156,13 +158,19 @@ const handler = NextAuth({
         token.goatflow_user_id = (user as any).goatflow_user_id;
         console.log("[jwt] set from user object:", !!token.goatflow_token);
       }
-      // Fallback: retrieve from module-level map if token not set
+      // Fallback: retrieve from DB bridge if token not set (cross-instance miss)
       if (!token.goatflow_token && token.email) {
-        const cached = tokenMap.get(token.email as string);
-        if (cached) {
-          token.goatflow_token = cached.token;
-          token.goatflow_user_id = cached.userId;
-          console.log("[jwt] retrieved from tokenMap:", !!token.goatflow_token);
+        try {
+          const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+          const bridgeRes = await fetch(`${apiUrl}/auth/retrieve-token?email=${encodeURIComponent(token.email as string)}`);
+          const bridge = await bridgeRes.json();
+          if (bridge.token) {
+            token.goatflow_token = bridge.token;
+            token.goatflow_user_id = bridge.user_id;
+            console.log("[jwt] retrieved from DB bridge:", !!token.goatflow_token);
+          }
+        } catch (err) {
+          console.error("[jwt] DB bridge fetch error:", err);
         }
       }
       return token;

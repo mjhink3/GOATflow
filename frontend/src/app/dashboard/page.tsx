@@ -296,7 +296,7 @@ export default function DashboardPage() {
 
           {/* ── Track Sieve ── */}
           <section
-            className="rounded-2xl border border-goat-border p-4"
+            className="rounded-2xl border border-goat-border p-4 track-sieve-section"
             style={{ background: "rgba(13,13,26,0.6)" }}
           >
             <div className="flex items-center gap-2 mb-4">

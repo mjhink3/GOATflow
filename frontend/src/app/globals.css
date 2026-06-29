@@ -314,3 +314,41 @@
 }
 
 aside::-webkit-scrollbar { display: none; }
+
+/* ── Shepherd.js / GOATflow tour overrides ── */
+.goatflow-tour-step .shepherd-content {
+  background: #1A1A2E;
+  border: 1px solid #2A2A4A;
+  border-radius: 12px;
+  color: #F5F5F5;
+  font-family: var(--font-dm-sans);
+  max-width: 320px;
+}
+.goatflow-tour-step .shepherd-text {
+  font-size: 13px;
+  line-height: 1.6;
+  color: #d1d5db;
+  padding: 12px 16px;
+}
+.goatflow-tour-step .shepherd-footer {
+  padding: 0 16px 12px;
+}
+.goatflow-tour-step .shepherd-button {
+  background: rgba(97,0,255,0.35);
+  border: 1px solid rgba(97,0,255,0.55);
+  color: #a78bfa;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+.goatflow-tour-step .shepherd-button:hover {
+  background: rgba(97,0,255,0.5);
+}
+.goatflow-tour-step .shepherd-cancel-icon {
+  color: #6b7280;
+}
+.shepherd-modal-overlay-container {
+  opacity: 0.7;
+}

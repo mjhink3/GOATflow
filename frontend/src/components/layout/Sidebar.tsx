@@ -267,7 +267,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
       </div>
 
       {/* ── Signal Score ── */}
-      <div className="px-4 py-3 border-b border-goat-border">
+      <div className="px-4 py-3 border-b border-goat-border signal-score-section">
         <div style={{ background: "rgba(13,13,26,0.8)", border: "1px solid #2A2A4A", borderRadius: 12, padding: "12px 14px" }}>
           <p style={{ fontFamily: "var(--font-syne)", fontWeight: 700, fontSize: 13, color: "#F5F5F5", marginBottom: 10 }}>
             ⚡ Signal Score
@@ -347,7 +347,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
       </div>
 
       {/* ── GOAT Horns ── */}
-      <div className="px-4 py-3 border-b border-goat-border">
+      <div className="px-4 py-3 border-b border-goat-border goat-horns-section">
         <p style={{ fontSize: 9, color: "#6100ff", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: 8 }}>
           ▸ GOAT Horns ({activeHorns.length}/10) — influenced {player?.horn_influence_count ?? 0} tracks
         </p>
