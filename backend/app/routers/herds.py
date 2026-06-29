@@ -15,6 +15,8 @@ router = APIRouter()
 class CreateHerdIn(BaseModel):
     name: str
     description: Optional[str] = None
+    herd_type: str = "free_range"
+    work_domain: Optional[str] = None
 
 
 class JoinHerdIn(BaseModel):
@@ -37,9 +39,13 @@ async def create_herd(
     if existing and existing["current_herd_id"]:
         raise HTTPException(status_code=400, detail="You are already in a Herd. Leave your current Herd first.")
 
+    if body.herd_type not in ("free_range", "work"):
+        raise HTTPException(status_code=400, detail="herd_type must be 'free_range' or 'work'")
+
     herd = await conn.fetchrow(
-        "INSERT INTO herds (name, description, created_by) VALUES ($1, $2, $3) RETURNING *",
-        body.name, body.description, str(uid),
+        """INSERT INTO herds (name, description, created_by, herd_type, work_domain)
+           VALUES ($1, $2, $3, $4, $5) RETURNING *""",
+        body.name, body.description, str(uid), body.herd_type, body.work_domain,
     )
 
     await conn.execute(
