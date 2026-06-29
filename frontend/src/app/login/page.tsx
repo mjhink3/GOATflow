@@ -217,10 +217,10 @@ export default function LoginPage() {
           <Image
             src="/icons/goatflow_main_screen_logo.webp"
             alt="GOATflow"
-            width={240}
-            height={240}
+            width={320}
+            height={320}
             priority
-            style={{ width: 240, height: "auto", objectFit: "contain" }}
+            style={{ width: 320, height: "auto", objectFit: "contain" }}
           />
         </div>
 
@@ -234,7 +234,7 @@ export default function LoginPage() {
             letterSpacing: "0.04em",
             lineHeight: 1.6,
             animationDelay: "400ms",
-            marginTop: 6,
+            marginTop: 0,
             marginBottom: 16,
           }}
         >
