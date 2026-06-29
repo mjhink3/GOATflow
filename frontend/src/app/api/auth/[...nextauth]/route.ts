@@ -9,6 +9,9 @@ const pool = new Pool({
   connectionString: process.env.NEXTAUTH_DATABASE_URL,
 });
 
+// Module-level token cache to bridge signIn → jwt callback gap
+const tokenMap = new Map<string, { token: string; userId: string }>();
+
 // Manual adapter targeting our prefixed tables. @auth/pg-adapter assumes a
 // "users" table with a "name" column; our GOATflow "users" table uses
 // "display_name", so we use nextauth_users for the adapter's bookkeeping and
@@ -107,56 +110,65 @@ const handler = NextAuth({
   secret: process.env.NEXTAUTH_SECRET,
   callbacks: {
     async signIn({ user, account }) {
-      if (!user.email) return false;
+      const email = user.email;
+      if (!email) return false;
       try {
-        // account is null for email magic links in NextAuth v4
-        const provider = account?.provider ?? "email";
-        const providerId = account?.providerAccountId ?? user.email;
-        // API_URL is a server-only var; NEXT_PUBLIC_API_URL is build-time only
-        // and may not be available at runtime in Vercel serverless functions
         const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+        const provider = account?.provider ?? "email";
+        const providerId = account?.providerAccountId ?? email;
+        console.log("[signIn] calling oauth endpoint for:", email, provider);
         const res = await fetch(`${apiUrl}/auth/oauth`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            email: user.email,
-            display_name: user.name ?? user.email.split("@")[0],
+            email,
+            display_name: user.name ?? email.split("@")[0],
             provider,
             provider_id: providerId,
           }),
         });
         console.log("[signIn] oauth response status:", res.status);
         if (!res.ok) {
-          console.error("[NextAuth signIn] /auth/oauth responded", res.status, await res.text().catch(() => ""));
+          const body = await res.text();
+          console.error("[signIn] oauth failed:", body);
           return false;
         }
         const data = await res.json();
-        console.log("[signIn] oauth response data keys:", Object.keys(data));
+        console.log("[signIn] got token:", !!data.access_token);
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (user as any).goatflow_token = data.access_token;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (user as any).goatflow_user_id = data.user_id;
-        console.log("[signIn] set goatflow_token:", !!data.access_token);
+        // Store in module-level map for jwt callback to retrieve if user object is dropped
+        tokenMap.set(email, { token: data.access_token, userId: data.user_id });
         return true;
       } catch (err) {
-        console.error("[NextAuth signIn callback error]", err);
+        console.error("[signIn callback error]", err);
         return false;
       }
     },
     async jwt({ token, user }) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      console.log("[jwt] user present:", !!user, "goatflow_token:", !!(user as any)?.goatflow_token);
+      console.log("[jwt] called, user present:", !!user, "email:", token.email);
       if (user) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         token.goatflow_token = (user as any).goatflow_token;
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         token.goatflow_user_id = (user as any).goatflow_user_id;
+        console.log("[jwt] set from user object:", !!token.goatflow_token);
       }
-      console.log("[jwt] token after:", !!token.goatflow_token);
+      // Fallback: retrieve from module-level map if token not set
+      if (!token.goatflow_token && token.email) {
+        const cached = tokenMap.get(token.email as string);
+        if (cached) {
+          token.goatflow_token = cached.token;
+          token.goatflow_user_id = cached.userId;
+          console.log("[jwt] retrieved from tokenMap:", !!token.goatflow_token);
+        }
+      }
       return token;
     },
     async session({ session, token }) {
-      console.log("[session] token.goatflow_token:", !!token.goatflow_token);
+      console.log("[session] token.goatflow_token present:", !!token.goatflow_token);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (session as any).goatflow_token = token.goatflow_token;
       return session;
