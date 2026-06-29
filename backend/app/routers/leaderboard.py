@@ -12,6 +12,52 @@ VALID_CATEGORIES = {"hay", "cheese", "tracks", "gait", "stakes"}
 _FIELD_MAP = {"hay": "total_hay_earned", "cheese": "fresh_cheese", "tracks": "tasks_completed"}
 
 
+@router.get("/weekly_movers")
+async def get_weekly_movers(
+    current_user: dict = Depends(get_current_user),
+    conn: asyncpg.Connection = Depends(get_db),
+):
+    rows = await conn.fetch(
+        """
+        SELECT ol.user_id, u.display_name, COALESCE(SUM(ol.hay_earned), 0) AS value
+        FROM operational_log ol
+        JOIN users u ON CAST(u.id AS TEXT) = ol.user_id
+        WHERE ol.resolved_at >= CURRENT_DATE - INTERVAL '7 days'
+          AND ol.resolution = 'completed'
+        GROUP BY ol.user_id, u.display_name
+        ORDER BY value DESC
+        LIMIT 20
+        """
+    )
+    entries = [{"user_id": r["user_id"], "display_name": r["display_name"], "value": int(r["value"])} for r in rows]
+    ranked = [{**e, "rank": i + 1, "is_current_user": e["user_id"] == current_user["id"]} for i, e in enumerate(entries)]
+    current_user_rank = next((e["rank"] for e in ranked if e["is_current_user"]), None)
+    return {"entries": ranked, "current_user_rank": current_user_rank, "category": "weekly_movers"}
+
+
+@router.get("/heat_check")
+async def get_heat_check(
+    current_user: dict = Depends(get_current_user),
+    conn: asyncpg.Connection = Depends(get_db),
+):
+    rows = await conn.fetch(
+        """
+        SELECT ol.user_id, u.display_name, COALESCE(SUM(ol.hay_earned), 0) AS value
+        FROM operational_log ol
+        JOIN users u ON CAST(u.id AS TEXT) = ol.user_id
+        WHERE DATE(ol.resolved_at) = CURRENT_DATE
+          AND ol.resolution = 'completed'
+        GROUP BY ol.user_id, u.display_name
+        ORDER BY value DESC
+        LIMIT 20
+        """
+    )
+    entries = [{"user_id": r["user_id"], "display_name": r["display_name"], "value": int(r["value"])} for r in rows]
+    ranked = [{**e, "rank": i + 1, "is_current_user": e["user_id"] == current_user["id"]} for i, e in enumerate(entries)]
+    current_user_rank = next((e["rank"] for e in ranked if e["is_current_user"]), None)
+    return {"entries": ranked, "current_user_rank": current_user_rank, "category": "heat_check"}
+
+
 @router.get("/{category}")
 async def get_leaderboard(
     category: str,

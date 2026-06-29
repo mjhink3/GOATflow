@@ -166,4 +166,8 @@ async def churn(
         """,
         current_user["id"],
     )
-    return [dict(r) for r in rows]
+    return {
+        "signals": [dict(r) for r in rows],
+        "rejected_inputs": result.rejected_inputs,
+        "signal_warning": result.signal_warning,
+    }

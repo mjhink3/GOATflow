@@ -18,3 +18,13 @@ export async function getLeaderboard(category: string): Promise<LeaderboardRespo
   const res = await api.get<LeaderboardResponse>(`/leaderboard/${category}`);
   return res.data;
 }
+
+export async function getWeeklyMovers(): Promise<LeaderboardResponse> {
+  const res = await api.get<LeaderboardResponse>(`/leaderboard/weekly_movers`);
+  return res.data;
+}
+
+export async function getHeatCheck(): Promise<LeaderboardResponse> {
+  const res = await api.get<LeaderboardResponse>(`/leaderboard/heat_check`);
+  return res.data;
+}

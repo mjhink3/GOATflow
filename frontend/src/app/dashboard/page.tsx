@@ -11,6 +11,7 @@ import { TrackCard } from "@/components/dashboard/TrackCard";
 import { HayPopup } from "@/components/dashboard/HayPopup";
 import { FreshCheesePopup } from "@/components/dashboard/FreshCheesePopup";
 import { TrailNotePrompt } from "@/components/dashboard/TrailNotePrompt";
+import { TrackRatingPrompt } from "@/components/dashboard/TrackRatingPrompt";
 import { CancelReasonPrompt } from "@/components/dashboard/CancelReasonPrompt";
 import type { CompletionResult } from "@/lib/types";
 
@@ -29,18 +30,21 @@ export default function DashboardPage() {
   const [claimDone, setClaimDone]       = useState(false);
 
   // ── Track Sieve ──
-  const [sieverText, setSieverText]     = useState("");
-  const [sieverFiles, setSieverFiles]   = useState<File[]>([]);
-  const [isDragging, setIsDragging]     = useState(false);
-  const [isChurning, setIsChurning]     = useState(false);
-  const [churnCount, setChurnCount]     = useState(0);
-  const [churnError, setChurnError]     = useState("");
+  const [sieverText, setSieverText]         = useState("");
+  const [sieverFiles, setSieverFiles]       = useState<File[]>([]);
+  const [isDragging, setIsDragging]         = useState(false);
+  const [isChurning, setIsChurning]         = useState(false);
+  const [churnCount, setChurnCount]         = useState(0);
+  const [churnError, setChurnError]         = useState("");
+  const [rejectedInputs, setRejectedInputs] = useState<string[]>([]);
+  const [signalWarning, setSignalWarning]   = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ── Completion popups ──
   const [completionResult, setCompletionResult]     = useState<CompletionResult | null>(null);
   const [completionCreatedAt, setCompletionCreatedAt] = useState<string | null>(null);
-  const [trailNoteData, setTrailNoteData]           = useState<{ logId: number; taskName: string; daysElapsed: number } | null>(null);
+  const [trailNoteData, setTrailNoteData]           = useState<{ logId: number; taskName: string; daysElapsed: number; tier: string } | null>(null);
+  const [ratingData, setRatingData]                 = useState<{ logId: number; taskName: string; tier: string } | null>(null);
   const [pendingCheese, setPendingCheese]           = useState<{ count: number; total: number } | null>(null);
   const [showCheese, setShowCheese]                 = useState(false);
   const [cancelResult, setCancelResult]             = useState<{ taskName: string; logId: number | null } | null>(null);
@@ -87,7 +91,7 @@ export default function DashboardPage() {
 
   async function handleChurn() {
     if (churnCount >= CHURN_DAILY_LIMIT) {
-      setChurnError("Daily limit reached (5 churns/day). Come back tomorrow.");
+      setChurnError(`Daily limit reached (${CHURN_DAILY_LIMIT} churns/day). Come back tomorrow.`);
       return;
     }
     if (!sieverText.trim() && sieverFiles.length === 0) {
@@ -95,13 +99,17 @@ export default function DashboardPage() {
       return;
     }
     setChurnError("");
+    setRejectedInputs([]);
+    setSignalWarning("");
     setIsChurning(true);
     try {
-      await runChurn(sieverFiles, sieverText);
+      const result = await runChurn(sieverFiles, sieverText);
       setChurnCount(c => c + 1);
       setSieverText("");
       setSieverFiles([]);
       if (fileInputRef.current) fileInputRef.current.value = "";
+      if (result.rejected_inputs?.length > 0) setRejectedInputs(result.rejected_inputs);
+      if (result.signal_warning) setSignalWarning(result.signal_warning);
       qc.invalidateQueries({ queryKey: ["signals"] });
     } catch (err: unknown) {
       const detail = (err as { response?: { data?: { detail?: string } } })?.response?.data?.detail;
@@ -125,20 +133,31 @@ export default function DashboardPage() {
     const cheeseTotal = completionResult?.cheese_total ?? 0;
     const logId = completionResult?.log_id ?? 0;
     const taskName = completionResult?.task_name ?? "";
+    const tier = completionResult?.xp_tier ?? "Standard";
     const elapsed = completionCreatedAt
       ? Math.max(0, Math.floor((Date.now() - new Date(completionCreatedAt).getTime()) / (1000 * 60 * 60 * 24)))
       : 0;
     setCompletionResult(null);
     setCompletionCreatedAt(null);
     if (cheese > 0) setPendingCheese({ count: cheese, total: cheeseTotal });
-    setTrailNoteData({ logId, taskName, daysElapsed: elapsed });
+    setTrailNoteData({ logId, taskName, daysElapsed: elapsed, tier });
   }
 
   function handleTrailNoteClose() {
+    const data = trailNoteData;
     setTrailNoteData(null);
-    if (pendingCheese) {
-      setShowCheese(true);
+    const count = (parseInt(localStorage.getItem("goatflow_completion_count") || "0", 10) || 0) + 1;
+    localStorage.setItem("goatflow_completion_count", String(count));
+    if (count % 3 === 0 && data) {
+      setRatingData({ logId: data.logId, taskName: data.taskName, tier: data.tier });
+    } else {
+      if (pendingCheese) setShowCheese(true);
     }
+  }
+
+  function handleRatingClose() {
+    setRatingData(null);
+    if (pendingCheese) setShowCheese(true);
   }
 
   function handleTrackCancelled(taskName: string, logId: number | null) {
@@ -170,7 +189,15 @@ export default function DashboardPage() {
           onDone={() => setCancelResult(null)}
         />
       )}
-      {showCheese && !completionResult && !trailNoteData && (
+      {ratingData && !completionResult && !trailNoteData && (
+        <TrackRatingPrompt
+          taskName={ratingData.taskName}
+          tier={ratingData.tier}
+          logId={ratingData.logId}
+          onDismiss={handleRatingClose}
+        />
+      )}
+      {showCheese && !completionResult && !trailNoteData && !ratingData && (
         <FreshCheesePopup
           count={pendingCheese?.count ?? 1}
           total={pendingCheese?.total ?? 1}
@@ -375,10 +402,27 @@ export default function DashboardPage() {
               <Image src="/icons/icon_churn_engine.png" alt="" width={40} height={40} />
               {isChurning ? "Churning…" : "Drop Into Churn Engine"}
             </button>
+
+            {rejectedInputs.length > 0 && (
+              <div style={{ marginTop: 12, padding: "10px 14px", borderRadius: 8, background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)" }}>
+                <p style={{ fontSize: 12, color: "#f59e0b", marginBottom: 6, fontWeight: 600 }}>🐐 Some inputs needed more signal:</p>
+                <ul style={{ paddingLeft: 16, margin: 0 }}>
+                  {rejectedInputs.map((input, i) => (
+                    <li key={i} style={{ fontSize: 11, color: "#9ca3af", marginBottom: 2 }}>{input}</li>
+                  ))}
+                </ul>
+                <p style={{ fontSize: 10, color: "#6b7280", marginTop: 6, fontStyle: "italic" }}>The goat can&apos;t chew fog.</p>
+              </div>
+            )}
           </section>
 
 {/* ── Active Tracks ── */}
           <section>
+            {signalWarning && (
+              <div style={{ marginBottom: 12, padding: "10px 14px", borderRadius: 8, background: "rgba(245,158,11,0.08)", border: "1px solid rgba(245,158,11,0.25)" }}>
+                <p style={{ fontSize: 12, color: "#f59e0b" }}>⚠️ {signalWarning}</p>
+              </div>
+            )}
             <div className="flex items-center gap-2 mb-3">
               <Image src="/icons/icon_tracks.webp" alt="" width={20} height={20} />
               <h2 className="font-syne text-goat-white font-bold" style={{ fontSize: 18 }}>

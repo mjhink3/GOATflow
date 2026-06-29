@@ -28,6 +28,8 @@ class Signal(BaseModel):
 
 class ChurnOutput(BaseModel):
     signals: list[Signal]
+    rejected_inputs: list[str] = []
+    signal_warning: str = ""
 
 
 _SYSTEM_PROMPT_BASE = """You are the GOATflow Churn Engine — the tactical input layer for a high-performance task management system.
@@ -66,7 +68,19 @@ Rules:
 - directive_applied: true ONLY when a GOAT Horn directly changed this task's priority ranking.
 - horn_applied_name: exact text of the Horn that governed this task, or empty string.
 - category: exactly one of: communication, administrative, creative, financial, personal, health, technical, planning, operational, other
-- CRITICAL: Never invent, assume, or hallucinate specific names, companies, deadlines, or details not explicitly present in the user's input. If the user says 'follow up on jobs', the task name should be 'Follow up on jobs applied last week' — do not add specific company names, recruiter names, or details that were not in the input. Keep task names faithful to exactly what the user provided."""
+- CRITICAL: Never invent, assume, or hallucinate specific names, companies, deadlines, or details not explicitly present in the user's input. If the user says 'follow up on jobs', the task name should be 'Follow up on jobs applied last week' — do not add specific company names, recruiter names, or details that were not in the input. Keep task names faithful to exactly what the user provided.
+
+SIGNAL STRENGTH EVALUATION: Before generating tracks, evaluate each item in the user's input for signal quality:
+- GOAT Signal: has specific action + clear outcome + deadline/urgency + meaningful impact. Eligible for GOAT tier and maximum Hay.
+- High Signal: specific action with clear outcome. Eligible for High-Leverage tier.
+- Medium Signal: actionable but missing outcome or deadline. Standard or Micro tier only.
+- Low Signal: vague, unclear, or unactionable (e.g. 'work on stuff', 'be productive', 'think about project'). Do NOT generate a track. Instead add to rejected_inputs with a brief reason.
+
+ANTI-FARMING RULES:
+- Never award GOAT tier to vague inputs regardless of how they are phrased.
+- If more than 50% of inputs are low signal, set signal_warning to a short message explaining the overall quality issue.
+- Repetitive tasks (same task appearing 3+ times in recent history) get Micro tier maximum.
+- 'The goat can't chew fog' — no signal, no meaningful Hay."""
 
 _JSON_SCHEMA = """{
   "signals": [
@@ -80,7 +94,9 @@ _JSON_SCHEMA = """{
       "horn_applied_name": "",
       "category": "communication | administrative | creative | financial | personal | health | technical | planning | operational | other"
     }
-  ]
+  ],
+  "rejected_inputs": ["list of low-signal inputs not converted to tracks, each as a short descriptive string"],
+  "signal_warning": "short warning if overall input quality is poor, else empty string"
 }"""
 
 
