@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.services.gamification import ascension_rank, compute_level, pasture_name
+from app.services.decay import compute_decay
 
 router = APIRouter()
 
@@ -89,6 +90,8 @@ async def get_player(
         "clip_rate":         round(clip * 100),
     }
 
+    decay_info = await compute_decay(conn, current_user["id"])
+
     return {
         **player,
         "level": level,
@@ -109,7 +112,23 @@ async def get_player(
         "signal_score": signal_score,
         "signal_label": signal_label,
         "signal_breakdown": signal_breakdown,
+        "cheese_state": decay_info.get("new_state", player.get("cheese_state", "fresh")),
+        "hay_lost_to_decay": decay_info.get("hay_lost", 0),
+        "days_inactive": decay_info.get("days_inactive", 0),
+        "demotion_warning": decay_info.get("demotion_warning", False),
+        "cheese_floor": decay_info.get("cheese_floor", 0),
+        "recovery_day": decay_info.get("recovery_day", 0),
     }
+
+
+@router.post("/decay/apply")
+async def apply_decay_endpoint(
+    current_user: dict = Depends(get_current_user),
+    conn: asyncpg.Connection = Depends(get_db),
+):
+    from app.services.decay import apply_decay
+    result = await apply_decay(conn, str(current_user["id"]))
+    return result
 
 
 async def _compute_gait_streak(conn: asyncpg.Connection, user_id: str) -> int:

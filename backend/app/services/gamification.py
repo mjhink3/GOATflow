@@ -180,7 +180,11 @@ async def complete_signal(
                 tasks_completed  = tasks_completed + 1,
                 level            = $2,
                 hay              = $3,
-                fresh_cheese     = $4
+                fresh_cheese     = $4,
+                last_active_at   = NOW(),
+                cheese_state     = 'fresh',
+                rot_started_at   = NULL,
+                demotion_warning = FALSE
             WHERE user_id = $5
             """,
             new_total_hay,
