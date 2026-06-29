@@ -6,6 +6,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/lib/hooks/useAuth";
 import { usePlayer } from "@/lib/hooks/usePlayer";
 import { useHorns } from "@/lib/hooks/useHorns";
+import { useHerd } from "@/lib/hooks/useHerd";
 import { pasture_name, ascension_rank } from "@/lib/gamification";
 
 const LEVEL_IMAGES: Record<number, string> = {
@@ -73,11 +74,21 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
   const { user, logout } = useAuth();
   const { player } = usePlayer();
   const { horns, save, isSaving } = useHorns();
+  const { herd, members, invite_code, isInHerd, isHerdBoss, create: createHerd, join: joinHerd, leave: leaveHerd } = useHerd();
 
-  const [localHorns, setLocalHorns] = useState<string[] | null>(null);
-  const [newHorn, setNewHorn]         = useState("");
-  const [copied, setCopied]           = useState<number | null>(null);
-  const [goatifOn, setGoatifOn]       = useState(false);
+  const [localHorns, setLocalHorns]     = useState<string[] | null>(null);
+  const [newHorn, setNewHorn]           = useState("");
+  const [copied, setCopied]             = useState<number | null>(null);
+  const [goatifOn, setGoatifOn]         = useState(false);
+
+  // Herd UI state
+  const [herdMode, setHerdMode]         = useState<"none" | "create" | "join">("none");
+  const [herdName, setHerdName]         = useState("");
+  const [herdDesc, setHerdDesc]         = useState("");
+  const [joinCode, setJoinCode]         = useState("");
+  const [herdPending, setHerdPending]   = useState(false);
+  const [herdError, setHerdError]       = useState("");
+  const [codeCopied, setCodeCopied]     = useState(false);
 
   useEffect(() => {
     setGoatifOn(localStorage.getItem("goatflow_notif_master") === "true");
@@ -129,6 +140,44 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
     navigator.clipboard.writeText(text);
     setCopied(idx);
     setTimeout(() => setCopied(null), 1500);
+  }
+
+  async function handleCreateHerd() {
+    if (!herdName.trim()) return;
+    setHerdPending(true);
+    setHerdError("");
+    try {
+      await createHerd({ name: herdName.trim(), description: herdDesc.trim() || undefined });
+      setHerdMode("none");
+      setHerdName("");
+      setHerdDesc("");
+    } catch {
+      setHerdError("Failed to create herd. Try again.");
+    } finally {
+      setHerdPending(false);
+    }
+  }
+
+  async function handleJoinHerd() {
+    if (!joinCode.trim()) return;
+    setHerdPending(true);
+    setHerdError("");
+    try {
+      await joinHerd(joinCode.trim());
+      setHerdMode("none");
+      setJoinCode("");
+    } catch {
+      setHerdError("Invalid or expired invite code.");
+    } finally {
+      setHerdPending(false);
+    }
+  }
+
+  function copyInviteCode() {
+    if (!invite_code) return;
+    navigator.clipboard.writeText(invite_code);
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 1500);
   }
 
   function toggleGoatif() {
@@ -313,6 +362,143 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
         </div>
       </div>
 
+      {/* ── My Herd ── */}
+      <div className="px-4 py-3 border-b border-goat-border">
+        <p style={{ fontSize: 9, color: "#6100ff", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: 8 }}>
+          ▸ My Herd
+        </p>
+
+        {isInHerd ? (
+          <div>
+            <div style={{ background: "rgba(13,13,26,0.8)", border: "1px solid #2A2A4A", borderRadius: 10, padding: "10px 12px", marginBottom: 8 }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                <span style={{ fontSize: 12, color: "#F5F5F5", fontWeight: 700, fontFamily: "var(--font-syne)" }}>
+                  🐐 {herd?.name}
+                </span>
+                {isHerdBoss && (
+                  <span style={{ fontSize: 8, padding: "1px 6px", borderRadius: 99, background: "rgba(97,0,255,0.3)", border: "1px solid rgba(97,0,255,0.5)", color: "#a78bfa", textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                    HerdBoss
+                  </span>
+                )}
+              </div>
+              <p style={{ fontSize: 10, color: "#6b7280", marginBottom: 2 }}>
+                Pasture {herd?.pasture_level} · {members.length} member{members.length !== 1 ? "s" : ""}
+              </p>
+              {isHerdBoss && invite_code && (
+                <div style={{ display: "flex", alignItems: "center", gap: 6, marginTop: 6 }}>
+                  <span style={{ fontSize: 9, color: "#4b5563", fontFamily: "monospace", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                    {invite_code}
+                  </span>
+                  <button
+                    onClick={copyInviteCode}
+                    style={{ fontSize: 9, padding: "2px 6px", borderRadius: 4, cursor: "pointer", whiteSpace: "nowrap",
+                      background: codeCopied ? "rgba(83,198,96,0.2)" : "rgba(97,0,255,0.15)",
+                      border: `1px solid ${codeCopied ? "rgba(83,198,96,0.4)" : "rgba(97,0,255,0.3)"}`,
+                      color: codeCopied ? "#53c660" : "#a78bfa" }}
+                  >
+                    {codeCopied ? "Copied!" : "Copy"}
+                  </button>
+                </div>
+              )}
+            </div>
+            <div style={{ display: "flex", gap: 6 }}>
+              <button
+                onClick={() => { router.push("/herd"); onClose?.(); }}
+                style={{ flex: 1, fontSize: 10, padding: "5px 8px", borderRadius: 7, cursor: "pointer",
+                  background: "rgba(97,0,255,0.2)", border: "1px solid rgba(97,0,255,0.4)", color: "#a78bfa" }}
+              >
+                View Herd
+              </button>
+              <button
+                onClick={() => leaveHerd()}
+                style={{ fontSize: 10, padding: "5px 8px", borderRadius: 7, cursor: "pointer",
+                  background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.2)", color: "rgba(239,68,68,0.6)" }}
+              >
+                Leave
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div>
+            {herdMode === "none" && (
+              <div style={{ display: "flex", gap: 6 }}>
+                <button
+                  onClick={() => { setHerdMode("create"); setHerdError(""); }}
+                  style={{ flex: 1, fontSize: 10, padding: "6px 8px", borderRadius: 7, cursor: "pointer",
+                    background: "rgba(97,0,255,0.2)", border: "1px solid rgba(97,0,255,0.4)", color: "#a78bfa" }}
+                >
+                  + Create
+                </button>
+                <button
+                  onClick={() => { setHerdMode("join"); setHerdError(""); }}
+                  style={{ flex: 1, fontSize: 10, padding: "6px 8px", borderRadius: 7, cursor: "pointer",
+                    background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.12)", color: "#9ca3af" }}
+                >
+                  Join Code
+                </button>
+              </div>
+            )}
+
+            {herdMode === "create" && (
+              <div>
+                <input
+                  value={herdName}
+                  onChange={e => setHerdName(e.target.value)}
+                  placeholder="Herd name…"
+                  style={{ width: "100%", marginBottom: 4, background: "rgba(97,0,255,0.08)", border: "1px solid rgba(97,0,255,0.25)",
+                    borderRadius: 6, padding: "5px 8px", fontSize: 10, color: "#F5F5F5", outline: "none", boxSizing: "border-box" }}
+                />
+                <input
+                  value={herdDesc}
+                  onChange={e => setHerdDesc(e.target.value)}
+                  placeholder="Description (optional)"
+                  style={{ width: "100%", marginBottom: 6, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)",
+                    borderRadius: 6, padding: "5px 8px", fontSize: 10, color: "#9ca3af", outline: "none", boxSizing: "border-box" }}
+                />
+                {herdError && <p style={{ fontSize: 9, color: "#ef4444", marginBottom: 4 }}>{herdError}</p>}
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button onClick={handleCreateHerd} disabled={herdPending}
+                    style={{ flex: 1, fontSize: 10, padding: "5px 8px", borderRadius: 7, cursor: herdPending ? "not-allowed" : "pointer",
+                      background: "rgba(97,0,255,0.3)", border: "1px solid rgba(97,0,255,0.5)", color: "#a78bfa" }}>
+                    {herdPending ? "Creating…" : "Create"}
+                  </button>
+                  <button onClick={() => { setHerdMode("none"); setHerdError(""); }}
+                    style={{ fontSize: 10, padding: "5px 10px", borderRadius: 7, cursor: "pointer",
+                      background: "transparent", border: "1px solid rgba(255,255,255,0.1)", color: "#6b7280" }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {herdMode === "join" && (
+              <div>
+                <input
+                  value={joinCode}
+                  onChange={e => setJoinCode(e.target.value)}
+                  placeholder="Paste invite code…"
+                  style={{ width: "100%", marginBottom: 6, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)",
+                    borderRadius: 6, padding: "5px 8px", fontSize: 10, color: "#F5F5F5", outline: "none", boxSizing: "border-box" }}
+                />
+                {herdError && <p style={{ fontSize: 9, color: "#ef4444", marginBottom: 4 }}>{herdError}</p>}
+                <div style={{ display: "flex", gap: 6 }}>
+                  <button onClick={handleJoinHerd} disabled={herdPending}
+                    style={{ flex: 1, fontSize: 10, padding: "5px 8px", borderRadius: 7, cursor: herdPending ? "not-allowed" : "pointer",
+                      background: "rgba(97,0,255,0.3)", border: "1px solid rgba(97,0,255,0.5)", color: "#a78bfa" }}>
+                    {herdPending ? "Joining…" : "Join"}
+                  </button>
+                  <button onClick={() => { setHerdMode("none"); setHerdError(""); }}
+                    style={{ fontSize: 10, padding: "5px 10px", borderRadius: 7, cursor: "pointer",
+                      background: "transparent", border: "1px solid rgba(255,255,255,0.1)", color: "#6b7280" }}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* ── Weekly Clip Rate bars ── */}
       <div className="px-4 py-3 border-b border-goat-border">
         <p style={{ fontSize: 9, color: "#6100ff", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: 8 }}>
@@ -427,6 +613,16 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* ── My Herd nav ── */}
+      <div className="px-4 py-2 border-b border-goat-border">
+        <button
+          className="w-full flex items-center gap-2 py-2 px-3 rounded-lg border border-goat-border text-xs text-goat-silver hover:border-goat-violet hover:text-goat-violet transition-colors"
+          onClick={() => { router.push("/herd"); onClose?.(); }}
+        >
+          🐐 My Herd
+        </button>
       </div>
 
       {/* ── Leaderboard ── */}

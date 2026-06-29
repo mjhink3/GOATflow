@@ -3,6 +3,8 @@ export interface User {
   username: string;
   display_name: string;
   created_at: string;
+  current_herd_id?: number | null;
+  role?: "member" | "herdboss";
 }
 
 export interface Player {
@@ -24,6 +26,15 @@ export interface Player {
   today_completion_pct: number | null;
   stakes_honor_rate: number | null;
   horn_influence_count: number;
+  signal_score?: number;
+  signal_label?: string;
+  signal_breakdown?: {
+    track_specificity: number;
+    trail_notes: number;
+    horn_calibration: number;
+    consistency: number;
+    clip_rate: number;
+  } | null;
 }
 
 export type Difficulty = "Micro" | "Standard" | "High-Leverage" | "GOAT";
