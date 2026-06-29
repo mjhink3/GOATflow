@@ -15,7 +15,7 @@ import { CancelReasonPrompt } from "@/components/dashboard/CancelReasonPrompt";
 import { RankCard } from "@/components/dashboard/RankCard";
 import type { CompletionResult } from "@/lib/types";
 
-const CHURN_DAILY_LIMIT = 5;
+const CHURN_DAILY_LIMIT = 15;
 
 export default function DashboardPage() {
   const qc = useQueryClient();
