@@ -4,12 +4,12 @@ export interface HerdMember {
   user_id: string;
   display_name: string;
   role: "member" | "herdboss";
-  joined_at: string;
-  total_hay_earned: number;
-  hay: number;
-  gait_streak: number;
-  tasks_completed: number;
-  level: number;
+  joined_at?: string;
+  total_hay_earned: number | null;
+  hay: number | null;
+  tasks_completed: number | null;
+  level: number | null;
+  fresh_cheese: number | null;
 }
 
 export interface Herd {

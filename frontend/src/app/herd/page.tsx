@@ -95,7 +95,7 @@ export default function HerdPage() {
                   )}
                 </div>
                 <p style={{ fontSize: 10, color: "#6b7280", marginTop: 1 }}>
-                  Lv {m.level ?? 1} · {m.gait_streak ?? 0}d streak · {m.tasks_completed ?? 0} tracks
+                  Lv {m.level ?? 1} · {m.tasks_completed ?? 0} tracks · {m.fresh_cheese ?? 0} 🧀
                 </p>
               </div>
               <div style={{ textAlign: "right", flexShrink: 0 }}>
