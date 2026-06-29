@@ -13,6 +13,10 @@ const pool = new Pool({
 const handler = NextAuth({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   adapter: PostgresAdapter(pool) as any,
+  // JWT strategy required even with adapter — adapter handles email verification
+  // tokens only; without this, NextAuth uses DB sessions and skips the jwt callback,
+  // so goatflow_token set in signIn never reaches the session callback.
+  session: { strategy: "jwt" },
   providers: [
     GoogleProvider({
       clientId: process.env.GOOGLE_CLIENT_ID!,
@@ -44,6 +48,9 @@ const handler = NextAuth({
     async signIn({ user, account }) {
       if (!user.email) return false;
       try {
+        // account is null for email magic links in NextAuth v4
+        const provider = account?.provider ?? "email";
+        const providerId = account?.providerAccountId ?? user.email;
         const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
         const res = await fetch(`${apiUrl}/auth/oauth`, {
           method: "POST",
@@ -51,8 +58,8 @@ const handler = NextAuth({
           body: JSON.stringify({
             email: user.email,
             display_name: user.name ?? user.email.split("@")[0],
-            provider: account?.provider ?? "email",
-            provider_id: account?.providerAccountId ?? user.email,
+            provider,
+            provider_id: providerId,
           }),
         });
         if (!res.ok) return false;

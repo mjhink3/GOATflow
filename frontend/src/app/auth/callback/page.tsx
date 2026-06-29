@@ -9,10 +9,16 @@ export default function AuthCallback() {
   const router = useRouter();
 
   useEffect(() => {
+    console.log("[AuthCallback] status:", status, "session:", session);
     if (status === "loading") return;
     if (session && (session as any).goatflow_token) {
+      console.log("[AuthCallback] token found, redirecting to dashboard");
       localStorage.setItem("goatflow_token", (session as any).goatflow_token);
       router.replace("/dashboard");
+    } else if (status === "authenticated") {
+      // Session exists but goatflow_token missing — signIn callback likely failed
+      console.error("[AuthCallback] authenticated but no goatflow_token:", session);
+      router.replace("/login?error=token_missing");
     } else if (status === "unauthenticated") {
       router.replace("/login");
     }
