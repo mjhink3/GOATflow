@@ -144,7 +144,13 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
   }
 
   async function lockInHorns() {
-    await save(activeHorns);
+    const trimmed = newHorn.trim();
+    const toSave =
+      trimmed && activeHorns.length < 10 && !activeHorns.includes(trimmed)
+        ? [...activeHorns, trimmed]
+        : activeHorns;
+    if (trimmed) setNewHorn("");
+    await save(toSave);
     setLocalHorns(null);
   }
 
