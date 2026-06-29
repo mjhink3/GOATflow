@@ -215,6 +215,64 @@ async def complete_signal(
             hay_earned,
         )
 
+        log_id = log_row["id"] if log_row else None
+
+        # ── Time-to-complete metrics ──
+        now_utc = datetime.utcnow()
+        if logged_at:
+            elapsed_s = int((now_utc - logged_at.replace(tzinfo=None)).total_seconds())
+            if elapsed_s < 60:
+                speed_bucket = "instant"
+            elif elapsed_s < 300:
+                speed_bucket = "fast"
+            elif elapsed_s < 3600:
+                speed_bucket = "normal"
+            elif elapsed_s < 86400:
+                speed_bucket = "slow"
+            else:
+                speed_bucket = "very_slow"
+            suspicious = sig["xp_reward"] in ("GOAT", "High-Leverage") and elapsed_s < 120
+            if log_id:
+                await conn.execute(
+                    """UPDATE operational_log
+                       SET signal_created_at = $1,
+                           time_to_complete_seconds = $2,
+                           completion_speed_bucket = $3,
+                           suspicious_completion_flag = $4
+                       WHERE id = $5""",
+                    logged_at, elapsed_s, speed_bucket, suspicious, log_id,
+                )
+
+        # ── Hay transaction ledger ──
+        if log_id:
+            await conn.execute(
+                """INSERT INTO hay_transactions
+                       (user_id, source_type, source_id, log_id, amount, balance_after,
+                        reason, xp_tier)
+                   VALUES ($1, 'track_completion', $2, $2, $3, $4, 'track completed', $5)""",
+                user_id, log_id, hay_earned, hay_remainder, sig["xp_reward"],
+            )
+
+        # ── Cheese transaction ledger (only when cheese was actually converted) ──
+        if cheese_gained > 0 and log_id:
+            await conn.execute(
+                """INSERT INTO cheese_transactions
+                       (user_id, transaction_type, cheese_type, amount, balance_after, source_hay_amount)
+                   VALUES ($1, 'converted_from_hay', 'fresh', $2, $3, $4)""",
+                user_id, cheese_gained, new_cheese, HAY_TO_CHEESE * cheese_gained,
+            )
+
+        # ── Proof event ──
+        if log_id:
+            await conn.execute(
+                """INSERT INTO proof_events
+                       (user_id, event_type, source_table, source_id, metadata)
+                   VALUES ($1, 'track_completed', 'operational_log', $2,
+                           ($3)::jsonb)""",
+                user_id, log_id,
+                f'{{"xp_tier": "{sig["xp_reward"]}", "hay_earned": {hay_earned}}}',
+            )
+
         # Award streak shield every 7 days of GAIT streak
         streak_rows = await conn.fetch(
             """
@@ -255,7 +313,7 @@ async def complete_signal(
         "leveled_up": new_level > old_level,
         "new_level": new_level,
         "pasture_name": pasture_name(new_level),
-        "log_id": log_row["id"] if log_row else None,
+        "log_id": log_id,
     }
 
 

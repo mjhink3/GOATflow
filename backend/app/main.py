@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import create_pool, close_pool, ensure_schema
-from app.routers import auth, signals, player, horns, stakes, churn, log, leaderboard
+from app.routers import auth, signals, player, horns, stakes, churn, log, leaderboard, behavioral
 
 
 @asynccontextmanager
@@ -34,6 +34,7 @@ app.include_router(stakes.router, prefix="/stakes", tags=["stakes"])
 app.include_router(churn.router, prefix="/churn", tags=["churn"])
 app.include_router(log.router, prefix="/log", tags=["log"])
 app.include_router(leaderboard.router, prefix="/leaderboard", tags=["leaderboard"])
+app.include_router(behavioral.router, prefix="/behavioral", tags=["behavioral"])
 
 
 @app.get("/health")
