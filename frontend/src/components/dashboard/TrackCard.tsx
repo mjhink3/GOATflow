@@ -37,12 +37,10 @@ export function TrackCard({ signal, index, onComplete, onCancel, onCompleted, on
 
   const tier = TIER_STYLES[signal.xp_reward] ?? TIER_STYLES.Standard;
 
-  // Effective bleat: High-Leverage/GOAT always Summit Call; Standard >=7 also Summit Call
+  // Summit Call only when the AI explicitly assigned it, or track is GOAT tier
   const effectiveSummit =
     signal.bleat_type === "Summit Call" ||
-    signal.xp_reward === "High-Leverage" ||
-    signal.xp_reward === "GOAT" ||
-    (signal.xp_reward === "Standard" && signal.operational_weight >= 7);
+    signal.xp_reward === "GOAT";
 
   // Hide category when the important signals already dominate
   const hideCategoryTag =
