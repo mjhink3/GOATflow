@@ -12,7 +12,6 @@ import { HayPopup } from "@/components/dashboard/HayPopup";
 import { FreshCheesePopup } from "@/components/dashboard/FreshCheesePopup";
 import { TrailNotePrompt } from "@/components/dashboard/TrailNotePrompt";
 import { CancelReasonPrompt } from "@/components/dashboard/CancelReasonPrompt";
-import { RankCard } from "@/components/dashboard/RankCard";
 import type { CompletionResult } from "@/lib/types";
 
 const CHURN_DAILY_LIMIT = 15;
@@ -45,7 +44,6 @@ export default function DashboardPage() {
   const [pendingCheese, setPendingCheese]           = useState<{ count: number; total: number } | null>(null);
   const [showCheese, setShowCheese]                 = useState(false);
   const [cancelResult, setCancelResult]             = useState<{ taskName: string; logId: number | null } | null>(null);
-  const [showRankCard, setShowRankCard]             = useState(false);
 
   // ─────────────────────────────────────────────────────────────────────────
   // Morning Stake Gate
@@ -379,22 +377,7 @@ export default function DashboardPage() {
             </button>
           </section>
 
-          {/* ── Share Your Rank ── */}
-          <div>
-            <button
-              onClick={() => setShowRankCard(v => !v)}
-              style={{
-                display: "flex", alignItems: "center", gap: 6,
-                fontSize: 11, color: showRankCard ? "#a78bfa" : "#6b7280",
-                background: "none", border: "none", cursor: "pointer", padding: 0, marginBottom: 8,
-              }}
-            >
-              {showRankCard ? "▾" : "▸"} Share Your Rank
-            </button>
-            {showRankCard && <RankCard />}
-          </div>
-
-          {/* ── Active Tracks ── */}
+{/* ── Active Tracks ── */}
           <section>
             <div className="flex items-center gap-2 mb-3">
               <Image src="/icons/icon_tracks.webp" alt="" width={20} height={20} />
