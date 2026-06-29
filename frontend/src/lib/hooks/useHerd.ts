@@ -23,8 +23,17 @@ export function useHerd() {
   };
 
   const create = useMutation({
-    mutationFn: ({ name, description }: { name: string; description?: string }) =>
-      createHerd(name, description),
+    mutationFn: ({
+      name,
+      description,
+      herd_type,
+      work_domain,
+    }: {
+      name: string;
+      description?: string;
+      herd_type?: "free_range" | "work";
+      work_domain?: string;
+    }) => createHerd(name, description, herd_type ?? "free_range", work_domain),
     onSuccess: refetchHerd,
   });
 

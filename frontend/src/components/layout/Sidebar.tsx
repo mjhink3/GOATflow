@@ -95,6 +95,8 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
   const [herdMode, setHerdMode]         = useState<"none" | "create" | "join">("none");
   const [herdName, setHerdName]         = useState("");
   const [herdDesc, setHerdDesc]         = useState("");
+  const [herdType, setHerdType]         = useState<"free_range" | "work">("free_range");
+  const [workDomain, setWorkDomain]     = useState("");
   const [joinCode, setJoinCode]         = useState("");
   const [herdPending, setHerdPending]   = useState(false);
   const [herdError, setHerdError]       = useState("");
@@ -157,9 +159,16 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
     setHerdPending(true);
     setHerdError("");
     try {
-      await createHerd({ name: herdName.trim(), description: herdDesc.trim() || undefined });
+      await createHerd({
+        name: herdName.trim(),
+        description: herdDesc.trim() || undefined,
+        herd_type: herdType,
+        work_domain: herdType === "work" && workDomain.trim() ? workDomain.trim() : undefined,
+      });
       setHerdMode("none");
       setHerdName("");
+      setHerdType("free_range");
+      setWorkDomain("");
       setHerdDesc("");
     } catch {
       setHerdError("Failed to create herd. Try again.");
@@ -465,6 +474,32 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
                   style={{ width: "100%", marginBottom: 6, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)",
                     borderRadius: 6, padding: "5px 8px", fontSize: 10, color: "#9ca3af", outline: "none", boxSizing: "border-box" }}
                 />
+                {/* Herd type toggle */}
+                <div style={{ display: "flex", gap: 4, marginBottom: 6 }}>
+                  {([["free_range", "🌿 Free-Range"], ["work", "💼 Work Herd"]] as const).map(([key, label]) => (
+                    <button
+                      key={key}
+                      onClick={() => setHerdType(key)}
+                      style={{
+                        flex: 1, fontSize: 9, padding: "4px 6px", borderRadius: 6, cursor: "pointer",
+                        background: herdType === key ? "rgba(83,198,96,0.25)" : "rgba(255,255,255,0.04)",
+                        border: `1px solid ${herdType === key ? "rgba(83,198,96,0.5)" : "rgba(255,255,255,0.1)"}`,
+                        color: herdType === key ? "#53c660" : "#6b7280",
+                      }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {herdType === "work" && (
+                  <input
+                    value={workDomain}
+                    onChange={e => setWorkDomain(e.target.value)}
+                    placeholder="Company domain (optional, e.g. rxo.com)"
+                    style={{ width: "100%", marginBottom: 6, background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)",
+                      borderRadius: 6, padding: "5px 8px", fontSize: 10, color: "#9ca3af", outline: "none", boxSizing: "border-box" }}
+                  />
+                )}
                 {herdError && <p style={{ fontSize: 9, color: "#ef4444", marginBottom: 4 }}>{herdError}</p>}
                 <div style={{ display: "flex", gap: 6 }}>
                   <button onClick={handleCreateHerd} disabled={herdPending}

@@ -221,13 +221,27 @@ export default function HerdPage() {
 
       {/* Header */}
       <div style={{ marginBottom: 32 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 6, flexWrap: "wrap" }}>
           <h1 className="font-syne text-goat-white font-bold" style={{ fontSize: 28 }}>
             🐐 {herd?.name}
           </h1>
           {isHerdBoss && (
             <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 99, background: "rgba(97,0,255,0.3)", border: "1px solid rgba(97,0,255,0.5)", color: "#a78bfa", textTransform: "uppercase", letterSpacing: "0.1em" }}>
               HerdBoss
+            </span>
+          )}
+          {herd?.herd_type === "work" ? (
+            <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 99, background: "rgba(59,130,246,0.2)", border: "1px solid rgba(59,130,246,0.4)", color: "#93c5fd" }}>
+              💼 Work Herd
+            </span>
+          ) : (
+            <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 99, background: "rgba(83,198,96,0.15)", border: "1px solid rgba(83,198,96,0.35)", color: "#86efac" }}>
+              🌿 Free-Range
+            </span>
+          )}
+          {herd?.is_verified && (
+            <span style={{ fontSize: 9, padding: "2px 8px", borderRadius: 99, background: "rgba(245,158,11,0.2)", border: "1px solid rgba(245,158,11,0.45)", color: "#fcd34d" }}>
+              ✓ Verified
             </span>
           )}
         </div>

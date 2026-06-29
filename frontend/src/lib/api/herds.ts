@@ -20,6 +20,9 @@ export interface Herd {
   herd_title: string;
   created_by: string;
   created_at: string;
+  herd_type: "free_range" | "work";
+  work_domain: string | null;
+  is_verified: boolean;
 }
 
 export interface HerdData {
@@ -38,8 +41,10 @@ export async function getMyHerd(): Promise<HerdData> {
 export async function createHerd(
   name: string,
   description?: string,
+  herd_type: "free_range" | "work" = "free_range",
+  work_domain?: string,
 ): Promise<{ herd: Herd; invite_code: string }> {
-  const res = await api.post("/herds/", { name, description });
+  const res = await api.post("/herds/", { name, description, herd_type, work_domain });
   return res.data;
 }
 
