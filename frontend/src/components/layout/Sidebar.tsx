@@ -168,7 +168,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
             width: 80,
             height: 80,
             margin: 2,
-            borderRadius: "50%",
+            borderRadius: 12,
             backgroundImage: `url(${levelImg})`,
             backgroundSize: "cover",
             backgroundPosition: "center",
@@ -187,9 +187,6 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
             }} />
           )}
         </div>
-        <p style={{ fontSize: 9, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.12em", textAlign: "center" }}>
-          {rank}
-        </p>
         <p className="font-syne text-goat-white font-bold text-sm text-center leading-tight">
           {user?.display_name ?? "—"}
         </p>
@@ -215,11 +212,11 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
           </p>
 
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-            <span style={{ fontSize: 11, color: "#9ca3af", display: "flex", alignItems: "center" }}><Image src="/icons/icon_hay_stack.webp" width={14} height={14} alt="" style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} /> Lifetime Hay</span>
+            <span style={{ fontSize: 11, color: "#9ca3af", display: "flex", alignItems: "center" }}><Image src="/icons/icon_hay_stack.webp" width={20} height={20} alt="" style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} /> Lifetime Hay</span>
             <span style={{ fontSize: 11, color: "#53c660", fontWeight: 600 }}>{player?.total_hay_earned ?? 0}</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-            <span style={{ fontSize: 11, color: "#9ca3af", display: "flex", alignItems: "center" }}><Image src="/icons/icon_level.webp" width={14} height={14} alt="" style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} /> Ascension Rank</span>
+            <span style={{ fontSize: 11, color: "#9ca3af", display: "flex", alignItems: "center" }}><Image src="/icons/icon_level.webp" width={20} height={20} alt="" style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} /> Ascension Rank</span>
             <span style={{ fontSize: 11, color: "#F5F5F5", fontWeight: 600 }}>{rank}</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 10 }}>
@@ -230,36 +227,30 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
           <div style={{ borderTop: "1px solid #2A2A4A", marginBottom: 10 }} />
 
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-            <span style={{ fontSize: 11, color: "#9ca3af", display: "flex", alignItems: "center" }}><Image src="/icons/icon_hay.webp" width={14} height={14} alt="" style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} /> Hay Balance</span>
+            <span style={{ fontSize: 11, color: "#9ca3af", display: "flex", alignItems: "center" }}><Image src="/icons/icon_hay.webp" width={20} height={20} alt="" style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} /> Hay Balance</span>
             <span style={{ fontSize: 11, color: "#f59e0b", fontWeight: 600 }}>{player?.hay ?? 0}/500</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
             <span style={{ fontSize: 11, color: "#9ca3af", display: "flex", alignItems: "center" }}>Fresh Cheese Banked</span>
-            <span style={{ fontSize: 11, color: "#F5F5F5", fontWeight: 600, display: "flex", alignItems: "center" }}><Image src="/icons/icon_fresh_cheese.webp" width={14} height={14} alt="" style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} /> {player?.fresh_cheese ?? 0}</span>
+            <span style={{ fontSize: 11, color: "#F5F5F5", fontWeight: 600, display: "flex", alignItems: "center" }}><Image src="/icons/icon_fresh_cheese.webp" width={20} height={20} alt="" style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} /> {player?.fresh_cheese ?? 0}</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-            <span style={{ fontSize: 11, color: "#9ca3af", display: "flex", alignItems: "center" }}><Image src="/icons/icon_clip_rate.webp" width={14} height={14} alt="" style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} /> Clip Rate (7d)</span>
+            <span style={{ fontSize: 11, color: "#9ca3af", display: "flex", alignItems: "center" }}><Image src="/icons/icon_clip_rate.webp" width={20} height={20} alt="" style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} /> Clip Rate (7d)</span>
             <span style={{ fontSize: 11, color: clipPct === null ? "#6b7280" : clipColor, fontWeight: 600 }}>{clipDisplay}</span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-            <span style={{ fontSize: 11, color: "#9ca3af", display: "flex", alignItems: "center" }}><Image src="/icons/icon_gait.webp" width={14} height={14} alt="" style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} /> GAIT Streak 🔥</span>
+            <span style={{ fontSize: 11, color: "#9ca3af", display: "flex", alignItems: "center" }}><Image src="/icons/icon_gait.webp" width={20} height={20} alt="" style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} /> GAIT Streak 🔥</span>
             <span style={{ fontSize: 11, color: "#8B5CF6", fontWeight: 600 }}>
               {player?.gait_streak ?? 0}d{(player?.streak_shields ?? 0) > 0 ? ` 🛡️ ${player?.streak_shields}` : ""}
             </span>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-            <span style={{ fontSize: 11, color: "#9ca3af", display: "flex", alignItems: "center" }}><Image src="/icons/icon_stakes.png" width={14} height={14} alt="" style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} /> Stake Streak</span>
+            <span style={{ fontSize: 11, color: "#9ca3af", display: "flex", alignItems: "center" }}><Image src="/icons/icon_stakes.png" width={20} height={20} alt="" style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} /> Stake Streak</span>
             <span style={{ fontSize: 11, color: (player?.stake_streak ?? 0) > 0 ? "#f59e0b" : "#6b7280", fontWeight: 600 }}>
               {(player?.stake_streak ?? 0) > 0 ? `${player?.stake_streak}d` : "—"}
             </span>
           </div>
 
-          <p style={{ fontSize: 9, color: "#4b5563", textAlign: "center", marginTop: 6 }}>
-            Ports to WorkGOAT when available —{" "}
-            <a href="https://workgoat.vip" target="_blank" rel="noopener noreferrer" style={{ color: "#7c3aed", textDecoration: "none" }}>
-              workgoat.vip
-            </a>
-          </p>
         </div>
       </div>
 

@@ -21,7 +21,7 @@ const dmSans = DM_Sans({
 export const metadata: Metadata = {
   title: "GOATflow",
   description: "Grab life by the horns. Leave the bull behind.",
-  icons: { icon: "/icons/favicon.webp" },
+  icons: { icon: "/assets/goatflow_appstore_logo_1773963712043.webp" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

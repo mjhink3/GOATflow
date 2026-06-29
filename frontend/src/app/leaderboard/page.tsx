@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { getLeaderboard, type LeaderboardEntry } from "@/lib/api/leaderboard";
 
@@ -44,6 +45,7 @@ function LeaderRow({ entry, unit }: { entry: LeaderboardEntry; unit: string }) {
 }
 
 export default function LeaderboardPage() {
+  const router = useRouter();
   const [category, setCategory] = useState("hay");
   const activeTab = TABS.find(t => t.key === category)!;
 
@@ -58,6 +60,18 @@ export default function LeaderboardPage() {
 
   return (
     <div className="flex flex-col gap-6 px-5 py-6 pb-16 max-w-2xl mx-auto w-full pt-16 md:pt-6">
+
+      {/* Back button */}
+      <button
+        onClick={() => router.push("/dashboard")}
+        style={{
+          display: "inline-flex", alignItems: "center", gap: 6,
+          fontSize: 11, color: "#6b7280", background: "none", border: "none",
+          cursor: "pointer", padding: 0, alignSelf: "flex-start",
+        }}
+      >
+        ← Back to Dashboard
+      </button>
 
       {/* Header */}
       <div className="flex items-center gap-3">

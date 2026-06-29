@@ -264,32 +264,10 @@ export default function DashboardPage() {
       )}
 
       {/* ── Main dashboard content ── */}
-      <div className="flex flex-col gap-5 pb-16 pt-14 md:pt-0">
+      <div className="flex flex-col gap-5 p-5 pb-16 pt-14 md:pt-5">
 
-        {/* ── Banner ── */}
-        <div className="w-full" style={{ background: "rgba(13,13,26,0.8)" }}>
-          <Image
-            src="/icons/goatflow_main_screen_logo.webp"
-            alt="GOATflow"
-            width={1200}
-            height={300}
-            priority
-            style={{ width: "100%", maxHeight: 180, objectFit: "contain", display: "block" }}
-          />
-        </div>
-
-        {/* ── Trust badge ── */}
-        <div className="flex justify-center px-5">
-          <span style={{
-            fontSize: 10, color: "#53c660", display: "inline-flex", alignItems: "center", gap: 6,
-            background: "rgba(83,198,96,0.08)", border: "1px solid rgba(83,198,96,0.25)",
-            borderRadius: 99, padding: "4px 14px",
-          }}>
-            🛡️ Stateless Processing Active: Source files purged after analysis
-          </span>
-        </div>
-
-        <div className="flex flex-col gap-5 px-5">
+          {/* ── Stats Row ── */}
+          <StatsRow />
 
           {/* ── Track Sieve ── */}
           <section
@@ -401,9 +379,6 @@ export default function DashboardPage() {
             </button>
           </section>
 
-          {/* ── Stats Row ── */}
-          <StatsRow />
-
           {/* ── Share Your Rank ── */}
           <div>
             <button
@@ -466,7 +441,6 @@ export default function DashboardPage() {
               </div>
             )}
           </section>
-        </div>
       </div>
     </div>
   );
