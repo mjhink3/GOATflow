@@ -51,7 +51,9 @@ const handler = NextAuth({
         // account is null for email magic links in NextAuth v4
         const provider = account?.provider ?? "email";
         const providerId = account?.providerAccountId ?? user.email;
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+        // API_URL is a server-only var; NEXT_PUBLIC_API_URL is build-time only
+        // and may not be available at runtime in Vercel serverless functions
+        const apiUrl = process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
         const res = await fetch(`${apiUrl}/auth/oauth`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -62,12 +64,16 @@ const handler = NextAuth({
             provider_id: providerId,
           }),
         });
-        if (!res.ok) return false;
+        if (!res.ok) {
+          console.error("[NextAuth signIn] /auth/oauth responded", res.status, await res.text().catch(() => ""));
+          return false;
+        }
         const data = await res.json();
         (user as any).goatflow_token = data.access_token;
         (user as any).goatflow_user_id = data.user_id;
         return true;
-      } catch {
+      } catch (err) {
+        console.error("[NextAuth signIn callback error]", err);
         return false;
       }
     },
