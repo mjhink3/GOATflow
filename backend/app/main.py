@@ -20,13 +20,8 @@ app = FastAPI(title="GOATflow API", version="1.0.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "https://goatflow.vercel.app",
-        "https://goatflow.app",
-        "https://www.goatflow.app",
-    ],
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
