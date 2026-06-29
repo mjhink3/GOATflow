@@ -5,9 +5,17 @@ import "shepherd.js/dist/css/shepherd.css";
 
 const TOUR_KEY = "goatflow_tour_done";
 
+function dispatchTourComplete() {
+  window.dispatchEvent(new CustomEvent("goatflow:tour-complete"));
+}
+
 export function OnboardingTour() {
   useEffect(() => {
-    if (localStorage.getItem(TOUR_KEY)) return;
+    if (localStorage.getItem(TOUR_KEY)) {
+      // Already done — immediately unblock the stake gate
+      dispatchTourComplete();
+      return;
+    }
 
     const tour = new Shepherd.Tour({
       useModalOverlay: true,
@@ -64,21 +72,28 @@ export function OnboardingTour() {
       buttons: [{ text: "Start climbing 🐐", action: tour.complete }],
     });
 
-    tour.on("complete", () => localStorage.setItem(TOUR_KEY, "true"));
-    tour.on("cancel", () => localStorage.setItem(TOUR_KEY, "true"));
+    tour.on("complete", () => {
+      localStorage.setItem(TOUR_KEY, "true");
+      dispatchTourComplete();
+    });
+    tour.on("cancel", () => {
+      localStorage.setItem(TOUR_KEY, "true");
+      dispatchTourComplete();
+    });
 
     let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
 
     function startTour() {
       if (fallbackTimer) clearTimeout(fallbackTimer);
       if (!localStorage.getItem(TOUR_KEY) && !tour.isActive()) {
+        // Mark done immediately so a mid-tour browser close doesn't replay
+        localStorage.setItem(TOUR_KEY, "true");
         setTimeout(() => tour.start(), 500);
       }
     }
 
     window.addEventListener("goatflow:stake-done", startTour);
 
-    // Fallback: if no stake gate is needed (already staked today), start after 2000ms
     fallbackTimer = setTimeout(() => {
       window.dispatchEvent(new CustomEvent("goatflow:stake-done"));
     }, 2000);

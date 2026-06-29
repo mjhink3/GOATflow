@@ -28,6 +28,10 @@ export default function DashboardPage() {
   const [gateSkipped, setGateSkipped]   = useState(false);
   const [claimPending, setClaimPending] = useState(false);
   const [claimDone, setClaimDone]       = useState(false);
+  // Suppress stake gate until tour is done (or already done on prior visit)
+  const [tourComplete, setTourComplete] = useState(
+    () => typeof window !== "undefined" && !!localStorage.getItem("goatflow_tour_done")
+  );
 
   // ── Track Sieve ──
   const [sieverText, setSieverText]         = useState("");
@@ -52,7 +56,14 @@ export default function DashboardPage() {
   // ─────────────────────────────────────────────────────────────────────────
   // Morning Stake Gate
   // ─────────────────────────────────────────────────────────────────────────
-  const needsGate = !isLoadingToday && !todayStake && !gateSkipped;
+  const needsGate = !isLoadingToday && todayStake === null && !gateSkipped && tourComplete;
+
+  // Listen for tour completion to unblock the stake gate
+  useEffect(() => {
+    function onTourComplete() { setTourComplete(true); }
+    window.addEventListener("goatflow:tour-complete", onTourComplete);
+    return () => window.removeEventListener("goatflow:tour-complete", onTourComplete);
+  }, []);
 
   // When stake is already done on mount, signal tour to start
   useEffect(() => {

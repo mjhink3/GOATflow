@@ -652,6 +652,25 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
       {/* ── Sticky footer: Goatifications + Logout ── */}
       <div style={{ position: "sticky", bottom: 0, background: "var(--color-goat-surface, #1A1A2E)", borderTop: "1px solid #2A2A4A" }}>
 
+      {/* ── Replay Tutorial ── */}
+      <div className="px-4 pt-3">
+        <button
+          onClick={() => {
+            localStorage.removeItem("goatflow_tour_done");
+            window.location.reload();
+          }}
+          style={{
+            width: "100%", display: "flex", alignItems: "center", gap: 8,
+            padding: "8px 12px", borderRadius: 8, fontSize: 11,
+            color: "#6b7280", background: "none",
+            border: "1px solid rgba(255,255,255,0.06)",
+            cursor: "pointer", marginBottom: 8,
+          }}
+        >
+          🔄 Replay Tutorial
+        </button>
+      </div>
+
       {/* ── Goatifications toggle ── */}
       <div className="px-4 py-3">
         <div className="flex items-center justify-between mb-1">
