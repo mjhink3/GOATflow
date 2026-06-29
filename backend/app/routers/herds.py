@@ -81,7 +81,7 @@ async def get_my_herd(
 
     members = await conn.fetch(
         """SELECT hm.user_id, hm.role, hm.joined_at, u.display_name,
-                  p.total_hay_earned, p.hay, p.gait_streak, p.tasks_completed, p.level
+                  p.total_hay_earned, p.hay, p.tasks_completed, p.level, p.fresh_cheese
            FROM herd_members hm
            JOIN users u ON CAST(u.id AS TEXT) = hm.user_id
            LEFT JOIN player p ON p.user_id = hm.user_id
@@ -231,8 +231,7 @@ async def herd_leaderboard(
 
     members = await conn.fetch(
         """SELECT hm.user_id, hm.role, u.display_name,
-                  p.total_hay_earned, p.hay, p.gait_streak, p.tasks_completed,
-                  p.level, p.fresh_cheese, p.weekly_clip_rate
+                  p.total_hay_earned, p.hay, p.tasks_completed, p.level, p.fresh_cheese
            FROM herd_members hm
            JOIN users u ON CAST(u.id AS TEXT) = hm.user_id
            LEFT JOIN player p ON p.user_id = hm.user_id
