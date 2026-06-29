@@ -18,17 +18,17 @@ interface StatCardProps {
 function StatCard({ icon, value, label, sub, color = "#F5F5F5" }: StatCardProps) {
   return (
     <div
-      className="flex flex-col items-center justify-center gap-1 p-3 rounded-xl border border-goat-border"
+      className="flex flex-col items-center justify-center gap-1 p-4 rounded-xl border border-goat-border"
       style={{ background: "rgba(26,26,46,0.6)", minHeight: 120 }}
     >
       <Image src={icon} alt={label} width={56} height={56} />
-      <span style={{ fontSize: 24, fontWeight: 800, color, lineHeight: 1, fontFamily: "var(--font-syne)", textAlign: "center" }}>
+      <span style={{ fontSize: 24, fontWeight: 800, color, lineHeight: 1, fontFamily: "var(--font-syne)", textAlign: "center", marginBottom: 4 }}>
         {value}
       </span>
-      <span style={{ fontSize: 7, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.1em", textAlign: "center" }}>
+      <span style={{ fontSize: 11, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.1em", textAlign: "center" }}>
         {label}
       </span>
-      {sub && <span style={{ fontSize: 7, color: "#6b7280", textAlign: "center" }}>{sub}</span>}
+      {sub && <span style={{ fontSize: 10, color: "#6b7280", textAlign: "center" }}>{sub}</span>}
     </div>
   );
 }
