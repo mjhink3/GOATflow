@@ -80,6 +80,8 @@ export default function LoginPage() {
   const [loginError, setLoginError] = useState("");
   const [emailInput, setEmailInput] = useState("");
   const [emailSent, setEmailSent] = useState(false);
+  const [emailPending, setEmailPending] = useState(false);
+  const [emailError, setEmailError] = useState("");
 
   // Login form
   const [loginUsername, setLoginUsername] = useState("");
@@ -284,16 +286,35 @@ export default function LoginPage() {
                   placeholder="Enter your email"
                   style={{ width: "100%", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 10, padding: "11px 14px", fontSize: 13, color: "#F5F5F5", outline: "none", boxSizing: "border-box" }}
                 />
+                {emailError && (
+                  <p style={{ fontSize: 11, color: "#ef4444", textAlign: "center", margin: 0 }}>{emailError}</p>
+                )}
                 <button
                   onClick={async () => {
-                    if (!emailInput.trim()) return;
-                    await signIn("email", { email: emailInput.trim(), callbackUrl: "/auth/callback" });
-                    setEmailSent(true);
+                    if (!emailInput.trim() || emailPending) return;
+                    setEmailError("");
+                    setEmailPending(true);
+                    try {
+                      const result = await signIn("email", {
+                        email: emailInput.trim(),
+                        callbackUrl: "/auth/callback",
+                        redirect: false,
+                      });
+                      if (result?.ok) {
+                        setEmailSent(true);
+                      } else {
+                        setEmailError(result?.error ?? "Failed to send link. Check your email and try again.");
+                      }
+                    } catch {
+                      setEmailError("Something went wrong. Please try again.");
+                    } finally {
+                      setEmailPending(false);
+                    }
                   }}
-                  disabled={!emailInput.trim()}
-                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, width: "100%", padding: "11px 16px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.05)", color: !emailInput.trim() ? "#6b7280" : "#F5F5F5", fontSize: 13, fontWeight: 600, cursor: emailInput.trim() ? "pointer" : "not-allowed", opacity: emailInput.trim() ? 1 : 0.5 }}
+                  disabled={!emailInput.trim() || emailPending}
+                  style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10, width: "100%", padding: "11px 16px", borderRadius: 10, border: "1px solid rgba(255,255,255,0.12)", background: "rgba(255,255,255,0.05)", color: (!emailInput.trim() || emailPending) ? "#6b7280" : "#F5F5F5", fontSize: 13, fontWeight: 600, cursor: (emailInput.trim() && !emailPending) ? "pointer" : "not-allowed", opacity: (emailInput.trim() && !emailPending) ? 1 : 0.5 }}
                 >
-                  Continue with Email ✉️
+                  {emailPending ? "Sending…" : "Continue with Email ✉️"}
                 </button>
               </>
             )}
