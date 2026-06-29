@@ -48,6 +48,47 @@ async def get_player(
     )
     horn_influence_count = horn_influence_row["cnt"] if horn_influence_row else 0
 
+    # ── Signal Score ──
+    horns_row = await conn.fetchrow(
+        "SELECT rules_text FROM directives WHERE user_id = $1",
+        current_user["id"],
+    )
+    horn_count = len([h for h in (horns_row["rules_text"] or "").strip().splitlines() if h.strip()]) if horns_row else 0
+
+    churn_row = await conn.fetchrow(
+        "SELECT COALESCE(SUM(count), 0)::bigint AS total FROM churn_usage WHERE user_id = $1",
+        str(current_user["id"]),
+    )
+    total_churns = int(churn_row["total"] or 0) if churn_row else 0
+
+    tasks = player.get("tasks_completed", 0) or 0
+    specificity  = min(tasks / max(total_churns * 3, 1), 1.0)
+    trail_notes  = 0.20 if tasks >= 10 else (tasks / 10) * 0.20
+    horn_util    = min(horn_count / 5, 1.0)
+    consistency  = min(gait_streak / 14, 1.0)
+    clip         = min((clip_rate_pct or 0) / 100, 1.0)
+
+    signal_score = round(specificity * 30 + trail_notes * 20 + horn_util * 20 + consistency * 15 + clip * 15)
+
+    if signal_score >= 91:
+        signal_label = "GOAT Signal 🐐"
+    elif signal_score >= 76:
+        signal_label = "Sharp"
+    elif signal_score >= 51:
+        signal_label = "Strong Signal"
+    elif signal_score >= 26:
+        signal_label = "Building Signal"
+    else:
+        signal_label = "Getting Started"
+
+    signal_breakdown = {
+        "track_specificity": round(specificity * 100),
+        "trail_notes":       round(trail_notes * 100),
+        "horn_calibration":  round(horn_util * 100),
+        "consistency":       round(consistency * 100),
+        "clip_rate":         round(clip * 100),
+    }
+
     return {
         **player,
         "level": level,
@@ -65,6 +106,9 @@ async def get_player(
         "horn_influence_count": horn_influence_count,
         "display_name": current_user["display_name"],
         "username": current_user["username"],
+        "signal_score": signal_score,
+        "signal_label": signal_label,
+        "signal_breakdown": signal_breakdown,
     }
 
 
