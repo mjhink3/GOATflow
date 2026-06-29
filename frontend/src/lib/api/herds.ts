@@ -63,3 +63,44 @@ export async function getHerdLeaderboard(): Promise<HerdMember[]> {
   const res = await api.get<HerdMember[]>("/herds/leaderboard");
   return res.data;
 }
+
+export interface Bleat {
+  id: number;
+  herd_id: number;
+  sender_id: string;
+  recipient_id: string;
+  message: string | null;
+  responded_at: string | null;
+  response_hay_earned: number;
+  created_at: string;
+  sender_name?: string;
+  recipient_name?: string;
+}
+
+export interface BleatStats {
+  total_received: number;
+  total_responded: number;
+  total_sent: number;
+  response_rate: number;
+  avg_response_hours: number | null;
+}
+
+export async function sendBleat(recipient_id: string, message?: string): Promise<Bleat> {
+  const res = await api.post<Bleat>("/herds/bleats/send", { recipient_id, message });
+  return res.data;
+}
+
+export async function getBleats(): Promise<{ received: Bleat[]; sent: Bleat[] }> {
+  const res = await api.get<{ received: Bleat[]; sent: Bleat[] }>("/herds/bleats");
+  return res.data;
+}
+
+export async function respondBleat(bleat_id: number): Promise<{ hay_earned: number; speed_label: string }> {
+  const res = await api.post<{ hay_earned: number; speed_label: string }>(`/herds/bleats/${bleat_id}/respond`);
+  return res.data;
+}
+
+export async function getBleatStats(): Promise<BleatStats> {
+  const res = await api.get<BleatStats>("/herds/bleats/stats");
+  return res.data;
+}

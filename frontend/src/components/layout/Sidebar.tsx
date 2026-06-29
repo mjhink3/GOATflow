@@ -7,6 +7,8 @@ import { useAuth } from "@/lib/hooks/useAuth";
 import { usePlayer } from "@/lib/hooks/usePlayer";
 import { useHorns } from "@/lib/hooks/useHorns";
 import { useHerd } from "@/lib/hooks/useHerd";
+import { useQuery } from "@tanstack/react-query";
+import { getBleats } from "@/lib/api/herds";
 import { pasture_name, ascension_rank } from "@/lib/gamification";
 
 const LEVEL_IMAGES: Record<number, string> = {
@@ -75,6 +77,14 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
   const { player } = usePlayer();
   const { horns, save, isSaving } = useHorns();
   const { herd, members, invite_code, isInHerd, isHerdBoss, create: createHerd, join: joinHerd, leave: leaveHerd } = useHerd();
+
+  const { data: bleatsData } = useQuery({
+    queryKey: ["bleats"],
+    queryFn: getBleats,
+    staleTime: 60_000,
+    enabled: isInHerd,
+  });
+  const pendingBleats = bleatsData?.received?.filter(b => !b.responded_at).length ?? 0;
 
   const [localHorns, setLocalHorns]     = useState<string[] | null>(null);
   const [newHorn, setNewHorn]           = useState("");
@@ -622,6 +632,15 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
           onClick={() => { router.push(pathname === "/herd" ? "/dashboard" : "/herd"); onClose?.(); }}
         >
           🐐 My Herd
+          {pendingBleats > 0 && (
+            <span style={{
+              marginLeft: "auto", minWidth: 16, height: 16, borderRadius: 99,
+              background: "#f59e0b", color: "#000", fontSize: 9, fontWeight: 700,
+              display: "flex", alignItems: "center", justifyContent: "center", padding: "0 4px",
+            }}>
+              {pendingBleats}
+            </span>
+          )}
         </button>
       </div>
 
