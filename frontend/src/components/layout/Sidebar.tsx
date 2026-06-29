@@ -94,6 +94,16 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
 
   const weeklyRates: (number | null)[] = player?.weekly_clip_rates ?? [null, null, null, null];
 
+  const signalScore     = player?.signal_score ?? 0;
+  const signalLabel     = player?.signal_label ?? "Getting Started";
+  const signalBreakdown = player?.signal_breakdown ?? null;
+  const scoreColor      = signalScore >= 91 ? "#f59e0b"
+    : signalScore >= 76 ? "#53c660"
+    : signalScore >= 51 ? "#a78bfa"
+    : signalScore >= 26 ? "#f59e0b"
+    : "#6b7280";
+  const scoreGlow       = signalScore >= 91 ? "0 0 16px rgba(245,158,11,0.4)" : "none";
+
   const linkedInText = encodeURIComponent(
     `I'm Level ${level} on GOATflow — ${rank} in the ${pasture}. Building my GOAT legacy one track at a time. 🐐 #GOATflow #Productivity`
   );
@@ -133,8 +143,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
         <div className="fixed inset-0 z-40 bg-black/60 md:hidden" onClick={onClose} />
       )}
     <aside
-      className={`relative flex flex-col w-64 bg-goat-surface border-r border-goat-border overflow-y-auto shrink-0 min-h-screen ${isMobileOpen ? "fixed inset-y-0 left-0 z-50" : "hidden md:flex"}`}
-      style={{ scrollbarWidth: "none", msOverflowStyle: "none" } as CSSProperties}
+      className={`relative flex flex-col w-64 bg-goat-surface border-r border-goat-border overflow-hidden shrink-0 h-screen ${isMobileOpen ? "fixed inset-y-0 left-0 z-50" : "hidden md:flex"}`}
     >
 
       {/* ── Mobile close button ── */}
@@ -148,6 +157,9 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
           ✕
         </button>
       )}
+
+      {/* ── Scrollable content ── */}
+      <div style={{ flex: 1, minHeight: 0, overflowY: "auto", scrollbarWidth: "none", msOverflowStyle: "none" } as CSSProperties}>
 
       {/* ── Branding header ── */}
       <div className="border-b border-goat-border">
@@ -251,6 +263,53 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
             </span>
           </div>
 
+        </div>
+      </div>
+
+      {/* ── Signal Score ── */}
+      <div className="px-4 py-3 border-b border-goat-border">
+        <div style={{ background: "rgba(13,13,26,0.8)", border: "1px solid #2A2A4A", borderRadius: 12, padding: "12px 14px" }}>
+          <p style={{ fontFamily: "var(--font-syne)", fontWeight: 700, fontSize: 13, color: "#F5F5F5", marginBottom: 10 }}>
+            ⚡ Signal Score
+          </p>
+
+          <div style={{ display: "flex", alignItems: "baseline", gap: 6, marginBottom: 4 }}>
+            <span style={{ fontSize: 40, fontWeight: 800, color: scoreColor, fontFamily: "var(--font-syne)", lineHeight: 1, textShadow: scoreGlow }}>
+              {signalScore}
+            </span>
+            <span style={{ fontSize: 14, color: "#4b5563" }}>/100</span>
+          </div>
+
+          <p style={{ fontSize: 11, color: scoreColor, fontWeight: 600, marginBottom: 8 }}>{signalLabel}</p>
+
+          <div style={{ height: 4, borderRadius: 99, background: "rgba(255,255,255,0.08)", overflow: "hidden", marginBottom: 10 }}>
+            <div style={{ height: "100%", width: `${signalScore}%`, background: scoreColor, borderRadius: 99, transition: "width 0.8s ease" }} />
+          </div>
+
+          {signalBreakdown && (
+            <div style={{ marginBottom: 8 }}>
+              {([
+                { label: "Track Quality",    val: signalBreakdown.track_specificity },
+                { label: "Consistency",      val: signalBreakdown.consistency },
+                { label: "Horn Calibration", val: signalBreakdown.horn_calibration },
+                { label: "Clip Rate",        val: signalBreakdown.clip_rate },
+              ] as { label: string; val: number }[]).map(({ label, val }) => (
+                <div key={label} style={{ marginBottom: 5 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 2 }}>
+                    <span style={{ fontSize: 9, color: "#6b7280" }}>{label}</span>
+                    <span style={{ fontSize: 9, color: "#9ca3af" }}>{val}%</span>
+                  </div>
+                  <div style={{ height: 3, borderRadius: 99, background: "rgba(255,255,255,0.06)", overflow: "hidden" }}>
+                    <div style={{ height: "100%", width: `${val}%`, background: scoreColor, borderRadius: 99, opacity: 0.65 }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <p style={{ fontSize: 9, color: "#4b5563", fontStyle: "italic" }}>
+            🔒 Your work data is yours. Only scores are shared.
+          </p>
         </div>
       </div>
 
@@ -392,11 +451,13 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
         </button>
       </div>
 
-      {/* ── Spacer ── */}
-      <div className="flex-1" />
+      </div>{/* end scrollable content */}
+
+      {/* ── Sticky footer: Goatifications + Logout ── */}
+      <div style={{ position: "sticky", bottom: 0, background: "var(--color-goat-surface, #1A1A2E)", borderTop: "1px solid #2A2A4A" }}>
 
       {/* ── Goatifications toggle ── */}
-      <div className="px-4 py-3 border-t border-goat-border">
+      <div className="px-4 py-3">
         <div className="flex items-center justify-between mb-1">
           <p style={{ fontSize: 9, color: "#6100ff", textTransform: "uppercase", letterSpacing: "0.15em" }}>
             ▸ Goatifications
@@ -426,15 +487,27 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
       </div>
 
       {/* ── Logout ── */}
-      <div className="px-4 pb-4 border-t border-goat-border pt-3">
+      <div className="px-4 pb-4 pt-3">
         <button
           onClick={logout}
-          className="w-full flex items-center gap-2 py-2 px-3 rounded-lg border border-goat-border text-xs text-goat-red hover:bg-goat-red/10 hover:border-goat-red transition-colors"
+          className="w-full flex items-center gap-2 py-2 px-3 rounded-lg border text-xs transition-colors"
+          style={{ borderColor: "rgba(239,68,68,0.25)", color: "rgba(239,68,68,0.8)" }}
+          onMouseEnter={e => {
+            e.currentTarget.style.color = "rgba(239,68,68,1)";
+            e.currentTarget.style.borderColor = "rgba(239,68,68,0.6)";
+            e.currentTarget.style.background = "rgba(239,68,68,0.08)";
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.color = "rgba(239,68,68,0.8)";
+            e.currentTarget.style.borderColor = "rgba(239,68,68,0.25)";
+            e.currentTarget.style.background = "transparent";
+          }}
         >
           <Image src="/icons/icon_logout.png" alt="" width={14} height={14} />
           Logout
         </button>
       </div>
+      </div>{/* end sticky footer */}
     </aside>
     </>
   );
