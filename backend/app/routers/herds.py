@@ -250,12 +250,12 @@ async def herd_leaderboard(
 
 
 BLEAT_LABELS = {
-    "on_fire":         "🔥 You on fire today?",
-    "how_climbing":    "🏔️ How's the climb?",
-    "stack_hay":       "🧀 Stack that Hay!",
-    "summit_incoming": "⚡ Summit incoming?",
-    "holding_fence":   "🛡️ Holding the fence?",
-    "goat_move":       "🐐 GOAT move incoming?",
+    "on_fire":          "🔥 You're on fire",
+    "stack_hay":        "🧀 Stack that Hay",
+    "goat_move":        "🐐 GOAT move incoming",
+    "how_climbing":     "🏔️ How's the climb?",
+    "holding_fence":    "🛡️ Holding the fence?",
+    "summit_incoming":  "⚡ Summit incoming?",
 }
 
 BASE_HAY = {"quick": 10, "deet": 20, "goat_report": 35}
