@@ -35,6 +35,12 @@ export interface Player {
     consistency: number;
     clip_rate: number;
   } | null;
+  cheese_state?: "fresh" | "staling" | "rotting";
+  hay_lost_to_decay?: number;
+  days_inactive?: number;
+  demotion_warning?: boolean;
+  cheese_floor?: number;
+  recovery_day?: number;
 }
 
 export type Difficulty = "Micro" | "Standard" | "High-Leverage" | "GOAT";

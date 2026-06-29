@@ -314,6 +314,29 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
             <span style={{ fontSize: 11, color: "#9ca3af", display: "flex", alignItems: "center" }}>Fresh Cheese Banked</span>
             <span style={{ fontSize: 11, color: "#F5F5F5", fontWeight: 600, display: "flex", alignItems: "center" }}><Image src="/icons/icon_fresh_cheese.webp" width={20} height={20} alt="" style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} /> {player?.fresh_cheese ?? 0}</span>
           </div>
+          {player?.cheese_state === "staling" && (
+            <div style={{
+              marginBottom: 6, padding: "5px 8px", borderRadius: 6, fontSize: 10,
+              background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.35)", color: "#f59e0b",
+            }}>
+              ⚠️ Cheese staling{(player.days_inactive ?? 0) > 1 ? ` — ${Math.floor(player.days_inactive ?? 0)}d inactive` : ""} — log a Track
+            </div>
+          )}
+          {player?.cheese_state === "rotting" && (
+            <div style={{
+              marginBottom: 6, padding: "5px 8px", borderRadius: 6, fontSize: 10,
+              background: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.4)", color: "#f87171",
+              animation: "pulse 2s infinite",
+            }}>
+              🚨 Cheese ROTTING — {player.hay_lost_to_decay ?? 0} Hay lost. Log a Track NOW.
+              {player.demotion_warning && (
+                <div style={{ marginTop: 2, color: "#fca5a5", fontSize: 9 }}>⚠️ Below cheese floor — rank at risk</div>
+              )}
+              {(player.recovery_day ?? 0) > 0 && (
+                <div style={{ marginTop: 2, color: "#fcd34d", fontSize: 9 }}>Day {player.recovery_day} of 7 rot recovery</div>
+              )}
+            </div>
+          )}
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
             <span style={{ fontSize: 11, color: "#9ca3af", display: "flex", alignItems: "center" }}><Image src="/icons/icon_clip_rate.webp" width={20} height={20} alt="" style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} /> Clip Rate (7d)</span>
             <span style={{ fontSize: 11, color: clipPct === null ? "#6b7280" : clipColor, fontWeight: 600 }}>{clipDisplay}</span>
