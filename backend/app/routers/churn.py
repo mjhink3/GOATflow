@@ -128,6 +128,15 @@ async def churn(
     )
     horns_text = horns_row["rules_text"] if horns_row else ""
 
+    # Enforce daily limit
+    DAILY_LIMIT = 15
+    usage_row = await conn.fetchrow(
+        "SELECT count FROM churn_usage WHERE user_id = $1 AND usage_date = CURRENT_DATE",
+        int(current_user["id"]),
+    )
+    if usage_row and usage_row["count"] >= DAILY_LIMIT:
+        raise HTTPException(status_code=429, detail=f"Daily churn limit reached ({DAILY_LIMIT}/day). Come back tomorrow.")
+
     # Track usage
     await conn.execute(
         """
