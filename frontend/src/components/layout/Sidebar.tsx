@@ -358,11 +358,16 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
             <span style={{ fontSize: 11, color: "#9ca3af", display: "flex", alignItems: "center" }}><Image src="/icons/icon_clip_rate.webp" width={20} height={20} alt="" style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} /> Clip Rate (7d)</span>
             <span style={{ fontSize: 11, color: clipPct === null ? "#6b7280" : clipColor, fontWeight: 600 }}>{clipDisplay}</span>
           </div>
-          <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-            <span style={{ fontSize: 11, color: "#9ca3af", display: "flex", alignItems: "center" }}><Image src="/icons/icon_gait.webp" width={20} height={20} alt="" style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} /> GAIT Streak 🔥</span>
-            <span style={{ fontSize: 11, color: "#8B5CF6", fontWeight: 600 }}>
-              {player?.gait_streak ?? 0}d{(player?.streak_shields ?? 0) > 0 ? ` 🛡️ ${player?.streak_shields}` : ""}
-            </span>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 4 }}>
+            <span style={{ fontSize: 11, color: "#9ca3af", display: "flex", alignItems: "center" }}><Image src="/icons/icon_gait.webp" width={20} height={20} alt="" style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} /> GAIT Traction</span>
+            <div style={{ textAlign: "right" }}>
+              <div style={{ fontSize: 11, color: player?.traction_color ?? "#6b7280", fontWeight: 600 }}>
+                {player?.traction_label ?? "Cold Hooves"}
+              </div>
+              <div style={{ fontSize: 9, color: "#6b7280" }}>
+                {player?.gait_streak ?? 0}d streak{(player?.streak_shields ?? 0) > 0 ? ` · 🛡️ ${player?.streak_shields}` : ""}
+              </div>
+            </div>
           </div>
           <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
             <span style={{ fontSize: 11, color: "#9ca3af", display: "flex", alignItems: "center" }}><Image src="/icons/icon_stakes.png" width={20} height={20} alt="" style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} /> Stake Streak</span>

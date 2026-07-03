@@ -15,18 +15,20 @@ const TABS = [
   { key: "top_goats",     label: "🐐 Top Goats" },
   { key: "weekly_movers", label: "📈 Weekly Movers" },
   { key: "streaks",       label: "🔥 Streaks" },
+  { key: "traction",      label: "⚡ GAIT Traction" },
   { key: "heat_check",    label: "🌡️ Pasture Heat Check" },
   { key: "my_climb",      label: "🧗 My Climb" },
 ];
 
 const MEDALS = ["🥇", "🥈", "🥉"];
 
-function streakTierLabel(days: number): string {
-  if (days >= 30) return "Unshorn Legend 🏔️";
-  if (days >= 14) return "Herd Locked 🔒";
-  if (days >= 7)  return "On Traaack 🐐";
-  if (days >= 3)  return "Warming Up 🌱";
-  return "";
+function tractionTierFromStreak(days: number): { label: string; color: string } {
+  if (days >= 30) return { label: "GOAT Traction",   color: "#FFD700" };
+  if (days >= 14) return { label: "Peak Pasture",    color: "#8B5CF6" };
+  if (days >= 7)  return { label: "Full Gallop",     color: "#53c660" };
+  if (days >= 3)  return { label: "On Traaack",      color: "#6100ff" };
+  if (days >= 1)  return { label: "Finding Footing", color: "#f59e0b" };
+  return             { label: "Cold Hooves",      color: "#6b7280" };
 }
 
 function flameCount(days: number): string {
@@ -140,6 +142,13 @@ export default function LeaderboardPage() {
     enabled: tab === "streaks" || tab === "my_climb",
   });
 
+  const tractionQuery = useQuery({
+    queryKey: ["leaderboard", "traction"],
+    queryFn: () => getLeaderboard("traction"),
+    staleTime: 60_000,
+    enabled: tab === "traction",
+  });
+
   const heatQuery = useQuery({
     queryKey: ["leaderboard", "heat_check"],
     queryFn: getHeatCheck,
@@ -208,13 +217,37 @@ export default function LeaderboardPage() {
     return (
       <BoardSection label="GAIT Streak Leaderboard">
         {data.entries.map(entry => {
-          const tier = streakTierLabel(entry.value);
+          const tier = tractionTierFromStreak(entry.value);
           return (
             <LeaderRow
               key={entry.user_id}
               entry={entry}
               valueDisplay={<span style={{ fontSize: 13, color: "#f97316", fontWeight: 600 }}>{flameCount(entry.value)} {entry.value}d</span>}
-              valueSub={tier ? <span style={{ fontSize: 10, color: "#9ca3af" }}>{tier}</span> : undefined}
+              valueSub={<span style={{ fontSize: 10, color: tier.color, fontWeight: 600 }}>{tier.label}</span>}
+            />
+          );
+        })}
+        {!userInTop20 && data.current_user_rank && <UserFooter rank={data.current_user_rank} />}
+      </BoardSection>
+    );
+  }
+
+  function renderTraction() {
+    if (tractionQuery.isLoading) return <LoadingState />;
+    if (tractionQuery.isError) return <p style={{ fontSize: 12, color: "#ef4444", textAlign: "center", padding: "24px 0" }}>Failed to load.</p>;
+    const data = tractionQuery.data;
+    if (!data?.entries.length) return <BoardSection label="GAIT Traction Leaders"><p style={{ fontSize: 12, color: "#4b5563", textAlign: "center", padding: "24px 0" }}>No momentum yet. Start a streak today.</p></BoardSection>;
+    const userInTop20 = data.entries.some(e => e.is_current_user);
+    return (
+      <BoardSection label="GAIT Traction Leaders">
+        {data.entries.map(entry => {
+          const tier = tractionTierFromStreak(entry.value);
+          return (
+            <LeaderRow
+              key={entry.user_id}
+              entry={entry}
+              valueDisplay={<span style={{ fontSize: 13, color: tier.color, fontWeight: 700 }}>{tier.label}</span>}
+              valueSub={<span style={{ fontSize: 10, color: "#6b7280" }}>{flameCount(entry.value)} {entry.value}d streak</span>}
             />
           );
         })}
@@ -310,7 +343,7 @@ export default function LeaderboardPage() {
           <div className="grid grid-cols-2 gap-3">
             <StatTile label="Lifetime Hay" value={myLifetimeHay.toLocaleString()} color="#f59e0b" />
             <StatTile label="Hay This Week" value={`+${myWeeklyHay.toLocaleString()}`} color="#53c660" />
-            <StatTile label="GAIT Streak" value={`${myStreak}d`} color="#8B5CF6" />
+            <StatTile label="GAIT Traction" value={player?.traction_label ?? "Cold Hooves"} color={player?.traction_color ?? "#6b7280"} />
             <StatTile label="Lifetime Rank" value={myHayRank ? `#${myHayRank}` : "—"} color="#a78bfa" />
           </div>
         </div>
@@ -362,6 +395,7 @@ export default function LeaderboardPage() {
       {tab === "top_goats"     && renderTopGoats()}
       {tab === "weekly_movers" && renderWeeklyMovers()}
       {tab === "streaks"       && renderStreaks()}
+      {tab === "traction"      && renderTraction()}
       {tab === "heat_check"    && renderHeatCheck()}
       {tab === "my_climb"      && renderMyClimb()}
     </div>

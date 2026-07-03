@@ -15,6 +15,10 @@ export function LevelBar() {
   const freshnessPct  = player?.freshness_pct ?? 100;
   const cheeseState   = player?.cheese_state ?? "fresh";
   const hoursSince    = player?.hours_since_completion ?? null;
+  const tractionScore = player?.traction_score ?? 0;
+  const tractionLabel = player?.traction_label ?? "Cold Hooves";
+  const tractionColor = player?.traction_color ?? "#6b7280";
+  const showTraction  = tractionScore >= 51;
 
   const freshnessBarColor =
     freshnessPct > 75 ? "#53c660"
@@ -23,19 +27,24 @@ export function LevelBar() {
     : freshnessPct > 0  ? "#f97316"
     : "#ef4444";
 
-  const pillLabel =
-    cheeseState === "rotting" ? "🚨 Momentum Lost"
+  const pillLabel = showTraction
+    ? `⚡ ${tractionLabel}`
+    : cheeseState === "rotting" ? "🚨 Momentum Lost"
     : cheeseState === "staling" ? "⚡ Momentum Staling"
     : freshnessPct <= 25 ? "⚠️ Soon"
     : "🧀 Fresh";
 
-  const pillColor =
-    cheeseState === "rotting" ? "#f87171"
+  const pillColor = showTraction
+    ? tractionColor
+    : cheeseState === "rotting" ? "#f87171"
     : (cheeseState === "staling" || freshnessPct <= 25) ? "#f59e0b"
     : "#53c660";
 
-  const pillBg =
-    cheeseState === "rotting" ? "rgba(239,68,68,0.15)"
+  const pillBg = showTraction
+    ? tractionScore >= 91 ? "rgba(255,215,0,0.12)"
+    : tractionScore >= 76 ? "rgba(139,92,246,0.15)"
+    : "rgba(83,198,96,0.12)"
+    : cheeseState === "rotting" ? "rgba(239,68,68,0.15)"
     : (cheeseState === "staling" || freshnessPct <= 25) ? "rgba(245,158,11,0.15)"
     : "rgba(83,198,96,0.12)";
 

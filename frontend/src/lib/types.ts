@@ -44,6 +44,10 @@ export interface Player {
   last_completion_at?: string | null;
   hours_since_completion?: number | null;
   freshness_pct?: number;
+  traction_score?: number;
+  traction_label?: string;
+  traction_color?: string;
+  traction_breakdown?: { streak: number; velocity: number; clip_rate: number; freshness: number };
 }
 
 export type Difficulty = "Micro" | "Standard" | "High-Leverage" | "GOAT";

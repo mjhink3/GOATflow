@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
 import { useSignals } from "@/lib/hooks/useSignals";
 import { usePlayer } from "@/lib/hooks/usePlayer";
@@ -12,10 +12,11 @@ interface StatCardProps {
   value: string | number;
   label: string;
   sub?: string;
+  subNode?: React.ReactNode;
   color?: string;
 }
 
-function StatCard({ icon, value, label, sub, color = "#F5F5F5" }: StatCardProps) {
+function StatCard({ icon, value, label, sub, subNode, color = "#F5F5F5" }: StatCardProps) {
   return (
     <div
       className="flex flex-col items-center justify-center gap-1 p-4 rounded-xl border border-goat-border"
@@ -28,6 +29,7 @@ function StatCard({ icon, value, label, sub, color = "#F5F5F5" }: StatCardProps)
       <span style={{ fontSize: 11, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.1em", textAlign: "center" }}>
         {label}
       </span>
+      {subNode}
       {sub && <span style={{ fontSize: 10, color: "#6b7280", textAlign: "center" }}>{sub}</span>}
     </div>
   );
@@ -84,7 +86,14 @@ export function StatsRow() {
         <StatCard icon="/icons/icon_fresh_cheese.webp"   value={player?.fresh_cheese ?? 0}              label="Fresh Cheese"  color="#53c660" />
         <StatCard icon="/icons/icon_horns.webp"          value={horns.length}                           label="Active Horns"  sub="/ 10 max" />
         <StatCard icon="/icons/icon_clip_rate.webp"      value={clipDisplay}                            label="Clip Rate"     sub="7 day"   color={clipColor} />
-        <StatCard icon="/icons/icon_gait.webp"           value={`${player?.gait_streak ?? 0}d`}        label="GAIT Streak"   sub={`🛡️ ${player?.streak_shields ?? 0} shields banked`} color="#8B5CF6" />
+        <StatCard
+          icon="/icons/icon_gait.webp"
+          value={player?.traction_score ?? 0}
+          label="GAIT TRACTION"
+          color={player?.traction_color ?? "#6b7280"}
+          subNode={<span style={{ fontSize: 11, color: player?.traction_color ?? "#6b7280", fontWeight: 600, textAlign: "center" }}>{player?.traction_label ?? "Cold Hooves"}</span>}
+          sub={`🛡️ ${player?.streak_shields ?? 0} shields banked`}
+        />
         <StatCard icon="/icons/icon_stakes.png"          value={stakesValue}                            label="Stakes %"      sub={stakesSub} color={stakesColor} />
         <StatCard icon="/icons/icon_precision.png"       value={precisionValue}                         label="Precision"     sub={precisionSub} color={precisionColor} />
       </div>
