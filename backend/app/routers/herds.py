@@ -330,12 +330,12 @@ async def get_daily_brief(
     from groq import Groq
     from app.config import settings
 
-    prompt = f"""You are the GOATflow HerdBoss intelligence engine. Generate a Daily Brief for a team leader.
+    prompt = f"""You are the GOATflow HerdBoss intelligence engine. Generate a "Clear the Trail" leadership brief.
 
 Herd: {herd['name']}
 Pasture Level: {herd['pasture_level']}
 Members: {len(members)}
-Pending Bleats: {pending_bleats}
+Pending Bleats (team-wide): {pending_bleats}
 
 Member Status (last 24h):
 {chr(10).join([f"- {m['name']}: {m['tracks_today']} tracks, +{m['hay_today']} Hay, {m['cheese_state']}, {m['hours_inactive']}h inactive" for m in member_summaries])}
@@ -343,13 +343,15 @@ Member Status (last 24h):
 Recent wins:
 {chr(10).join(recent_wins_text) if recent_wins_text else 'No completions in the last 24 hours.'}
 
-Write a Daily Brief for the HerdBoss in GOATflow's voice. Rules:
+Write a Clear the Trail brief for the HerdBoss. Rules:
 - 3-4 sentences max. No fluff.
 - Name specific members when relevant. Be direct.
-- End with ONE clear action the HerdBoss should take today.
-- Tone: sharp teammate, not corporate manager. Like a coach at halftime.
-- Use GOATflow language: Tracks, Hay, Bleats, Pasture, Momentum, Traction.
-- No em dashes. No bullet points in the brief itself."""
+- End with ONE clear leadership action from: Herd Call (standard comms), Rally Cry (earned boost), or restraint (let the Herd run, do nothing).
+- Never recommend that the HerdBoss send a Bleat. Bleats are peer-to-peer between members only.
+- Tone: sharp leadership coach, not corporate manager.
+- Use GOATflow language: Tracks, Hay, Herd Call, Rally Cry, Pasture, Momentum, Traction, Clear the Trail.
+- No em dashes. No bullet points in the brief itself.
+- Focus on: what needs leadership attention, what is blocked, who needs clarity or support, what decision is waiting."""
 
     client = Groq(api_key=settings.GROQ_API_KEY)
     response = client.chat.completions.create(
