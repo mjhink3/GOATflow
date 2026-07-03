@@ -127,3 +127,39 @@ export async function getBleatStats(): Promise<BleatStats> {
   const res = await api.get<BleatStats>("/herds/bleats/stats");
   return res.data;
 }
+
+export interface DailyBriefMember {
+  user_id: string;
+  name: string;
+  role: string;
+  tracks_today: number;
+  hay_today: number;
+  gait_streak: number;
+  cheese_state: string;
+  hours_inactive: number;
+  level: number;
+  total_hay: number;
+}
+
+export interface RecentWin {
+  member_name: string;
+  task_name: string;
+  xp_tier: string;
+  hay_earned: number;
+}
+
+export interface DailyBrief {
+  brief: string;
+  herd_name: string;
+  pasture_level: number;
+  member_count: number;
+  members: DailyBriefMember[];
+  recent_wins: RecentWin[];
+  pending_bleats: number;
+  generated_at: string;
+}
+
+export async function getDailyBrief(): Promise<DailyBrief> {
+  const res = await api.get<DailyBrief>("/herds/daily-brief");
+  return res.data;
+}

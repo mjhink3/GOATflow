@@ -5,13 +5,254 @@ import { useRouter } from "next/navigation";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useHerd } from "@/lib/hooks/useHerd";
 import { useAuth } from "@/lib/hooks/useAuth";
-import { sendBleat, getBleats, respondBleat, getBleatStats, BLEAT_TYPES, type Bleat } from "@/lib/api/herds";
+import {
+  sendBleat, getBleats, respondBleat, getBleatStats, getDailyBrief,
+  BLEAT_TYPES, type Bleat, type DailyBriefMember, type RecentWin,
+} from "@/lib/api/herds";
 
 const RESPONSE_OPTIONS = [
   { key: "quick",       label: "Quick 🐐",        hay: "10–20",  base: 10, needsText: false, desc: "Fast ack, no details needed" },
   { key: "deet",        label: "Drop a Deet 📝",  hay: "20–40",  base: 20, needsText: true,  desc: "1–2 sentence update" },
   { key: "goat_report", label: "GOAT Report 🏆",  hay: "35–70",  base: 35, needsText: true,  desc: "Full progress drop" },
 ];
+
+const TIER_COLORS: Record<string, string> = {
+  Micro: "#6b7280",
+  Standard: "#3b82f6",
+  "High-Leverage": "#8B5CF6",
+  GOAT: "#FFD700",
+};
+
+function memberActivityState(m: DailyBriefMember): { label: string; color: string } {
+  if (m.hours_inactive < 6)  return { label: "🔥 Hot",     color: "#53c660" };
+  if (m.hours_inactive < 24) return { label: "✅ Active",  color: "#86efac" };
+  if (m.hours_inactive < 48) return { label: "⚠️ Cooling", color: "#f59e0b" };
+  return                            { label: "🚨 Cold",    color: "#f87171" };
+}
+
+function cheeseDot(state: string) {
+  const color = state === "rotting" ? "#f87171" : state === "staling" ? "#f59e0b" : "#53c660";
+  return <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: color, flexShrink: 0 }} />;
+}
+
+// ── Daily Brief Card ──────────────────────────────────────────────────────────
+
+function DailyBriefCard() {
+  const { data, isLoading, refetch, isRefetching } = useQuery({
+    queryKey: ["daily-brief"],
+    queryFn: getDailyBrief,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  return (
+    <div
+      className="rounded-xl border p-5"
+      style={{
+        background: "linear-gradient(135deg, rgba(97,0,255,0.08) 0%, rgba(13,13,26,0.9) 100%)",
+        borderColor: "rgba(97,0,255,0.3)",
+        marginBottom: 24,
+      }}
+    >
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span style={{ fontSize: 20 }}>⚡</span>
+          <div>
+            <p style={{ fontSize: 13, fontWeight: 700, color: "#F5F5F5", fontFamily: "var(--font-syne)" }}>
+              HerdBoss Daily Brief
+            </p>
+            <p style={{ fontSize: 10, color: "#6b7280" }}>
+              {data
+                ? `Generated ${new Date(data.generated_at).toLocaleTimeString()}`
+                : "AI-generated team intelligence"}
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => refetch()}
+          disabled={isRefetching}
+          style={{
+            background: "rgba(97,0,255,0.15)", border: "1px solid rgba(97,0,255,0.3)",
+            borderRadius: 8, padding: "6px 12px", fontSize: 11, color: "#a78bfa",
+            cursor: isRefetching ? "not-allowed" : "pointer", fontWeight: 600,
+          }}
+        >
+          {isRefetching ? "Generating…" : "↻ Refresh"}
+        </button>
+      </div>
+
+      {isLoading ? (
+        <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 0" }}>
+          <div style={{ width: 16, height: 16, borderRadius: "50%", border: "2px solid rgba(97,0,255,0.2)", borderTopColor: "#6100ff", animation: "spin 0.8s linear infinite" }} />
+          <p style={{ fontSize: 12, color: "#6b7280" }}>Analyzing the herd…</p>
+        </div>
+      ) : data ? (
+        <>
+          <p style={{ fontSize: 14, color: "#e5e7eb", lineHeight: 1.7, marginBottom: 16, fontStyle: "italic" }}>
+            &ldquo;{data.brief}&rdquo;
+          </p>
+          <div style={{ display: "flex", gap: 24, flexWrap: "wrap" }}>
+            <div>
+              <p style={{ fontSize: 18, fontWeight: 800, color: "#53c660" }}>
+                {data.members.reduce((s, m) => s + m.tracks_today, 0)}
+              </p>
+              <p style={{ fontSize: 9, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.1em" }}>Tracks Today</p>
+            </div>
+            <div>
+              <p style={{ fontSize: 18, fontWeight: 800, color: "#f59e0b" }}>
+                {data.members.reduce((s, m) => s + m.hay_today, 0)}
+              </p>
+              <p style={{ fontSize: 9, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.1em" }}>Hay Today</p>
+            </div>
+            <div>
+              <p style={{ fontSize: 18, fontWeight: 800, color: data.pending_bleats > 0 ? "#ef4444" : "#6b7280" }}>
+                {data.pending_bleats}
+              </p>
+              <p style={{ fontSize: 9, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.1em" }}>Pending Bleats</p>
+            </div>
+            <div>
+              <p style={{ fontSize: 18, fontWeight: 800, color: "#8B5CF6" }}>
+                {data.members.filter(m => m.cheese_state === "fresh").length}/{data.member_count}
+              </p>
+              <p style={{ fontSize: 9, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.1em" }}>Fresh Members</p>
+            </div>
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
+// ── Member Health Grid ────────────────────────────────────────────────────────
+
+function MemberHealthGrid({ onQuickBleat }: { onQuickBleat: (userId: string) => void }) {
+  const { data } = useQuery({
+    queryKey: ["daily-brief"],
+    queryFn: getDailyBrief,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  if (!data) return null;
+
+  return (
+    <div style={{ marginBottom: 24 }}>
+      <p style={{ fontSize: 9, color: "#6100ff", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: 12 }}>
+        ▸ Member Health
+      </p>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 10 }}>
+        {data.members.map(m => {
+          const activity = memberActivityState(m);
+          const needsBleat = m.cheese_state === "staling" || m.cheese_state === "rotting";
+          return (
+            <div
+              key={m.user_id}
+              style={{
+                padding: "12px 14px", borderRadius: 10,
+                background: "rgba(13,13,26,0.7)",
+                border: `1px solid ${needsBleat ? "rgba(245,158,11,0.3)" : "#2A2A4A"}`,
+              }}
+            >
+              {/* Name + role */}
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 8 }}>
+                {cheeseDot(m.cheese_state)}
+                <span style={{ fontSize: 13, color: "#F5F5F5", fontWeight: 600, fontFamily: "var(--font-syne)", flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {m.name}
+                </span>
+                {m.role === "herdboss" && (
+                  <span style={{ fontSize: 8, padding: "1px 5px", borderRadius: 99, background: "rgba(97,0,255,0.25)", color: "#a78bfa", border: "1px solid rgba(97,0,255,0.4)", flexShrink: 0 }}>
+                    Boss
+                  </span>
+                )}
+              </div>
+
+              {/* Activity state + stats */}
+              <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: needsBleat ? 8 : 0 }}>
+                <span style={{ fontSize: 11, color: activity.color, fontWeight: 600 }}>{activity.label}</span>
+                <span style={{ fontSize: 10, color: "#6b7280" }}>
+                  {m.tracks_today} tracks · +{m.hay_today} Hay
+                </span>
+              </div>
+
+              {/* Quick bleat for staling/rotting */}
+              {needsBleat && (
+                <button
+                  onClick={() => onQuickBleat(m.user_id)}
+                  style={{
+                    width: "100%", padding: "5px 0", borderRadius: 6, fontSize: 10, fontWeight: 600,
+                    background: "rgba(245,158,11,0.12)", border: "1px solid rgba(245,158,11,0.3)",
+                    color: "#fcd34d", cursor: "pointer",
+                  }}
+                >
+                  📣 Send Bleat
+                </button>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Recent Wins Feed ──────────────────────────────────────────────────────────
+
+function RecentWinsFeed() {
+  const { data } = useQuery({
+    queryKey: ["daily-brief"],
+    queryFn: getDailyBrief,
+    staleTime: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
+
+  if (!data) return null;
+
+  return (
+    <div style={{ marginBottom: 24 }}>
+      <p style={{ fontSize: 9, color: "#6100ff", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: 12 }}>
+        ▸ Recent Wins (last 24h)
+      </p>
+      {data.recent_wins.length === 0 ? (
+        <p style={{ fontSize: 12, color: "#4b5563", textAlign: "center", padding: "16px 0" }}>
+          No wins yet today. The pasture is waiting.
+        </p>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {data.recent_wins.map((w: RecentWin, i: number) => (
+            <div
+              key={i}
+              style={{
+                display: "flex", alignItems: "center", gap: 10,
+                padding: "9px 12px", borderRadius: 8,
+                background: "rgba(83,198,96,0.05)", border: "1px solid rgba(83,198,96,0.15)",
+              }}
+            >
+              <span style={{ fontSize: 10, color: "#53c660" }}>✓</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ fontSize: 12, color: "#F5F5F5", fontWeight: 600 }}>{w.member_name}</span>
+                <span style={{ fontSize: 12, color: "#9ca3af" }}> — {w.task_name}</span>
+              </div>
+              <span style={{
+                fontSize: 9, padding: "2px 6px", borderRadius: 99, flexShrink: 0,
+                background: `${TIER_COLORS[w.xp_tier] ?? "#6b7280"}22`,
+                border: `1px solid ${TIER_COLORS[w.xp_tier] ?? "#6b7280"}55`,
+                color: TIER_COLORS[w.xp_tier] ?? "#6b7280",
+                fontWeight: 600,
+              }}>
+                {w.xp_tier}
+              </span>
+              <span style={{ fontSize: 11, color: "#f59e0b", fontWeight: 600, flexShrink: 0 }}>
+                +{w.hay_earned}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Bleat Card ────────────────────────────────────────────────────────────────
 
 function BleatCard({
   bleat,
@@ -48,7 +289,7 @@ function BleatCard({
             </p>
             {bleat.response_text && (
               <p style={{ fontSize: 11, color: "#9ca3af", fontStyle: "italic", marginTop: 3 }}>
-                "{bleat.response_text}"
+                &ldquo;{bleat.response_text}&rdquo;
               </p>
             )}
           </div>
@@ -75,7 +316,6 @@ function BleatCard({
         {new Date(bleat.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
       </p>
 
-      {/* Response type buttons */}
       <div style={{ display: "flex", gap: 6, marginBottom: selectedType ? 8 : 0 }}>
         {RESPONSE_OPTIONS.map(opt => (
           <button
@@ -96,7 +336,6 @@ function BleatCard({
         ))}
       </div>
 
-      {/* Text input for deet / goat_report */}
       {activeOpt?.needsText && (
         <div style={{ marginBottom: 8 }}>
           <textarea
@@ -131,6 +370,8 @@ function BleatCard({
   );
 }
 
+// ── Herd Page ─────────────────────────────────────────────────────────────────
+
 export default function HerdPage() {
   const router = useRouter();
   const { user } = useAuth();
@@ -156,6 +397,11 @@ export default function HerdPage() {
     staleTime: 60_000,
     enabled: isInHerd,
   });
+
+  function handleQuickBleat(userId: string) {
+    setBleatRecipient(userId);
+    document.getElementById("bleats-section")?.scrollIntoView({ behavior: "smooth" });
+  }
 
   async function handleSendBleat() {
     if (!bleatRecipient || !selectedBleatType) return;
@@ -195,7 +441,7 @@ export default function HerdPage() {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-4 px-6">
         <p style={{ fontSize: 32 }}>🐐</p>
-        <p className="font-syne text-goat-white font-bold" style={{ fontSize: 20 }}>You're not in a Herd yet</p>
+        <p className="font-syne text-goat-white font-bold" style={{ fontSize: 20 }}>You&apos;re not in a Herd yet</p>
         <p style={{ fontSize: 13, color: "#6b7280", textAlign: "center", maxWidth: 320 }}>
           Create or join a Herd from the sidebar to compete with your crew.
         </p>
@@ -253,6 +499,9 @@ export default function HerdPage() {
         </p>
       </div>
 
+      {/* HerdBoss Daily Brief */}
+      {isHerdBoss && <DailyBriefCard />}
+
       {/* Stats */}
       {stats && (
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 32 }}>
@@ -277,6 +526,12 @@ export default function HerdPage() {
           <p style={{ fontSize: 10, color: "#4b5563", marginTop: 4 }}>Share this with your crew so they can join from the sidebar.</p>
         </div>
       )}
+
+      {/* HerdBoss Member Health Grid */}
+      {isHerdBoss && <MemberHealthGrid onQuickBleat={handleQuickBleat} />}
+
+      {/* HerdBoss Recent Wins Feed */}
+      {isHerdBoss && <RecentWinsFeed />}
 
       {/* Members leaderboard */}
       <div style={{ marginBottom: 32 }}>
@@ -314,7 +569,7 @@ export default function HerdPage() {
       </div>
 
       {/* ── Bleats Section ── */}
-      <section className="rounded-xl border border-goat-border p-4" style={{ background: "rgba(13,13,26,0.7)", marginBottom: 32 }}>
+      <section id="bleats-section" className="rounded-xl border border-goat-border p-4" style={{ background: "rgba(13,13,26,0.7)", marginBottom: 32 }}>
         <p style={{ fontSize: 9, color: "#6100ff", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: 12 }}>
           ▸ Bleats — Peer Accountability
         </p>
@@ -338,7 +593,6 @@ export default function HerdPage() {
             Bleat a teammate. They earn Hay for responding — more depth = more Hay.
           </p>
 
-          {/* Recipient */}
           <select
             value={bleatRecipient}
             onChange={e => setBleatRecipient(e.target.value)}
@@ -354,7 +608,6 @@ export default function HerdPage() {
             ))}
           </select>
 
-          {/* Bleat type grid — two labeled category rows */}
           {(["momentum", "accountability"] as const).map(cat => {
             const isGreen = cat === "momentum";
             const activeColor  = isGreen ? "rgba(83,198,96,0.35)"   : "rgba(245,158,11,0.35)";
@@ -446,13 +699,6 @@ export default function HerdPage() {
           </div>
         )}
       </section>
-
-      {/* Coming soon banner */}
-      <div style={{ padding: "16px 20px", borderRadius: 12, background: "rgba(97,0,255,0.06)", border: "1px solid rgba(97,0,255,0.15)", textAlign: "center" }}>
-        <p style={{ fontSize: 12, color: "#6b7280" }}>
-          🏗️ <strong style={{ color: "#a78bfa" }}>Herd Dashboard</strong> — Full HerdBoss controls and Herd XP are coming in Phase 6.
-        </p>
-      </div>
     </div>
   );
 }
