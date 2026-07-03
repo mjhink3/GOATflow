@@ -329,7 +329,11 @@ export default function DashboardPage() {
           <StatsRow />
 
           {/* ── Decay Warning Banner ── */}
-          {decayDismissed === false && player?.cheese_state && player.cheese_state !== "fresh" && (
+          {decayDismissed === false && player != null && (
+            (player.freshness_pct != null && player.freshness_pct <= 25 && player.cheese_state === "fresh") ||
+            player.cheese_state === "staling" ||
+            player.cheese_state === "rotting"
+          ) && (
             <div style={{
               borderRadius: 10, padding: "10px 14px", position: "relative",
               background: player.cheese_state === "rotting" ? "rgba(239,68,68,0.08)" : "rgba(245,158,11,0.08)",
@@ -339,15 +343,24 @@ export default function DashboardPage() {
                 onClick={dismissDecay}
                 style={{ position: "absolute", top: 6, right: 10, background: "none", border: "none", color: "#6b7280", fontSize: 14, cursor: "pointer", lineHeight: 1 }}
               >×</button>
-              {player.cheese_state === "staling" && (
+
+              {/* Early warning: freshness dropping but cheese_state still fresh */}
+              {player.freshness_pct != null && player.freshness_pct <= 25 && player.cheese_state === "fresh" && (
                 <p style={{ fontSize: 12, color: "#f59e0b", margin: 0 }}>
-                  ⚠️ Your cheese is staling. Complete a Track to stop the decay.
+                  ⚠️ Your cheese is starting to stale{player.hours_since_completion != null ? ` — ${player.hours_since_completion}h since last Track` : ""}. Complete a Track to stay fresh.
                 </p>
               )}
+
+              {player.cheese_state === "staling" && (
+                <p style={{ fontSize: 12, color: "#f59e0b", margin: 0 }}>
+                  ⚠️ Your cheese is staling{player.hours_since_completion != null ? ` — ${player.hours_since_completion}h since last Track` : ""}. Complete a Track to stop the decay.
+                </p>
+              )}
+
               {player.cheese_state === "rotting" && (
                 <>
                   <p style={{ fontSize: 12, color: "#f87171", margin: 0, fontWeight: 700 }}>
-                    🚨 ROTTING IN PROGRESS — You've lost {player.hay_lost_to_decay ?? 0} Hay. Complete a Track immediately to stop the bleeding.
+                    🚨 ROTTING IN PROGRESS — You've lost {player.hay_lost_to_decay ?? 0} Hay{player.hours_since_completion != null ? ` (${player.hours_since_completion}h inactive)` : ""}. Complete a Track immediately.
                   </p>
                   {player.demotion_warning && (
                     <p style={{ fontSize: 11, color: "#fca5a5", marginTop: 4, marginBottom: 0 }}>

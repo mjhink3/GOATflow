@@ -41,6 +41,9 @@ export interface Player {
   demotion_warning?: boolean;
   cheese_floor?: number;
   recovery_day?: number;
+  last_completion_at?: string | null;
+  hours_since_completion?: number | null;
+  freshness_pct?: number;
 }
 
 export type Difficulty = "Micro" | "Standard" | "High-Leverage" | "GOAT";
