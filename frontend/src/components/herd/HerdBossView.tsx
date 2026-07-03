@@ -172,7 +172,9 @@ export function HerdBossView() {
   const levelIdx     = Math.max(0, pastureLevel - 1);
   const prevThresh   = HERD_FENCE_THRESHOLDS[levelIdx]     ?? 0;
   const nextThresh   = HERD_FENCE_THRESHOLDS[levelIdx + 1] ?? prevThresh + 1_000;
-  const herdHay      = stats?.total_hay_earned ?? 0;
+  const herdHay      = stats?.total_hay_earned
+    ?? data?.members.reduce((s, m) => s + (m.total_hay ?? 0), 0)
+    ?? 0;
   const hayInLevel   = Math.max(0, herdHay - prevThresh);
   const hayNeeded    = Math.max(1, nextThresh - prevThresh);
   const fencePct     = Math.min(100, Math.round(hayInLevel / hayNeeded * 100));
@@ -405,9 +407,17 @@ export function HerdBossView() {
                     <span style={{ fontSize: 11, color: status.color, fontWeight: 600 }}>{status.label}</span>
                     <span style={{ fontSize: 10, color: "#6b7280" }}>{m.tracks_today}T · +{m.hay_today}H</span>
                   </div>
-                  <p style={{ fontSize: 9, color: "#4b5563" }}>
+                  <p style={{ fontSize: 9, color: "#4b5563", marginBottom: (m.hours_inactive >= 48 || m.cheese_state === "rotting") ? 8 : 0 }}>
                     {m.hours_inactive < 999 ? `${m.hours_inactive}h inactive` : "No activity yet"} · Lv {m.level}
                   </p>
+                  {(m.hours_inactive >= 48 || m.cheese_state === "rotting") && (
+                    <button onClick={() => scrollTo("herdboss-tools")} style={{
+                      width: "100%", padding: "5px 0", borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: "pointer",
+                      background: "rgba(97,0,255,0.12)", border: "1px solid rgba(97,0,255,0.3)", color: "#a78bfa",
+                    }}>
+                      📡 Send Herd Call ↓
+                    </button>
+                  )}
                 </div>
               );
             })}
@@ -557,8 +567,9 @@ export function HerdBossView() {
               { name: "Salt / Restraint",   color: "#fcd34d" },
             ].map(cat => (
               <div key={cat.name} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 9, color: "#4b5563", width: 118, flexShrink: 0 }}>{cat.name}</span>
-                <div style={{ flex: 1, height: 4, borderRadius: 99, background: "rgba(255,255,255,0.05)" }}>
+                <span style={{ fontSize: 12, color: "#4b5563", width: 140, flexShrink: 0 }}>{cat.name}</span>
+                <span style={{ fontSize: 11, color: "#374151", width: 20, flexShrink: 0, textAlign: "right" }}>—</span>
+                <div style={{ flex: 1, height: 6, borderRadius: 99, background: "rgba(255,255,255,0.05)" }}>
                   <div style={{ width: "0%", height: "100%", borderRadius: 99, background: cat.color }} />
                 </div>
               </div>
