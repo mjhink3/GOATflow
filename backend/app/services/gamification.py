@@ -305,6 +305,21 @@ async def complete_signal(
                 user_id,
             )
 
+        # Update herd stats if user is in a herd
+        herd_row = await conn.fetchrow(
+            "SELECT current_herd_id FROM users WHERE id = $1", int(user_id)
+        )
+        if herd_row and herd_row["current_herd_id"]:
+            herd_id = herd_row["current_herd_id"]
+            await conn.execute(
+                """UPDATE herd_stats
+                   SET total_hay_earned = total_hay_earned + $1,
+                       total_tracks_completed = total_tracks_completed + 1,
+                       last_updated = NOW()
+                   WHERE herd_id = $2""",
+                hay_earned, herd_id,
+            )
+
     return {
         "task_name": sig["task_name"],
         "xp_tier": sig["xp_reward"],
