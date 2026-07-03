@@ -1,4 +1,4 @@
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 
 import asyncpg
 from fastapi import APIRouter, Depends
@@ -9,6 +9,16 @@ from app.services.gamification import ascension_rank, compute_level, pasture_nam
 from app.services.decay import compute_decay
 
 router = APIRouter()
+
+
+def compute_freshness_pct(hours: float | None) -> int:
+    if hours is None: return 100
+    if hours <= 6:    return 100
+    if hours <= 12:   return 85
+    if hours <= 18:   return 70
+    if hours <= 24:   return 50
+    if hours <= 36:   return 25
+    return 0
 
 
 @router.get("")
@@ -90,6 +100,15 @@ async def get_player(
         "clip_rate":         round(clip * 100),
     }
 
+    last_completion = await conn.fetchval(
+        "SELECT MAX(resolved_at) FROM operational_log WHERE user_id = $1 AND resolution = 'completed'",
+        str(current_user["id"]),
+    )
+    hours_since: float | None = None
+    if last_completion is not None:
+        lc = last_completion.replace(tzinfo=timezone.utc) if last_completion.tzinfo is None else last_completion
+        hours_since = round((datetime.now(timezone.utc) - lc).total_seconds() / 3600, 1)
+
     decay_info = await compute_decay(conn, current_user["id"])
 
     return {
@@ -118,6 +137,9 @@ async def get_player(
         "demotion_warning": decay_info.get("demotion_warning", False),
         "cheese_floor": decay_info.get("cheese_floor", 0),
         "recovery_day": decay_info.get("recovery_day", 0),
+        "last_completion_at": last_completion.isoformat() if last_completion else None,
+        "hours_since_completion": hours_since,
+        "freshness_pct": compute_freshness_pct(hours_since),
     }
 
 
