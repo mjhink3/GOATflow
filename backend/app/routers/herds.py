@@ -225,6 +225,154 @@ async def generate_invite(
     return {"invite_code": invite_code}
 
 
+@router.get("/daily-brief")
+async def get_daily_brief(
+    current_user: dict = Depends(get_current_user),
+    conn: asyncpg.Connection = Depends(get_db),
+):
+    uid = int(current_user["id"])
+    user = await conn.fetchrow("SELECT current_herd_id, role FROM users WHERE id = $1", uid)
+
+    if not user or not user["current_herd_id"]:
+        raise HTTPException(status_code=400, detail="You are not in a Herd.")
+    if user["role"] != "herdboss":
+        raise HTTPException(status_code=403, detail="Only the HerdBoss can access the Daily Brief.")
+
+    herd_id = user["current_herd_id"]
+    herd = await conn.fetchrow("SELECT * FROM herds WHERE id = $1", herd_id)
+
+    members = await conn.fetch(
+        """SELECT hm.user_id, hm.role, u.display_name,
+                  p.total_hay_earned, p.hay, p.tasks_completed,
+                  p.level, p.fresh_cheese, p.cheese_state, p.last_active_at
+           FROM herd_members hm
+           JOIN users u ON CAST(u.id AS TEXT) = hm.user_id
+           LEFT JOIN player p ON p.user_id = hm.user_id
+           WHERE hm.herd_id = $1 AND hm.is_active = TRUE""",
+        herd_id,
+    )
+
+    member_ids = [m["user_id"] for m in members]
+
+    completions_24h = []
+    if member_ids:
+        completions_24h = await conn.fetch(
+            """SELECT user_id, COUNT(*) AS count, COALESCE(SUM(hay_earned), 0) AS hay_earned
+               FROM operational_log
+               WHERE user_id = ANY($1::text[])
+               AND resolved_at >= NOW() - INTERVAL '24 hours'
+               AND resolution = 'completed'
+               GROUP BY user_id""",
+            member_ids,
+        )
+
+    recent_completions = []
+    if member_ids:
+        recent_completions = await conn.fetch(
+            """SELECT ol.user_id, u.display_name, ol.task_name, ol.xp_tier, ol.hay_earned, ol.resolved_at
+               FROM operational_log ol
+               JOIN users u ON CAST(u.id AS TEXT) = ol.user_id
+               WHERE ol.user_id = ANY($1::text[])
+               AND ol.resolved_at >= NOW() - INTERVAL '24 hours'
+               AND ol.resolution = 'completed'
+               ORDER BY ol.resolved_at DESC LIMIT 10""",
+            member_ids,
+        )
+
+    pending_bleats = await conn.fetchval(
+        """SELECT COUNT(*) FROM bleats
+           WHERE herd_id = $1 AND responded_at IS NULL
+           AND created_at >= NOW() - INTERVAL '24 hours'""",
+        herd_id,
+    ) or 0
+
+    completion_map = {r["user_id"]: r for r in completions_24h}
+    member_summaries = []
+
+    for m in members:
+        comp = completion_map.get(m["user_id"])
+        last_active = m["last_active_at"]
+        if last_active:
+            if last_active.tzinfo is None:
+                last_active = last_active.replace(tzinfo=timezone.utc)
+            hours_inactive = (datetime.now(timezone.utc) - last_active).total_seconds() / 3600
+        else:
+            hours_inactive = 999.0
+
+        member_summaries.append({
+            "user_id": m["user_id"],
+            "name": m["display_name"],
+            "role": m["role"],
+            "tracks_today": int(comp["count"]) if comp else 0,
+            "hay_today": int(comp["hay_earned"]) if comp else 0,
+            "gait_streak": 0,
+            "cheese_state": m["cheese_state"] or "fresh",
+            "hours_inactive": round(hours_inactive, 1),
+            "level": m["level"] or 1,
+            "total_hay": m["total_hay_earned"] or 0,
+        })
+
+    recent_wins = [
+        {
+            "member_name": r["display_name"],
+            "task_name": r["task_name"],
+            "xp_tier": r["xp_tier"],
+            "hay_earned": r["hay_earned"],
+        }
+        for r in recent_completions[:5]
+    ]
+
+    recent_wins_text = [
+        f"{w['member_name']}: {w['task_name']} ({w['xp_tier']}, +{w['hay_earned']} Hay)"
+        for w in recent_wins
+    ]
+
+    from groq import Groq
+    from app.config import settings
+
+    prompt = f"""You are the GOATflow HerdBoss intelligence engine. Generate a Daily Brief for a team leader.
+
+Herd: {herd['name']}
+Pasture Level: {herd['pasture_level']}
+Members: {len(members)}
+Pending Bleats: {pending_bleats}
+
+Member Status (last 24h):
+{chr(10).join([f"- {m['name']}: {m['tracks_today']} tracks, +{m['hay_today']} Hay, {m['cheese_state']}, {m['hours_inactive']}h inactive" for m in member_summaries])}
+
+Recent wins:
+{chr(10).join(recent_wins_text) if recent_wins_text else 'No completions in the last 24 hours.'}
+
+Write a Daily Brief for the HerdBoss in GOATflow's voice. Rules:
+- 3-4 sentences max. No fluff.
+- Name specific members when relevant. Be direct.
+- End with ONE clear action the HerdBoss should take today.
+- Tone: sharp teammate, not corporate manager. Like a coach at halftime.
+- Use GOATflow language: Tracks, Hay, Bleats, Pasture, Momentum, Traction.
+- No em dashes. No bullet points in the brief itself."""
+
+    client = Groq(api_key=settings.GROQ_API_KEY)
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.7,
+        max_tokens=200,
+    )
+
+    brief_text = response.choices[0].message.content.strip()
+
+    return {
+        "brief": brief_text,
+        "herd_name": herd["name"],
+        "pasture_level": herd["pasture_level"],
+        "member_count": len(members),
+        "members": member_summaries,
+        "recent_wins": recent_wins,
+        "pending_bleats": int(pending_bleats),
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+    }
+
+
 @router.get("/leaderboard")
 async def herd_leaderboard(
     current_user: dict = Depends(get_current_user),
