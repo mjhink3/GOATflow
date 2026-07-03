@@ -26,20 +26,24 @@ const RESPONSE_OPTIONS = [
 
 // ─── Helper functions ─────────────────────────────────────────────────────────
 
-function memberStatus(m: DailyBriefMember): { label: string; color: string } {
-  if (m.cheese_state === "rotting")  return { label: "Rot Risk",  color: "#f87171" };
-  if (m.hours_inactive >= 48)        return { label: "🚨 Cold",   color: "#f87171" };
-  if (m.hours_inactive >= 24 || m.cheese_state === "staling") return { label: "⚠️ Cooling", color: "#f59e0b" };
-  if (m.hours_inactive < 6 && m.tracks_today > 0)            return { label: "🔥 Hot",     color: "#53c660" };
-  return                                                             { label: "✅ Fresh",   color: "#86efac" };
+function memberStatus(m: DailyBriefMember): {
+  label: string; textColor: string; circleColor: string; pulse: boolean;
+} {
+  if (m.cheese_state === "rotting")  return { label: "Rot Risk", textColor: "#f87171", circleColor: "#7f1d1d", pulse: true };
+  if (m.hours_inactive >= 48)        return { label: "Cold",     textColor: "#ef4444", circleColor: "#ef4444", pulse: false };
+  if (m.hours_inactive >= 24 || m.cheese_state === "staling")
+    return { label: "Cooling", textColor: "#f59e0b", circleColor: "#f59e0b", pulse: false };
+  if (m.hours_inactive < 6 && m.tracks_today > 0)
+    return { label: "Hot",   textColor: "#53c660", circleColor: "#53c660", pulse: false };
+  return   { label: "Fresh", textColor: "#a78bfa", circleColor: "#6100ff", pulse: false };
 }
 
 function herdMomentumStatus(members: DailyBriefMember[]): { label: string; color: string; herdStatus: string } {
   const total = members.length;
   if (!total) return { label: "No Data", color: "#6b7280", herdStatus: "No Members" };
-  const cold    = members.filter(m => m.hours_inactive >= 48).length;
-  const rotting = members.filter(m => m.cheese_state === "rotting").length;
-  const staling = members.filter(m => m.cheese_state !== "fresh").length;
+  const cold      = members.filter(m => m.hours_inactive >= 48).length;
+  const rotting   = members.filter(m => m.cheese_state === "rotting").length;
+  const staling   = members.filter(m => m.cheese_state !== "fresh").length;
   const tracksToday = members.reduce((s, m) => s + m.tracks_today, 0);
   if (rotting > 0 || cold > total / 2) return { label: "Fence Watch", color: "#f87171", herdStatus: "Fence Watch" };
   if (staling > 0 || cold > 0)         return { label: "Staling",     color: "#f59e0b", herdStatus: "Momentum Staling" };
@@ -86,6 +90,24 @@ function LockedBtn({ label }: { label: string }) {
     <button disabled style={{ width: "100%", padding: "7px 0", borderRadius: 7, fontSize: 11, fontWeight: 600, background: "rgba(107,114,128,0.08)", border: "1px solid rgba(107,114,128,0.2)", color: "#4b5563", cursor: "not-allowed" }}>
       {label}
     </button>
+  );
+}
+
+function SparkChart({ tracksToday }: { tracksToday: number }) {
+  const bars = [0, 0, 0, 0, 0, 0, tracksToday];
+  return (
+    <div style={{ display: "flex", alignItems: "flex-end", gap: 2, height: 12, marginTop: 6 }}>
+      {bars.map((val, i) => {
+        const isToday = i === 6;
+        const barH = isToday && val > 0 ? 12 : 2;
+        return (
+          <div key={i} style={{
+            width: 3, height: barH, borderRadius: 1, alignSelf: "flex-end",
+            background: isToday && val > 0 ? "#53c660" : "rgba(255,255,255,0.08)",
+          }} />
+        );
+      })}
+    </div>
   );
 }
 
@@ -191,6 +213,9 @@ export function HerdBossView() {
   const coldCount   = data?.members.filter(m => m.hours_inactive >= 48).length ?? 0;
   const memberCount = data?.member_count ?? members.length;
 
+  // Chronicle footer
+  const totalTracks = members.reduce((s, m) => s + (m.tasks_completed ?? 0), 0);
+
   function scrollTo(id: string) {
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   }
@@ -232,27 +257,26 @@ export function HerdBossView() {
         )}
       </div>
 
-      {/* ── 2. Clear the Trail ─────────────────────────────────────────────── */}
+      {/* ── 2. Clear the Trail — command card ──────────────────────────────── */}
       <div className="rounded-xl border" style={{
-        background: "linear-gradient(135deg, rgba(97,0,255,0.1) 0%, rgba(13,13,26,0.95) 100%)",
-        borderColor: "rgba(97,0,255,0.35)", padding: "20px", marginBottom: 20,
+        background: "linear-gradient(135deg, rgba(97,0,255,0.08) 0%, rgba(13,13,26,0.97) 100%)",
+        borderColor: "rgba(97,0,255,0.25)",
+        borderLeftWidth: 4,
+        borderLeftColor: "#6100ff",
+        padding: "20px 20px 20px 24px",
+        marginBottom: 20,
       }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-            <span style={{ fontSize: 22 }}>🧭</span>
-            <div>
-              <p style={{ fontSize: 14, fontWeight: 800, color: "#F5F5F5", fontFamily: "var(--font-syne)" }}>Clear the Trail</p>
-              <p style={{ fontSize: 10, color: "#6b7280" }}>
-                {data ? `Updated ${new Date(data.generated_at).toLocaleTimeString()}` : "AI leadership brief"}
-              </p>
-            </div>
+            <span style={{ fontSize: 20 }}>🧭</span>
+            <p style={{ fontSize: 14, fontWeight: 800, color: "#F5F5F5", fontFamily: "var(--font-syne)" }}>Clear the Trail</p>
           </div>
           <button onClick={() => briefQuery.refetch()} disabled={briefQuery.isRefetching} style={{
-            background: "rgba(97,0,255,0.15)", border: "1px solid rgba(97,0,255,0.3)", borderRadius: 8,
-            padding: "6px 12px", fontSize: 11, color: "#a78bfa",
-            cursor: briefQuery.isRefetching ? "not-allowed" : "pointer", fontWeight: 600,
+            background: "transparent", border: "1px solid rgba(97,0,255,0.2)", borderRadius: 6,
+            padding: "4px 9px", fontSize: 10, color: "#4b5563",
+            cursor: briefQuery.isRefetching ? "not-allowed" : "pointer",
           }}>
-            {briefQuery.isRefetching ? "Analyzing…" : "↻ Refresh Brief"}
+            {briefQuery.isRefetching ? "…" : "↻ Refresh"}
           </button>
         </div>
 
@@ -263,13 +287,12 @@ export function HerdBossView() {
           </div>
         ) : data ? (
           <>
-            <p style={{ fontSize: 14, color: "#e5e7eb", lineHeight: 1.75, marginBottom: 20, fontStyle: "italic" }}>
+            <p style={{ fontSize: 16, color: "#e5e7eb", lineHeight: 1.8, marginBottom: 20, fontStyle: "italic" }}>
               &ldquo;{data.brief}&rdquo;
             </p>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
               {[
                 { label: "Send Herd Call",     id: "herdboss-tools", color: "#6100ff", bg: "rgba(97,0,255,0.18)" },
-                { label: "Review Blockers",    id: "blocker-pen",    color: "#f59e0b", bg: "rgba(245,158,11,0.12)" },
                 { label: "View Member Health", id: "member-health",  color: "#53c660", bg: "rgba(83,198,96,0.1)" },
               ].map(btn => (
                 <button key={btn.label} onClick={() => scrollTo(btn.id)} style={{
@@ -287,26 +310,112 @@ export function HerdBossView() {
       {/* ── 3. KPI Strip ───────────────────────────────────────────────────── */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))", gap: 8, marginBottom: 20 }}>
         {[
-          { label: "Herd Momentum", value: momentum.label, color: momentum.color },
-          { label: "Hay Today",     value: hayToday.toLocaleString(), color: "#f59e0b" },
-          { label: "Tracks Cleared", value: tracksToday.toString(), color: "#53c660" },
-          { label: "Fresh Members", value: `${freshCount}/${memberCount}`, color: "#86efac" },
-          { label: "Cold Members",  value: coldCount.toString(), color: coldCount > 0 ? "#f87171" : "#6b7280" },
-          { label: "Open Decisions", value: "0", color: "#6b7280" },
-          { label: "Next Fence",    value: hayRemaining > 0 ? `${hayRemaining.toLocaleString()} Hay` : "Cleared", color: "#a78bfa" },
+          { label: "Herd Momentum",  value: momentum.label,                                                    color: momentum.color },
+          { label: "Hay Today",      value: hayToday.toLocaleString(),                                         color: "#f59e0b" },
+          { label: "Tracks Cleared", value: tracksToday.toString(),                                            color: "#53c660" },
+          { label: "Fresh Members",  value: `${freshCount}/${memberCount}`,                                    color: "#86efac" },
+          { label: "Cold Members",   value: coldCount.toString(),                                              color: coldCount > 0 ? "#f87171" : "#6b7280" },
+          { label: "Open Decisions", value: "0",                                                               color: "#6b7280" },
+          { label: "Next Fence",     value: hayRemaining > 0 ? `${hayRemaining.toLocaleString()} Hay` : "Cleared", color: "#a78bfa" },
         ].map(({ label, value, color }) => (
-          <div key={label} style={{ padding: "10px 10px", borderRadius: 10, background: "rgba(13,13,26,0.7)", border: "1px solid #2A2A4A", textAlign: "center" }}>
+          <div key={label} style={{ padding: "10px", borderRadius: 10, background: "rgba(13,13,26,0.7)", border: "1px solid #2A2A4A", textAlign: "center" }}>
             <p style={{ fontSize: 13, fontWeight: 800, color, fontFamily: "var(--font-syne)", lineHeight: 1.2 }}>{value}</p>
             <p style={{ fontSize: 8, color: "#4b5563", textTransform: "uppercase", letterSpacing: "0.08em", marginTop: 3 }}>{label}</p>
           </div>
         ))}
       </div>
 
-      {/* ── 4. HerdBoss Tools ──────────────────────────────────────────────── */}
+      {/* ── 4. Member Health — visual status grid ──────────────────────────── */}
+      <Sect label="Member Health" id="member-health">
+        {!data ? (
+          <p style={{ fontSize: 12, color: "#4b5563", padding: "8px 0" }}>Loading member data…</p>
+        ) : (
+          <div className="grid grid-cols-2 md:grid-cols-3" style={{ gap: 10 }}>
+            {data.members.map(m => {
+              const status = memberStatus(m);
+              const isCritical = m.hours_inactive >= 48 || m.cheese_state === "rotting";
+              const borderColor = isCritical
+                ? "rgba(239,68,68,0.3)"
+                : m.hours_inactive >= 24 ? "rgba(245,158,11,0.2)"
+                : "#2A2A4A";
+              return (
+                <div key={m.user_id} style={{
+                  padding: "16px 12px 12px", borderRadius: 12,
+                  background: "rgba(13,13,26,0.5)", border: `1px solid ${borderColor}`,
+                  display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center",
+                }}>
+                  {/* Status circle */}
+                  <div
+                    className={status.pulse ? "animate-pulse" : ""}
+                    style={{
+                      width: 40, height: 40, borderRadius: "50%",
+                      background: status.circleColor, marginBottom: 8, flexShrink: 0,
+                      boxShadow: `0 0 14px ${status.circleColor}60`,
+                    }}
+                  />
+                  {/* Name */}
+                  <p style={{ fontSize: 12, fontWeight: 700, color: "#F5F5F5", fontFamily: "var(--font-syne)", marginBottom: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "100%" }}>
+                    {m.name}
+                    {m.role === "herdboss" && <span style={{ fontSize: 8, color: "#a78bfa", marginLeft: 4 }}>Boss</span>}
+                  </p>
+                  {/* Status label */}
+                  <p style={{ fontSize: 10, fontWeight: 600, color: status.textColor, marginBottom: 4 }}>{status.label}</p>
+                  {/* Stats */}
+                  <p style={{ fontSize: 10, color: "#6b7280", marginBottom: 2 }}>
+                    {m.tracks_today} tracks · +{m.hay_today} Hay
+                  </p>
+                  {/* Last active */}
+                  <p style={{ fontSize: 9, color: "#4b5563" }}>
+                    {m.hours_inactive < 999 ? `${m.hours_inactive}h ago` : "No activity"}
+                  </p>
+                  {/* 7-day spark */}
+                  <SparkChart tracksToday={m.tracks_today} />
+                  {/* Herd Call shortcut for cold/rot members */}
+                  {isCritical && (
+                    <button onClick={() => scrollTo("herdboss-tools")} style={{
+                      marginTop: 10, width: "100%", padding: "5px 0", borderRadius: 6,
+                      fontSize: 10, fontWeight: 600, cursor: "pointer",
+                      background: "rgba(97,0,255,0.12)", border: "1px solid rgba(97,0,255,0.3)", color: "#a78bfa",
+                    }}>
+                      📡 Send Herd Call ↓
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </Sect>
+
+      {/* ── 5. Pasture Progress ────────────────────────────────────────────── */}
+      <Sect label="Pasture Progress">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: "#F5F5F5" }}>{currPasture}</span>
+          <span style={{ fontSize: 11, color: "#6b7280" }}>{nextPasture} →</span>
+        </div>
+        <div style={{ position: "relative", height: 12, borderRadius: 99, background: "rgba(97,0,255,0.08)", border: "1px solid rgba(97,0,255,0.15)", marginBottom: 10, overflow: "visible" }}>
+          <div style={{
+            position: "absolute", inset: 0, right: "auto",
+            borderRadius: 99,
+            width: `${fencePct}%`,
+            minWidth: 4,
+            background: "linear-gradient(90deg, #6100ff, #53c660)",
+            transition: "width 0.7s ease",
+          }} />
+          <span style={{ position: "absolute", right: -8, top: "50%", transform: "translateY(-50%)", fontSize: 14 }}>🪵</span>
+        </div>
+        <p style={{ fontSize: 11, color: "#9ca3af" }}>
+          {herdHay.toLocaleString()} / {nextThresh.toLocaleString()} Hay
+          {hayRemaining > 0 && (
+            <span style={{ color: "#a78bfa" }}> · {hayRemaining.toLocaleString()} Hay to break the {fenceName}</span>
+          )}
+        </p>
+      </Sect>
+
+      {/* ── 6. HerdBoss Tools ──────────────────────────────────────────────── */}
       <Sect label="HerdBoss Tools" id="herdboss-tools">
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
 
-          {/* A. Herd Call */}
           <ToolCard icon="📡" title="Herd Call" phase="Phase 7">
             <p style={{ fontSize: 10, color: "#6b7280", marginBottom: 10, lineHeight: 1.6 }}>Standard leadership communication. 2 per week max. Unspent calls generate Salt.</p>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
@@ -320,7 +429,6 @@ export function HerdBossView() {
             <LockedBtn label="Send Herd Call" />
           </ToolCard>
 
-          {/* B. Horn Blast */}
           <ToolCard icon="📯" title="Horn Blast" phase="Phase 7">
             <p style={{ fontSize: 10, color: "#6b7280", marginBottom: 10, lineHeight: 1.6 }}>Emergency tool. Unlocks near fence threshold or regression risk only.</p>
             <div style={{ padding: "5px 8px", borderRadius: 6, background: "rgba(107,114,128,0.08)", border: "1px solid rgba(107,114,128,0.15)", marginBottom: 8 }}>
@@ -332,7 +440,6 @@ export function HerdBossView() {
             <LockedBtn label="Unavailable" />
           </ToolCard>
 
-          {/* C. Rally Cry */}
           <ToolCard icon="⚡" title="Rally Cry" phase="Phase 7">
             <p style={{ fontSize: 10, color: "#6b7280", marginBottom: 10, lineHeight: 1.6 }}>Earned leadership tool. Granted monthly based on Herd freshness and engagement.</p>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
@@ -346,7 +453,6 @@ export function HerdBossView() {
             <LockedBtn label="Deploy Rally Cry" />
           </ToolCard>
 
-          {/* D. Salt */}
           <ToolCard icon="🧂" title="Salt" phase="Phase 7">
             <p style={{ fontSize: 10, color: "#6b7280", marginBottom: 12, lineHeight: 1.6 }}>
               Earned when your Herd performs without extra pushes. Leadership restraint — the rarest stat.
@@ -363,117 +469,11 @@ export function HerdBossView() {
         </div>
       </Sect>
 
-      {/* ── 5. Pasture Progress ────────────────────────────────────────────── */}
-      <Sect label="Pasture Progress">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 8 }}>
-          <div>
-            <p style={{ fontSize: 14, color: "#F5F5F5", fontWeight: 700 }}>{currPasture}</p>
-            <p style={{ fontSize: 10, color: "#6b7280" }}>→ {nextPasture}</p>
-          </div>
-          <div style={{ textAlign: "right" }}>
-            <p style={{ fontSize: 16, fontWeight: 800, color: "#f59e0b", fontFamily: "var(--font-syne)" }}>
-              {herdHay.toLocaleString()} <span style={{ fontSize: 10, fontWeight: 400, color: "#6b7280" }}>/ {nextThresh.toLocaleString()} Hay</span>
-            </p>
-            <p style={{ fontSize: 10, color: "#6b7280" }}>{fencePct}% toward {fenceName}</p>
-          </div>
-        </div>
-        <div style={{ height: 10, borderRadius: 99, background: "rgba(97,0,255,0.1)", border: "1px solid rgba(97,0,255,0.2)", overflow: "hidden", marginBottom: 8 }}>
-          <div style={{ height: "100%", borderRadius: 99, width: `${fencePct}%`, background: "linear-gradient(90deg, #6100ff, #8B5CF6)", transition: "width 0.6s ease" }} />
-        </div>
-        {hayRemaining > 0 && (
-          <p style={{ fontSize: 11, color: "#a78bfa" }}>{hayRemaining.toLocaleString()} Hay to break the {fenceName}</p>
-        )}
-      </Sect>
-
-      {/* ── 6. Member Health ───────────────────────────────────────────────── */}
-      <Sect label="Member Health" id="member-health">
-        {!data ? (
-          <p style={{ fontSize: 12, color: "#4b5563", padding: "8px 0" }}>Loading member data…</p>
-        ) : (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(230px, 1fr))", gap: 10 }}>
-            {data.members.map(m => {
-              const status = memberStatus(m);
-              const borderColor = status.color === "#f87171" ? "rgba(239,68,68,0.25)" : status.color === "#f59e0b" ? "rgba(245,158,11,0.2)" : "#2A2A4A";
-              return (
-                <div key={m.user_id} style={{ padding: "12px 14px", borderRadius: 10, background: "rgba(13,13,26,0.5)", border: `1px solid ${borderColor}` }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 7 }}>
-                    <span style={{ width: 8, height: 8, borderRadius: "50%", background: status.color, display: "inline-block", flexShrink: 0 }} />
-                    <span style={{ fontSize: 13, color: "#F5F5F5", fontWeight: 600, fontFamily: "var(--font-syne)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.name}</span>
-                    {m.role === "herdboss" && (
-                      <span style={{ fontSize: 8, padding: "1px 5px", borderRadius: 99, background: "rgba(97,0,255,0.25)", color: "#a78bfa", border: "1px solid rgba(97,0,255,0.4)", flexShrink: 0 }}>Boss</span>
-                    )}
-                  </div>
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4 }}>
-                    <span style={{ fontSize: 11, color: status.color, fontWeight: 600 }}>{status.label}</span>
-                    <span style={{ fontSize: 10, color: "#6b7280" }}>{m.tracks_today}T · +{m.hay_today}H</span>
-                  </div>
-                  <p style={{ fontSize: 9, color: "#4b5563", marginBottom: (m.hours_inactive >= 48 || m.cheese_state === "rotting") ? 8 : 0 }}>
-                    {m.hours_inactive < 999 ? `${m.hours_inactive}h inactive` : "No activity yet"} · Lv {m.level}
-                  </p>
-                  {(m.hours_inactive >= 48 || m.cheese_state === "rotting") && (
-                    <button onClick={() => scrollTo("herdboss-tools")} style={{
-                      width: "100%", padding: "5px 0", borderRadius: 6, fontSize: 10, fontWeight: 600, cursor: "pointer",
-                      background: "rgba(97,0,255,0.12)", border: "1px solid rgba(97,0,255,0.3)", color: "#a78bfa",
-                    }}>
-                      📡 Send Herd Call ↓
-                    </button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        )}
-      </Sect>
-
-      {/* ── 7. Blocker Pen ─────────────────────────────────────────────────── */}
-      <Sect label="Blocker Pen" accent="#f59e0b" id="blocker-pen">
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-          <p style={{ fontSize: 11, color: "#6b7280" }}>Surface blocked Tracks so you can clear the path.</p>
-          <PhaseBadge phase="Phase 7" />
-        </div>
-        <div style={{ padding: "12px 14px", borderRadius: 8, background: "rgba(13,13,26,0.4)", border: "1px solid #2A2A4A", marginBottom: 10 }}>
-          <p style={{ fontSize: 12, color: "#4b5563", textAlign: "center" }}>No active blockers — trail is clear</p>
-        </div>
-        <p style={{ fontSize: 9, color: "#4b5563", lineHeight: 1.7 }}>
-          Blocker types: Waiting on decision · Missing information · Competing priorities · Capacity issue · External dependency · Tool/system issue
-        </p>
-      </Sect>
-
-      {/* ── 8. Decision Queue ──────────────────────────────────────────────── */}
-      <Sect label="Decision Queue" accent="#8B5CF6">
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-          <p style={{ fontSize: 11, color: "#6b7280" }}>Decisions where you may be the bottleneck.</p>
-          <PhaseBadge phase="Phase 7" />
-        </div>
-        <div style={{ padding: "12px 14px", borderRadius: 8, background: "rgba(13,13,26,0.4)", border: "1px solid #2A2A4A" }}>
-          <p style={{ fontSize: 12, color: "#4b5563", textAlign: "center" }}>No open decisions — queue is clear</p>
-        </div>
-      </Sect>
-
-      {/* ── 9. Herd Pulse ──────────────────────────────────────────────────── */}
-      <Sect label="Herd Pulse" accent="#53c660">
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-          <p style={{ fontSize: 11, color: "#6b7280" }}>Help HerdBoss clear the trail — clarity, support, and friction signals from members.</p>
-          <PhaseBadge phase="Phase 7" />
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 10 }}>
-          {["Clarity %", "Support %", "Priority Confidence", "Friction Level"].map(metric => (
-            <div key={metric} style={{ padding: "10px 12px", borderRadius: 8, background: "rgba(13,13,26,0.5)", border: "1px solid #2A2A4A" }}>
-              <p style={{ fontSize: 10, color: "#4b5563", marginBottom: 3 }}>{metric}</p>
-              <p style={{ fontSize: 16, fontWeight: 700, color: "#2A2A4A" }}>—</p>
-            </div>
-          ))}
-        </div>
-        <p style={{ fontSize: 9, color: "#4b5563", lineHeight: 1.7 }}>
-          Member signals: Clearer priority needed · Faster decision needed · More support needed · Rebalanced workload · Less noise · Nothing, I&apos;m good
-        </p>
-      </Sect>
-
-      {/* ── Received Bleats (HerdBoss responds only — no send) ─────────────── */}
+      {/* ── Pending Bleats (respond only, shown when present) ──────────────── */}
       {pendingBleats.length > 0 && (
         <Sect label={`Bleats Awaiting Your Response (${pendingBleats.length})`} accent="#f59e0b">
           <p style={{ fontSize: 10, color: "#6b7280", marginBottom: 10 }}>
-            Members can bleat you. Respond to earn Hay — but HerdBosses use Herd Calls and Rally Cries to initiate.
+            Members can bleat you. Respond to earn Hay — HerdBosses use Herd Calls and Rally Cries to initiate.
           </p>
           {pendingBleats.map(bleat => (
             <MiniBleatResponder key={bleat.id} bleat={bleat} onRespond={handleRespondBleat} />
@@ -481,39 +481,43 @@ export function HerdBossView() {
         </Sect>
       )}
 
-      {/* ── 10. Recent Wins ────────────────────────────────────────────────── */}
+      {/* ── 7. Recent Wins ─────────────────────────────────────────────────── */}
       <Sect label="Recent Wins (last 24h)">
         {!data || data.recent_wins.length === 0 ? (
-          <p style={{ fontSize: 12, color: "#4b5563", textAlign: "center", padding: "12px 0" }}>No wins yet today. The pasture is waiting.</p>
+          <p style={{ fontSize: 12, color: "#4b5563", textAlign: "center", padding: "8px 0" }}>No wins yet today. The pasture is waiting.</p>
         ) : (
-          <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-            {data.recent_wins.map((w: RecentWin, i: number) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", borderRadius: 8, background: "rgba(83,198,96,0.04)", border: "1px solid rgba(83,198,96,0.12)" }}>
-                <span style={{ fontSize: 10, color: "#53c660" }}>✓</span>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <span style={{ fontSize: 12, color: "#F5F5F5", fontWeight: 600 }}>{w.member_name}</span>
-                  <span style={{ fontSize: 12, color: "#9ca3af" }}> — {w.task_name}</span>
+          <>
+            <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+              {data.recent_wins.slice(0, 5).map((w: RecentWin, i: number) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 8, padding: "6px 10px", borderRadius: 7, background: "rgba(83,198,96,0.04)", border: "1px solid rgba(83,198,96,0.1)" }}>
+                  <span style={{ fontSize: 10, color: "#53c660", flexShrink: 0 }}>✓</span>
+                  <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
+                    <span style={{ fontSize: 11, fontWeight: 600, color: "#F5F5F5" }}>{w.member_name}</span>
+                    <span style={{ fontSize: 11, color: "#6b7280" }}> — {w.task_name}</span>
+                  </div>
+                  <span style={{ fontSize: 8, padding: "1px 5px", borderRadius: 99, flexShrink: 0, background: `${TIER_COLORS[w.xp_tier] ?? "#6b7280"}18`, border: `1px solid ${TIER_COLORS[w.xp_tier] ?? "#6b7280"}40`, color: TIER_COLORS[w.xp_tier] ?? "#6b7280", fontWeight: 600 }}>
+                    {w.xp_tier}
+                  </span>
+                  <span style={{ fontSize: 11, color: "#f59e0b", fontWeight: 600, flexShrink: 0 }}>+{w.hay_earned}</span>
                 </div>
-                <span style={{ fontSize: 9, padding: "2px 6px", borderRadius: 99, flexShrink: 0, background: `${TIER_COLORS[w.xp_tier] ?? "#6b7280"}18`, border: `1px solid ${TIER_COLORS[w.xp_tier] ?? "#6b7280"}44`, color: TIER_COLORS[w.xp_tier] ?? "#6b7280", fontWeight: 600 }}>
-                  {w.xp_tier}
-                </span>
-                <span style={{ fontSize: 11, color: "#f59e0b", fontWeight: 600, flexShrink: 0 }}>+{w.hay_earned}</span>
-                <button disabled style={{ fontSize: 9, padding: "2px 8px", borderRadius: 6, background: "rgba(97,0,255,0.06)", border: "1px solid rgba(97,0,255,0.15)", color: "#4b5563", cursor: "not-allowed" }}>
-                  Recognize
-                </button>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+            {data.recent_wins.length > 5 && (
+              <p style={{ fontSize: 11, color: "#4b5563", marginTop: 8, textAlign: "center" }}>
+                View all {data.recent_wins.length} wins ↓
+              </p>
+            )}
+          </>
         )}
       </Sect>
 
-      {/* ── 11. Herd Standings ─────────────────────────────────────────────── */}
+      {/* ── 8. Herd Standings ──────────────────────────────────────────────── */}
       <Sect label="Herd Standings">
         <div style={{ display: "flex", gap: 6, marginBottom: 12, flexWrap: "wrap" }}>
           {[
-            { key: "all-time", label: "All-time", live: true },
+            { key: "all-time",  label: "All-time",  live: true  },
             { key: "this-week", label: "This Week", live: false },
-            { key: "today", label: "Today", live: false },
+            { key: "today",     label: "Today",     live: false },
           ].map(f => (
             <button key={f.key} onClick={() => f.live && setStandingsFilter(f.key)} style={{
               padding: "4px 10px", borderRadius: 99, fontSize: 10, fontWeight: 600, cursor: f.live ? "pointer" : "not-allowed",
@@ -547,55 +551,10 @@ export function HerdBossView() {
         </div>
       </Sect>
 
-      {/* ── 12. HerdBoss Composite Score ───────────────────────────────────── */}
-      <Sect label="HerdBoss Composite Score" accent="#FFD700">
-        <div style={{ display: "flex", alignItems: "flex-start", gap: 20 }}>
-          <div style={{ flexShrink: 0 }}>
-            <p style={{ fontSize: 42, fontWeight: 800, color: "#2A2A4A", fontFamily: "var(--font-syne)", lineHeight: 1 }}>—</p>
-            <PhaseBadge phase="Phase 7" />
-            <p style={{ fontSize: 9, color: "#4b5563", marginTop: 6, maxWidth: 100 }}>Unlocks with Herd activity data</p>
-          </div>
-          <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 5 }}>
-            {[
-              { name: "Clarity",            color: "#a78bfa" },
-              { name: "Unblocking",         color: "#53c660" },
-              { name: "Decision Velocity",  color: "#3b82f6" },
-              { name: "Load Balance",       color: "#86efac" },
-              { name: "Recognition",        color: "#FFD700" },
-              { name: "AI Adoption",        color: "#8B5CF6" },
-              { name: "Signal-to-Noise",    color: "#f59e0b" },
-              { name: "Salt / Restraint",   color: "#fcd34d" },
-            ].map(cat => (
-              <div key={cat.name} style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ fontSize: 12, color: "#4b5563", width: 140, flexShrink: 0 }}>{cat.name}</span>
-                <span style={{ fontSize: 11, color: "#374151", width: 20, flexShrink: 0, textAlign: "right" }}>—</span>
-                <div style={{ flex: 1, height: 6, borderRadius: 99, background: "rgba(255,255,255,0.05)" }}>
-                  <div style={{ width: "0%", height: "100%", borderRadius: 99, background: cat.color }} />
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </Sect>
-
-      {/* ── 13. Chronicle Seeds ────────────────────────────────────────────── */}
-      <Sect label="Chronicle Seeds" accent="#f59e0b">
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-          <p style={{ fontSize: 11, color: "#6b7280" }}>Moments shaping the monthly Herd Chronicle.</p>
-          <PhaseBadge phase="Phase 7" />
-        </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {[
-            { emoji: "🌱", text: "Herd formed — the trail begins here" },
-            { emoji: "🏔️", text: `${herdHay.toLocaleString()} Hay stacked toward the ${fenceName}` },
-          ].map((seed, i) => (
-            <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, padding: "10px 12px", borderRadius: 8, background: "rgba(245,158,11,0.04)", border: "1px solid rgba(245,158,11,0.12)" }}>
-              <span>{seed.emoji}</span>
-              <p style={{ fontSize: 12, color: "#9ca3af" }}>{seed.text}</p>
-            </div>
-          ))}
-        </div>
-      </Sect>
+      {/* ── 9. Chronicle footer ────────────────────────────────────────────── */}
+      <p style={{ fontSize: 11, color: "#374151", textAlign: "center", paddingTop: 4, paddingBottom: 32 }}>
+        📖 Chronicle moments: Herd formed · {herdHay.toLocaleString()} Hay stacked · {totalTracks} tracks cleared
+      </p>
 
     </div>
   );
