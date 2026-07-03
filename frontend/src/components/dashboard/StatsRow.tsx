@@ -92,7 +92,6 @@ export function StatsRow() {
           label="GAIT TRACTION"
           color={player?.traction_color ?? "#6b7280"}
           subNode={<span style={{ fontSize: 11, color: player?.traction_color ?? "#6b7280", fontWeight: 600, textAlign: "center" }}>{player?.traction_label ?? "Cold Hooves"}</span>}
-          sub={`🛡️ ${player?.streak_shields ?? 0} shields banked`}
         />
         <StatCard icon="/icons/icon_stakes.png"          value={stakesValue}                            label="Stakes %"      sub={stakesSub} color={stakesColor} />
         <StatCard icon="/icons/icon_precision.png"       value={precisionValue}                         label="Precision"     sub={precisionSub} color={precisionColor} />
