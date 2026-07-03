@@ -11,6 +11,46 @@ from app.services.decay import compute_decay
 router = APIRouter()
 
 
+def compute_traction_score(
+    gait_streak: int,
+    tasks_completed_this_week: int,
+    weekly_clip_rate: float | None,
+    hours_since_completion: float | None,
+) -> dict:
+    streak_score   = min(40, gait_streak * 4)
+    velocity_score = min(30, tasks_completed_this_week * 3)
+    clip_score     = int((weekly_clip_rate or 0) * 20)
+
+    if hours_since_completion is None:     freshness_score = 0
+    elif hours_since_completion <= 6:      freshness_score = 10
+    elif hours_since_completion <= 12:     freshness_score = 8
+    elif hours_since_completion <= 18:     freshness_score = 6
+    elif hours_since_completion <= 24:     freshness_score = 4
+    elif hours_since_completion <= 36:     freshness_score = 2
+    else:                                  freshness_score = 0
+
+    traction_score = min(100, streak_score + velocity_score + clip_score + freshness_score)
+
+    if traction_score >= 91:   label, color = "GOAT Traction",    "#FFD700"
+    elif traction_score >= 76: label, color = "Peak Pasture",     "#8B5CF6"
+    elif traction_score >= 51: label, color = "Full Gallop",      "#53c660"
+    elif traction_score >= 26: label, color = "On Traaack",       "#6100ff"
+    elif traction_score >= 11: label, color = "Finding Footing",  "#f59e0b"
+    else:                      label, color = "Cold Hooves",      "#6b7280"
+
+    return {
+        "traction_score": traction_score,
+        "traction_label": label,
+        "traction_color": color,
+        "traction_breakdown": {
+            "streak":    streak_score,
+            "velocity":  velocity_score,
+            "clip_rate": clip_score,
+            "freshness": freshness_score,
+        },
+    }
+
+
 def compute_freshness_pct(hours: float | None) -> int:
     if hours is None: return 100
     if hours <= 6:    return 100
@@ -109,6 +149,22 @@ async def get_player(
         lc = last_completion.replace(tzinfo=timezone.utc) if last_completion.tzinfo is None else last_completion
         hours_since = round((datetime.now(timezone.utc) - lc).total_seconds() / 3600, 1)
 
+    tasks_this_week = await conn.fetchval(
+        """
+        SELECT COUNT(*) FROM operational_log
+        WHERE user_id = $1 AND resolution = 'completed'
+          AND resolved_at >= NOW() - INTERVAL '7 days'
+        """,
+        str(current_user["id"]),
+    ) or 0
+
+    traction = compute_traction_score(
+        gait_streak=gait_streak,
+        tasks_completed_this_week=int(tasks_this_week),
+        weekly_clip_rate=clip_rate_pct / 100 if clip_rate_pct else None,
+        hours_since_completion=hours_since,
+    )
+
     decay_info = await compute_decay(conn, current_user["id"])
 
     return {
@@ -140,6 +196,7 @@ async def get_player(
         "last_completion_at": last_completion.isoformat() if last_completion else None,
         "hours_since_completion": hours_since,
         "freshness_pct": compute_freshness_pct(hours_since),
+        **traction,
     }
 
 

@@ -8,7 +8,7 @@ from app.dependencies import get_current_user
 
 router = APIRouter()
 
-VALID_CATEGORIES = {"hay", "cheese", "tracks", "gait", "stakes"}
+VALID_CATEGORIES = {"hay", "cheese", "tracks", "gait", "stakes", "traction"}
 _FIELD_MAP = {"hay": "total_hay_earned", "cheese": "fresh_cheese", "tracks": "tasks_completed"}
 
 
@@ -67,7 +67,7 @@ async def get_leaderboard(
     if category not in VALID_CATEGORIES:
         raise HTTPException(status_code=400, detail=f"Invalid category. Must be one of: {', '.join(sorted(VALID_CATEGORIES))}")
 
-    if category == "gait":
+    if category in ("gait", "traction"):
         entries = await _leaderboard_streak(conn, "operational_log", "resolved_at", "completed", filter_col="resolution", filter_val="completed")
     elif category == "stakes":
         entries = await _leaderboard_streak(conn, "stakes", "date", "claimed_active", filter_col="status", filter_val=None)
