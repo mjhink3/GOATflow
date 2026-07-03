@@ -344,23 +344,22 @@ export default function DashboardPage() {
                 style={{ position: "absolute", top: 6, right: 10, background: "none", border: "none", color: "#6b7280", fontSize: 14, cursor: "pointer", lineHeight: 1 }}
               >×</button>
 
-              {/* Early warning: freshness dropping but cheese_state still fresh */}
               {player.freshness_pct != null && player.freshness_pct <= 25 && player.cheese_state === "fresh" && (
                 <p style={{ fontSize: 12, color: "#f59e0b", margin: 0 }}>
-                  ⚠️ Your cheese is starting to stale{player.hours_since_completion != null ? ` — ${player.hours_since_completion}h since last Track` : ""}. Complete a Track to stay fresh.
+                  ⚡ Your momentum is cooling.{player.hours_since_completion != null ? ` ${player.hours_since_completion}h since last Track —` : ""} keep it alive.
                 </p>
               )}
 
               {player.cheese_state === "staling" && (
                 <p style={{ fontSize: 12, color: "#f59e0b", margin: 0 }}>
-                  ⚠️ Your cheese is staling{player.hours_since_completion != null ? ` — ${player.hours_since_completion}h since last Track` : ""}. Complete a Track to stop the decay.
+                  ⚠️ Momentum staling —{player.hours_since_completion != null ? ` ${player.hours_since_completion}h inactive.` : ""} Complete a Track to stop the decay.
                 </p>
               )}
 
               {player.cheese_state === "rotting" && (
                 <>
                   <p style={{ fontSize: 12, color: "#f87171", margin: 0, fontWeight: 700 }}>
-                    🚨 ROTTING IN PROGRESS — You've lost {player.hay_lost_to_decay ?? 0} Hay{player.hours_since_completion != null ? ` (${player.hours_since_completion}h inactive)` : ""}. Complete a Track immediately.
+                    🚨 Your Fresh Cheese is decaying — {player.hay_lost_to_decay ?? 0} Hay lost. Complete a Track now.
                   </p>
                   {player.demotion_warning && (
                     <p style={{ fontSize: 11, color: "#fca5a5", marginTop: 4, marginBottom: 0 }}>

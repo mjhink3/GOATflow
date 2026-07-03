@@ -24,8 +24,8 @@ export function LevelBar() {
     : "#ef4444";
 
   const pillLabel =
-    cheeseState === "rotting" ? "🚨 Rotting"
-    : cheeseState === "staling" ? "⚠️ Staling"
+    cheeseState === "rotting" ? "🚨 Momentum Lost"
+    : cheeseState === "staling" ? "⚡ Momentum Staling"
     : freshnessPct <= 25 ? "⚠️ Soon"
     : "🧀 Fresh";
 
@@ -69,15 +69,12 @@ export function LevelBar() {
         </span>
       </div>
 
-      {/* Center: label + hay bar + freshness bar */}
+      {/* Center: freshness pill + hay bar + freshness bar */}
       <div className="flex-1 flex flex-col justify-center gap-0.5 min-w-0">
-        <div className="flex items-center justify-between" style={{ marginBottom: 2 }}>
-          <span style={{ fontSize: 8, color: "#6b7280", textTransform: "uppercase", letterSpacing: "0.15em" }}>
-            Pasture Gauge
-          </span>
-          {/* Freshness status pill */}
+        {/* Freshness status pill — centered, standalone */}
+        <div className="flex justify-center" style={{ marginBottom: 3 }}>
           <span style={{
-            fontSize: 8, padding: "1px 6px", borderRadius: 99,
+            fontSize: 9, padding: "2px 8px", borderRadius: 99,
             background: pillBg, color: pillColor,
             border: `1px solid ${pillColor}44`,
             whiteSpace: "nowrap",
@@ -126,7 +123,7 @@ export function LevelBar() {
           <span style={{ color: "#6b7280" }}> / {hayToNext.toLocaleString()} Hay</span>
         </span>
         {player && (
-          <span style={{ fontSize: 8, color: "#4b5563", whiteSpace: "nowrap" }}>
+          <span style={{ fontSize: 11, color: "#9ca3af", whiteSpace: "nowrap" }}>
             {timeAgo ?? "No tracks yet"}
           </span>
         )}
