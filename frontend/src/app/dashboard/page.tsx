@@ -56,10 +56,12 @@ export default function DashboardPage() {
   const [cancelResult, setCancelResult]             = useState<{ taskName: string; logId: number | null } | null>(null);
 
   // ── Decay warning dismissal ──
+  // null = not yet checked (SSR / before mount); false = not dismissed; true = dismissed
   const decayDismissKey = `goatflow_decay_dismissed_${new Date().toISOString().slice(0, 10)}`;
-  const [decayDismissed, setDecayDismissed] = useState(
-    () => typeof window !== "undefined" && !!localStorage.getItem(decayDismissKey)
-  );
+  const [decayDismissed, setDecayDismissed] = useState<boolean | null>(null);
+  useEffect(() => {
+    setDecayDismissed(!!localStorage.getItem(decayDismissKey));
+  }, []);
   function dismissDecay() {
     localStorage.setItem(decayDismissKey, "1");
     setDecayDismissed(true);
@@ -327,7 +329,7 @@ export default function DashboardPage() {
           <StatsRow />
 
           {/* ── Decay Warning Banner ── */}
-          {!decayDismissed && player?.cheese_state && player.cheese_state !== "fresh" && (
+          {decayDismissed === false && player?.cheese_state && player.cheese_state !== "fresh" && (
             <div style={{
               borderRadius: 10, padding: "10px 14px", position: "relative",
               background: player.cheese_state === "rotting" ? "rgba(239,68,68,0.08)" : "rgba(245,158,11,0.08)",
