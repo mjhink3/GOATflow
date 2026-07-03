@@ -106,6 +106,11 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
     setGoatifOn(localStorage.getItem("goatflow_notif_master") === "true");
   }, []);
 
+  // Clear pending horn input on navigation so stale text can't become a phantom horn
+  useEffect(() => {
+    setNewHorn("");
+  }, [pathname]);
+
   const activeHorns = localHorns ?? horns;
   const level    = player?.level ?? 1;
   const levelImg = LEVEL_IMAGES[Math.min(level, 7)] ?? LEVEL_IMAGES[7];
@@ -139,8 +144,14 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
     setNewHorn("");
   }
 
-  function removeHorn(i: number) {
-    setLocalHorns(activeHorns.filter((_, idx) => idx !== i));
+  async function handleDeleteHorn(index: number) {
+    const updated = (localHorns ?? horns ?? []).filter((_, i) => i !== index);
+    setLocalHorns(updated);
+    try {
+      await save(updated);
+    } catch (err) {
+      console.error("[horns] delete save failed:", err);
+    }
   }
 
   async function lockInHorns() {
@@ -621,7 +632,7 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
                 <span style={{ color: "#6100ff", marginRight: 4 }}>◆</span>{h}
               </p>
               <button
-                onClick={() => removeHorn(i)}
+                onClick={() => handleDeleteHorn(i)}
                 className="text-goat-red opacity-0 group-hover:opacity-70 transition-opacity shrink-0 mt-0.5"
                 style={{ fontSize: 10 }}
                 title="Remove horn"
