@@ -7,6 +7,7 @@ import {
   getDailyBrief, getBleats, respondBleat,
   BLEAT_TYPES, type DailyBriefMember, type RecentWin, type Bleat,
 } from "@/lib/api/herds";
+import { MountainProgress } from "@/components/ui/MountainProgress";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -389,27 +390,15 @@ export function HerdBossView() {
 
       {/* ── 5. Pasture Progress ────────────────────────────────────────────── */}
       <Sect label="Pasture Progress">
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
-          <span style={{ fontSize: 13, fontWeight: 700, color: "#F5F5F5" }}>{currPasture}</span>
-          <span style={{ fontSize: 11, color: "#6b7280" }}>{nextPasture} →</span>
-        </div>
-        <div style={{ position: "relative", height: 12, borderRadius: 99, background: "rgba(97,0,255,0.08)", border: "1px solid rgba(97,0,255,0.15)", marginBottom: 10, overflow: "visible" }}>
-          <div style={{
-            position: "absolute", inset: 0, right: "auto",
-            borderRadius: 99,
-            width: `${fencePct}%`,
-            minWidth: 4,
-            background: "linear-gradient(90deg, #6100ff, #53c660)",
-            transition: "width 0.7s ease",
-          }} />
-          <span style={{ position: "absolute", right: -8, top: "50%", transform: "translateY(-50%)", fontSize: 14 }}>🪵</span>
-        </div>
-        <p style={{ fontSize: 11, color: "#9ca3af" }}>
-          {herdHay.toLocaleString()} / {nextThresh.toLocaleString()} Hay
-          {hayRemaining > 0 && (
-            <span style={{ color: "#a78bfa" }}> · {hayRemaining.toLocaleString()} Hay to break the {fenceName}</span>
-          )}
-        </p>
+        <MountainProgress
+          currentLevel={herd?.pasture_level ?? 1}
+          currentHay={herdHay}
+          hayToNext={hayRemaining}
+          memberPositions={data?.members.map(m => ({
+            display_name: m.name,
+            level: m.level,
+          }))}
+        />
       </Sect>
 
       {/* ── 6. HerdBoss Tools ──────────────────────────────────────────────── */}

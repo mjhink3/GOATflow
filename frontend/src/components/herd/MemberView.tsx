@@ -8,6 +8,8 @@ import {
   sendBleat, getBleats, respondBleat, getBleatStats,
   BLEAT_TYPES, type Bleat,
 } from "@/lib/api/herds";
+import { compute_level } from "@/lib/gamification";
+import { MountainProgress } from "@/components/ui/MountainProgress";
 
 const RESPONSE_OPTIONS = [
   { key: "quick",       label: "Quick 🐐",        hay: "10–20", needsText: false, desc: "Fast ack, no details needed" },
@@ -132,8 +134,12 @@ export function MemberView() {
     window.alert(result.message);
   }
 
-  const pendingBleats = bleatsData?.received?.filter(b => !b.responded_at) ?? [];
+  const pendingBleats   = bleatsData?.received?.filter(b => !b.responded_at) ?? [];
   const respondedBleats = bleatsData?.received?.filter(b => !!b.responded_at) ?? [];
+
+  const me = members.find(m => m.user_id === currentUserId);
+  const { level: myLevel, hayThisLevel: myHay, hayToNext: myHayToNext } =
+    compute_level(me?.total_hay_earned ?? 0);
 
   return (
     <div>
@@ -169,6 +175,15 @@ export function MemberView() {
           ))}
         </div>
       )}
+
+      {/* Mountain Progress */}
+      <div style={{ marginBottom: 28 }}>
+        <MountainProgress
+          currentLevel={myLevel}
+          currentHay={myHay}
+          hayToNext={myHayToNext}
+        />
+      </div>
 
       {/* Bleats */}
       <section className="rounded-xl border border-goat-border p-4" style={{ background: "rgba(13,13,26,0.7)", marginBottom: 28 }}>
