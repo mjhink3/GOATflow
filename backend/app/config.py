@@ -6,7 +6,7 @@ class Settings(BaseSettings):
     GEMINI_API_KEY: str = ""
     GEMINI_MODEL: str = "gemini-2.0-flash-lite"
     GROQ_API_KEY: str = ""
-    GROQ_MODEL: str = "qwen-qwq-32b"
+    GROQ_MODEL: str = "llama-3.3-70b"
     JWT_SECRET: str
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRE_MINUTES: int = 60 * 24 * 30  # 30 days
