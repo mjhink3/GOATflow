@@ -311,14 +311,25 @@ async def complete_signal(
         )
         if herd_row and herd_row["current_herd_id"]:
             herd_id = herd_row["current_herd_id"]
-            await conn.execute(
+            new_stats = await conn.fetchrow(
                 """UPDATE herd_stats
                    SET total_hay_earned = total_hay_earned + $1,
                        total_tracks_completed = total_tracks_completed + 1,
                        last_updated = NOW()
-                   WHERE herd_id = $2""",
+                   WHERE herd_id = $2
+                   RETURNING total_hay_earned""",
                 hay_earned, herd_id,
             )
+            # Advance pasture_level if herd hay crossed a fence threshold
+            _FENCE_THRESHOLDS = [0, 600, 2_000, 5_000, 12_000, 30_000, 100_000]
+            if new_stats:
+                new_herd_hay = new_stats["total_hay_earned"]
+                new_pasture = sum(1 for t in _FENCE_THRESHOLDS if new_herd_hay >= t)
+                new_pasture = max(1, min(new_pasture, 7))
+                await conn.execute(
+                    "UPDATE herds SET pasture_level = $1 WHERE id = $2 AND pasture_level < $1",
+                    new_pasture, herd_id,
+                )
 
     return {
         "task_name": sig["task_name"],
