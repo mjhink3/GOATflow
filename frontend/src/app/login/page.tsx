@@ -78,6 +78,7 @@ export default function LoginPage() {
   const [tab, setTab] = useState<"login" | "signup">("login");
   const [pending, setPending] = useState(false);
   const [loginError, setLoginError] = useState("");
+  const [isGenerating, setIsGenerating] = useState(false);
   const [emailInput, setEmailInput] = useState("");
   const [emailSent, setEmailSent] = useState(false);
   const [emailPending, setEmailPending] = useState(false);
@@ -91,6 +92,18 @@ export default function LoginPage() {
   const [signupUsername, setSignupUsername] = useState("");
   const [signupPassword, setSignupPassword] = useState("");
   const [signupDisplay,  setSignupDisplay]  = useState("");
+
+  async function generateGoatname() {
+    setIsGenerating(true);
+    try {
+      const res  = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/generate-goatname`);
+      const data = await res.json();
+      setSignupUsername(data.username);
+      setSignupDisplay(data.display_name);
+    } finally {
+      setIsGenerating(false);
+    }
+  }
 
   useEffect(() => {
     if (isAuthenticated) router.replace("/dashboard");
@@ -368,6 +381,11 @@ export default function LoginPage() {
                     onChange={(e) => setLoginPassword(e.target.value)}
                     className="bg-goat-black border-goat-border text-goat-white placeholder:text-goat-border focus:border-goat-violet"
                   />
+                  <div style={{ textAlign: "right", marginTop: -2 }}>
+                    <a href="/forgot-password" style={{ fontSize: 11, color: "#6b7280", textDecoration: "none" }}>
+                      Forgot password?
+                    </a>
+                  </div>
                 </div>
                 {loginError && (
                   <p className="text-xs text-goat-red text-center">{loginError}</p>
@@ -389,14 +407,26 @@ export default function LoginPage() {
                   <Label htmlFor="signup-username" className="text-xs uppercase tracking-widest text-goat-silver">
                     Goatname
                   </Label>
-                  <Input
-                    id="signup-username"
-                    autoComplete="username"
-                    placeholder="yourgoatname"
-                    value={signupUsername}
-                    onChange={(e) => setSignupUsername(e.target.value)}
-                    className="bg-goat-black border-goat-border text-goat-white placeholder:text-goat-border focus:border-goat-violet"
-                  />
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <Input
+                      id="signup-username"
+                      autoComplete="username"
+                      placeholder="yourgoatname"
+                      value={signupUsername}
+                      onChange={(e) => setSignupUsername(e.target.value)}
+                      className="bg-goat-black border-goat-border text-goat-white placeholder:text-goat-border focus:border-goat-violet"
+                      style={{ flex: 1 }}
+                    />
+                    <button
+                      type="button"
+                      onClick={generateGoatname}
+                      disabled={isGenerating}
+                      style={{ background: "rgba(97,0,255,0.15)", border: "1px solid rgba(97,0,255,0.3)", borderRadius: 8, padding: "0 12px", fontSize: 11, color: "#a78bfa", cursor: isGenerating ? "not-allowed" : "pointer", whiteSpace: "nowrap", flexShrink: 0 }}
+                    >
+                      {isGenerating ? "…" : "🎲 Generate"}
+                    </button>
+                  </div>
+                  <p style={{ fontSize: 10, color: "#4b5563", marginTop: 2 }}>Tap 🎲 to get a randomly generated Goatname. Guaranteed ridiculous.</p>
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="signup-password" className="text-xs uppercase tracking-widest text-goat-silver">

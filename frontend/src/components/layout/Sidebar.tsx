@@ -751,6 +751,18 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
       {/* ── Sticky footer: Goatifications + Logout ── */}
       <div style={{ position: "sticky", bottom: 0, background: "var(--color-goat-surface, #1A1A2E)", borderTop: "1px solid #2A2A4A" }}>
 
+      {/* ── Admin Panel (admin only) ── */}
+      {user?.username === "ob_testuser" && (
+        <div className="px-4 pt-3">
+          <button
+            onClick={() => router.push("/admin")}
+            style={{ width: "100%", display: "flex", alignItems: "center", gap: 8, padding: "8px 12px", borderRadius: 8, fontSize: 11, color: "#6b7280", background: "none", border: "1px solid rgba(255,255,255,0.06)", cursor: "pointer" }}
+          >
+            🛡️ Admin Panel
+          </button>
+        </div>
+      )}
+
       {/* ── Replay Tutorial ── */}
       <div className="px-4 pt-3">
         <button
