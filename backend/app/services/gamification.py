@@ -19,10 +19,10 @@ LEVEL_GROWTH = 0.20
 PASTURE_NAMES: dict[int, str] = {
     1: "The Pen",
     2: "The Grazing Grounds",
-    3: "The Open Pasture",
-    4: "The Highland Trail",
-    5: "The Summit Ridge",
-    6: "The Peak",
+    3: "The Foothills",
+    4: "The Ridgeline",
+    5: "The High Cliffs",
+    6: "The Summit",
     7: "GOAT Mountain",
 }
 
@@ -321,7 +321,7 @@ async def complete_signal(
                 hay_earned, herd_id,
             )
             # Advance pasture_level if herd hay crossed a fence threshold
-            _FENCE_THRESHOLDS = [0, 600, 2_000, 5_000, 12_000, 30_000, 100_000]
+            _FENCE_THRESHOLDS = [0, 600, 2_000, 5_000, 10_000, 20_000, 40_000]
             if new_stats:
                 new_herd_hay = new_stats["total_hay_earned"]
                 new_pasture = sum(1 for t in _FENCE_THRESHOLDS if new_herd_hay >= t)
