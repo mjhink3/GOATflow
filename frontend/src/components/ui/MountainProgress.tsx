@@ -15,13 +15,13 @@ interface MountainProgressProps {
 }
 
 const LEVELS = [
-  { level: 1, name: "The Pen" },
-  { level: 2, name: "The Grazing Grounds" },
-  { level: 3, name: "The Foothills" },
-  { level: 4, name: "The Ridgeline" },
-  { level: 5, name: "The High Cliffs" },
-  { level: 6, name: "The Summit" },
-  { level: 7, name: "GOAT Mountain" },
+  { level: 1, name: "The Pen",             emoji: "🐐" },
+  { level: 2, name: "The Grazing Grounds", emoji: "🐐" },
+  { level: 3, name: "The Foothills",       emoji: "🐐" },
+  { level: 4, name: "The Ridgeline",       emoji: "🐐" },
+  { level: 5, name: "The High Cliffs",     emoji: "🐐" },
+  { level: 6, name: "The Summit",          emoji: "🐐" },
+  { level: 7, name: "GOAT Mountain",       emoji: "👑" },
 ];
 
 export function MountainProgress({

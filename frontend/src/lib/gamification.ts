@@ -33,16 +33,13 @@ export function compute_level(totalHayEarned: number): { level: number; hayThisL
 
 // ─── Pasture & rank names ───────────────────────────────────────────────────
 export const PASTURE_NAMES: Record<number, string> = {
-  1:  "The Pen",
-  2:  "The Grazing Grounds",
-  3:  "The Foothills",
-  4:  "The Ridgeline",
-  5:  "The High Cliffs",
-  6:  "The Summit",
-  7:  "The Summit",
-  8:  "The Summit",
-  9:  "The Summit",
-  10: "The Summit",
+  1: "The Pen",
+  2: "The Grazing Grounds",
+  3: "The Foothills",
+  4: "The Ridgeline",
+  5: "The High Cliffs",
+  6: "The Summit",
+  7: "GOAT Mountain",
 };
 
 export const ASCENSION_RANKS: Record<number, string> = {

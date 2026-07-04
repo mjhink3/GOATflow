@@ -11,8 +11,8 @@ import { MountainProgress } from "@/components/ui/MountainProgress";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const HERD_FENCE_THRESHOLDS = [0, 600, 2_000, 5_000, 12_000, 30_000, 100_000];
-const HERD_PASTURE_NAMES    = ["The Pen", "The Grazing Grounds", "The Open Field", "The High Pasture", "The Summit Pasture", "The GOAT Range", "Beyond"];
+const HERD_FENCE_THRESHOLDS = [0, 600, 2_000, 5_000, 10_000, 20_000, 40_000];
+const HERD_PASTURE_NAMES    = ["The Pen", "The Grazing Grounds", "The Foothills", "The Ridgeline", "The High Cliffs", "The Summit", "GOAT Mountain"];
 const HERD_FENCE_NAMES      = ["Wooden Fence", "Stone Wall", "Iron Gate", "Mountain Pass", "Summit Gate", "The GOAT Horizon"];
 
 const TIER_COLORS: Record<string, string> = {
@@ -191,20 +191,21 @@ export function HerdBossView() {
   }
 
   // Pasture progress
-  const pastureLevel = herd?.pasture_level ?? 1;
-  const levelIdx     = Math.max(0, pastureLevel - 1);
-  const prevThresh   = HERD_FENCE_THRESHOLDS[levelIdx]     ?? 0;
-  const nextThresh   = HERD_FENCE_THRESHOLDS[levelIdx + 1] ?? prevThresh + 1_000;
-  const herdHay      = stats?.total_hay_earned
+  const pastureLevel       = herd?.pasture_level ?? 1;
+  const herdHay            = stats?.total_hay_earned
     ?? data?.members.reduce((s, m) => s + (m.total_hay ?? 0), 0)
     ?? 0;
-  const hayInLevel   = Math.max(0, herdHay - prevThresh);
-  const hayNeeded    = Math.max(1, nextThresh - prevThresh);
-  const fencePct     = Math.min(100, Math.round(hayInLevel / hayNeeded * 100));
-  const hayRemaining = Math.max(0, nextThresh - herdHay);
-  const currPasture  = HERD_PASTURE_NAMES[levelIdx]     ?? "Unknown Pasture";
-  const nextPasture  = HERD_PASTURE_NAMES[levelIdx + 1] ?? "The GOAT Range";
-  const fenceName    = HERD_FENCE_NAMES[levelIdx]       ?? "The Next Fence";
+  const nextFenceThreshold = pastureLevel < 7
+    ? (HERD_FENCE_THRESHOLDS[pastureLevel] ?? 40_000)
+    : 40_000;
+  const prevThresh         = HERD_FENCE_THRESHOLDS[pastureLevel - 1] ?? 0;
+  const hayInLevel         = Math.max(0, herdHay - prevThresh);
+  const hayNeeded          = Math.max(1, nextFenceThreshold - prevThresh);
+  const fencePct           = Math.min(100, Math.round(hayInLevel / hayNeeded * 100));
+  const hayRemaining       = Math.max(0, nextFenceThreshold - herdHay);
+  const currPasture        = HERD_PASTURE_NAMES[pastureLevel - 1] ?? "Unknown Pasture";
+  const nextPasture        = HERD_PASTURE_NAMES[pastureLevel]     ?? "GOAT Mountain";
+  const fenceName          = HERD_FENCE_NAMES[pastureLevel - 1]   ?? "The Next Fence";
 
   // KPI values
   const momentum    = herdMomentumStatus(data?.members ?? []);
