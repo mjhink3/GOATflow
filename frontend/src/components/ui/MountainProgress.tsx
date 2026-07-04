@@ -129,8 +129,13 @@ export function MountainProgress({
         {LEVELS.map(({ level, name }) => {
           const pos        = getLevelPosition(level);
           const isCurrent  = level === currentLevel;
+          const isNextLvl  = level === currentLevel + 1 && currentLevel < 7;
           const isUnlocked = level <= currentLevel;
           const isLocked   = level > currentLevel;
+          // Show labels only for current level and next target; peak covered by GOAT MTN text
+          const showLabel  = !compact && (isCurrent || isNextLvl);
+          // When at level 1 both current + next labels are low on the slope — push level 1 label down
+          const labelYExtra = currentLevel === 1 && level === 1 ? 10 : 0;
 
           return (
             <g key={level}>
@@ -142,12 +147,12 @@ export function MountainProgress({
                 stroke={isUnlocked ? "#6100ff" : "#2A2A4A"}
                 strokeWidth={isCurrent ? 2 : 1}
               />
-              {!compact && (
+              {showLabel && (
                 <text
                   x={pos.x + 14}
-                  y={pos.y + 4}
+                  y={pos.y + 4 + labelYExtra}
                   fontSize={isCurrent ? 10 : 8}
-                  fill={isLocked ? "#2A2A4A" : isCurrent ? "#a78bfa" : "#6b7280"}
+                  fill={isCurrent ? "#a78bfa" : "#6b7280"}
                   fontFamily="var(--font-dm-sans, sans-serif)"
                   fontWeight={isCurrent ? "700" : "400"}
                 >
@@ -211,18 +216,7 @@ export function MountainProgress({
           </text>
         )}
 
-        {/* Base label */}
-        {!compact && (
-          <text
-            x={baseLeftX + 4}
-            y={baseY + 14}
-            fontSize={8}
-            fill="#4b5563"
-            fontFamily="var(--font-dm-sans, sans-serif)"
-          >
-            The Pen
-          </text>
-        )}
+
       </svg>
 
       {/* Text below (full size only) */}
