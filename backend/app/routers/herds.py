@@ -355,7 +355,7 @@ Write a Clear the Trail brief for the HerdBoss. Rules:
 
     client = Groq(api_key=settings.GROQ_API_KEY)
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model=settings.GROQ_MODEL,
         messages=[{"role": "user", "content": prompt}],
         temperature=0.7,
         max_tokens=200,

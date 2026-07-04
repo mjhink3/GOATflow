@@ -141,7 +141,7 @@ def _stream_text(contents: list) -> str:
 
     client = Groq(api_key=settings.GROQ_API_KEY)
     response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
+        model=settings.GROQ_MODEL,
         messages=[{"role": "user", "content": prompt}],
         temperature=0.2,
         max_tokens=4096,
