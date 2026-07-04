@@ -10,7 +10,6 @@ import { useHerd } from "@/lib/hooks/useHerd";
 import { useQuery } from "@tanstack/react-query";
 import { getBleats } from "@/lib/api/herds";
 import { pasture_name, ascension_rank } from "@/lib/gamification";
-import { MountainProgress } from "@/components/ui/MountainProgress";
 
 const LEVEL_IMAGES: Record<number, string> = {
   1: "/assets/GOATflow_The_Kid_level_1_1773616494954.webp",
@@ -378,16 +377,6 @@ export function Sidebar({ isMobileOpen = false, onClose }: SidebarProps) {
           </div>
 
         </div>
-      </div>
-
-      {/* ── Mountain Progress ── */}
-      <div style={{ padding: "8px 12px", borderBottom: "1px solid #2A2A4A" }}>
-        <MountainProgress
-          currentLevel={level}
-          currentHay={player?.hay ?? 0}
-          hayToNext={player?.hay_to_next_level ?? 500}
-          compact={true}
-        />
       </div>
 
       {/* ── Signal Score ── */}
